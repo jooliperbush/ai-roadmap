@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Literacy Roadmap</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F5F0E8;
+    --dark: #2A2118;
+    --mid: #EDE8DF;
+    --border: #D4C9B5;
+    --muted: #8B7355;
+    --text: #4A3828;
+    --card: #FDFAF5;
+    --accent-01: #C8B8A2;
+    --accent-02: #A8B8A2;
+    --accent-03: #A2ADB8;
+    --accent-04: #B8A2A8;
+    --accent-05: #B8B8A2;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--dark);
+    color: var(--bg);
+    padding: 52px 48px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; width: 45%;
+    background: linear-gradient(135deg, transparent 0%, rgba(200,184,162,0.08) 100%);
+    pointer-events: none;
+  }
+  .header-label {
+    font-size: 10px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--accent-01);
+    margin-bottom: 14px;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 46px;
+    font-weight: 400;
+    line-height: 1.1;
+    margin-bottom: 10px;
+  }
+  header p {
+    color: var(--accent-01);
+    font-size: 15px;
+    font-style: italic;
+    margin-bottom: 36px;
+    font-family: 'Playfair Display', serif;
+  }
+  .metrics {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .metric-val {
+    font-size: 24px;
+    font-weight: 300;
+    letter-spacing: -0.5px;
+  }
+  .metric-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent-01);
+    margin-top: 2px;
+  }
+
+  /* LAYOUT */
+  .body-wrap {
+    display: flex;
+    min-height: calc(100vh - 220px);
+  }
+
+  /* SIDEBAR */
+  aside {
+    width: 230px;
+    flex-shrink: 0;
+    background: var(--mid);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+  }
+  .phase-btn {
+    width: 100%;
+    padding: 16px 24px;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-left: 4px solid transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .phase-btn:hover { background: rgba(42,33,24,0.05); }
+  .phase-btn.active {
+    background: var(--dark);
+    color: var(--bg);
+  }
+  .phase-btn .btn-num {
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.6;
+    margin-bottom: 4px;
+  }
+  .phase-btn .btn-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .phase-btn .btn-dur {
+    font-size: 11px;
+    margin-top: 3px;
+    opacity: 0.55;
+  }
+
+  /* MAIN */
+  main {
+    flex: 1;
+    padding: 44px 48px;
+    max-width: 860px;
+  }
+
+  /* PHASE HEADER */
+  .phase-header {
+    display: flex;
+    gap: 22px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .phase-num-box {
+    width: 58px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-family: 'Playfair Display', serif;
+    flex-shrink: 0;
+    color: var(--dark);
+  }
+  .phase-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+  .phase-meta {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .phase-dur {
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+  }
+  .phase-cost {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 2px;
+  }
+  .cost-free { background: #E8F0E8; color: #4A6A4A; }
+  .cost-paid { background: #F0EAE0; color: #7A5A3A; }
+
+  .phase-goal {
+    border-left: 3px solid;
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text);
+    font-style: italic;
+    background: var(--mid);
+    margin-bottom: 32px;
+    font-family: 'Playfair Display', serif;
+  }
+
+  /* RESOURCES */
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .resources { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+  .resource-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+  }
+  .resource-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+  .resource-name {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .resource-source {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .resource-time {
+    font-size: 11px;
+    color: #6B5B47;
+    background: var(--mid);
+    padding: 4px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border-radius: 2px;
+  }
+  .resource-note {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.65;
+  }
+
+  /* HABITS */
+  .habits-toggle {
+    width: 100%;
+    background: none;
+    border: 1px solid var(--border);
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #6B5B47;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .habits-toggle:hover { background: var(--mid); }
+  .habits-body {
+    border: 1px solid var(--border);
+    border-top: none;
+    padding: 16px 20px;
+    background: var(--card);
+    display: none;
+  }
+  .habits-body.open { display: block; }
+  .habit-item {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .habit-item:last-child { margin-bottom: 0; }
+  .habit-dot { font-size: 20px; line-height: 1.2; flex-shrink: 0; }
+
+  /* NAV BUTTONS */
+  .phase-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .nav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    padding: 10px 26px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--dark);
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover:not(:disabled) { background: var(--mid); }
+  .nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .nav-btn.primary {
+    background: var(--dark);
+    color: var(--bg);
+    border-color: var(--dark);
+  }
+  .nav-btn.primary:hover:not(:disabled) { background: #3D3020; }
+
+  /* FOOTER */
+  footer {
+    background: var(--dark);
+    color: var(--bg);
+    padding: 52px 48px;
+  }
+  .footer-label {
+    font-size: 10px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--accent-01);
+    margin-bottom: 28px;
+  }
+  .success-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px;
+    max-width: 920px;
+  }
+  .success-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .success-check { color: var(--accent-01); font-size: 18px; flex-shrink: 0; line-height: 1.4; }
+  .success-text { font-size: 13px; line-height: 1.7; color: #D4C9B5; }
+
+  @media (max-width: 700px) {
+    .body-wrap { flex-direction: column; }
+    aside { width: 100%; border-right: none; border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; padding: 0; }
+    .phase-btn { flex-shrink: 0; min-width: 140px; border-left: none; border-bottom: 4px solid transparent; }
+    .phase-btn.active { border-bottom-color: var(--accent-01); border-left: none; }
+    main { padding: 28px 24px; }
+    header { padding: 36px 24px 32px; }
+    header h1 { font-size: 32px; }
+    footer { padding: 36px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-label">Personal Learning Plan</div>
+  <h1>AI Literacy Roadmap</h1>
+  <p>History graduate → informed AI builder. 20–24 weeks, no coding required to start.</p>
+  <div class="metrics">
+    <div><div class="metric-val">20–24</div><div class="metric-label">Total weeks</div></div>
+    <div><div class="metric-val">4–6 hrs</div><div class="metric-label">Per week</div></div>
+    <div><div class="metric-val">~£80–120</div><div class="metric-label">Total cost</div></div>
+    <div><div class="metric-val">6</div><div class="metric-label">Structured courses</div></div>
+  </div>
+</header>
+
+<div class="body-wrap">
+  <aside id="sidebar"></aside>
+  <main id="main-content"></main>
+</div>
+
+<footer>
+  <div class="footer-label">How you know it's working</div>
+  <div class="success-grid" id="success-grid"></div>
+</footer>
+
+<script>
+const phases = [
+  {
+    number: "01",
+    title: "Build the Mental Model",
+    duration: "Weeks 1–4",
+    cost: "Free",
+    accent: "#C8B8A2",
+    goal: "Understand how AI actually works — not surface level, but genuinely. By the end you can explain what a model is, why it makes mistakes, and what training means.",
+    resources: [
+      { name: "Elements of AI", source: "University of Helsinki · elementsofai.com", time: "~10 hrs", note: "Do every module, don't skip exercises. Gold standard intro — conceptual depth, zero technical barrier." },
+      { name: "AI for Everyone", source: "Andrew Ng / Coursera · coursera.org", time: "~6 hrs", note: "Best explainer in the field. Covers AI project lifecycle, real-world applications, opportunities and risks. Earns a certificate." },
+      { name: "Google AI Essentials", source: "Google · grow.google", time: "~5 hrs", note: "Prompt craft, responsible use, practical daily AI skills. Good supplement to Ng." },
+    ],
+    habits: [
+      "Use Claude or ChatGPT daily for research and writing — build intuition through volume",
+      "Subscribe to The Batch newsletter from day one (deeplearning.ai/the-batch)",
+    ],
+  },
+  {
+    number: "02",
+    title: "Understand Models Deeply",
+    duration: "Weeks 5–8",
+    cost: "Free",
+    accent: "#A8B8A2",
+    goal: "Go beyond user-level understanding. Know how transformers work, what tokens are, why context windows matter, and how prompting actually changes outputs. This is what separates informed builders from casual users.",
+    resources: [
+      { name: "Intro to Large Language Models", source: "Andrej Karpathy / YouTube", time: "1 hr (watch twice)", note: "The single best video on how LLMs work. Covers tokens, context windows, temperature, hallucination, training — no maths required. Non-negotiable." },
+      { name: "Anthropic Model Cards & Documentation", source: "Anthropic · anthropic.com/research", time: "~3 hrs", note: "Read how Claude is actually designed and constrained. Gives genuine insight into frontier model architecture and safety thinking." },
+      { name: "Python Literacy — read-only goal", source: "Codecademy · codecademy.com", time: "~10 hrs", note: "Not to write code — to read it. Enough to follow what Claude Code is doing, catch errors, and understand its reasoning. This is the unlock for Phase 4." },
+    ],
+    habits: [
+      "Experiment with prompting: same task, different phrasing — notice what changes",
+      "Start reading Anthropic's blog and AI safety posts weekly",
+    ],
+  },
+  {
+    number: "03",
+    title: "Get Fluent with Tools",
+    duration: "Weeks 9–14",
+    cost: "Free – £20/mo",
+    accent: "#A2ADB8",
+    goal: "Move from knowing about AI to having genuine fluency across the major tools. Develop the instinct to immediately see where AI can touch a problem.",
+    resources: [
+      { name: "Claude Pro", source: "Anthropic · claude.ai", time: "Daily use", note: "Primary tool. Use for research, writing, analysis, document work, brainstorming. Go deep on one tool before spreading wide." },
+      { name: "Perplexity", source: "Perplexity AI · perplexity.ai", time: "Daily use", note: "AI-native research. Replaces a lot of Google usage. Good for staying current on fast-moving topics." },
+      { name: "Notion AI", source: "Notion · notion.so", time: "~3 hrs setup", note: "AI-integrated knowledge management. Build a second brain that has AI baked in from the start." },
+      { name: "v0 by Vercel", source: "Vercel · v0.dev", time: "Experiment freely", note: "Generate UI components and simple web pages from text prompts. No code required. Good for seeing what AI-assisted building looks like." },
+    ],
+    habits: [
+      "Replace Google with Perplexity for most research",
+      "Document what works — build your own prompt library in Notion",
+    ],
+  },
+  {
+    number: "04",
+    title: "Start Building with Claude Code",
+    duration: "Weeks 15–20",
+    cost: "Claude Pro (~£20/mo)",
+    accent: "#B8A2A8",
+    goal: "Go from user to builder. Use Claude Code to ship actual things — automations, tools, scripts, mini-apps. The Python literacy from Phase 2 pays off here.",
+    resources: [
+      { name: "Claude Code", source: "Anthropic · claude.ai/code", time: "Ongoing", note: "Start with small, low-stakes tasks. Watch it work before directing it. Give it a problem you actually have — a data organiser, a research tool, a simple script." },
+      { name: "Zapier or Make", source: "Zapier / Make · zapier.com · make.com", time: "~5 hrs to first automation", note: "No-code workflow automation. Connect AI tools to other services. Build something that solves a real problem — an automated digest, a document pipeline." },
+      { name: "Cursor IDE", source: "Cursor · cursor.sh", time: "~3 hrs setup", note: "AI-native code editor. Even with minimal coding knowledge, Cursor + Claude Code together make small projects very achievable." },
+    ],
+    habits: [
+      "Build one thing per week, however small",
+      "Read the code Claude Code writes — don't just accept outputs blindly",
+      "Start a log of what you've built — accountability and portfolio",
+    ],
+  },
+  {
+    number: "05",
+    title: "Stay Current — Permanently",
+    duration: "Week 21 onwards",
+    cost: "Free",
+    accent: "#B8B8A2",
+    goal: "The field moves fast enough that any static curriculum is partially outdated within months. The ongoing habit matters more than any course ever will.",
+    resources: [
+      { name: "The Batch", source: "Andrew Ng / deeplearning.ai · deeplearning.ai/the-batch", time: "20 min/week", note: "Best weekly newsletter. Curated, intelligent, non-hype. Subscribe on day one, not week 21." },
+      { name: "Import AI", source: "Jack Clark / Substack · importai.substack.com", time: "20 min/week", note: "More technical, covers research papers accessibly. Former Anthropic. Good for understanding where the frontier is actually moving." },
+      { name: "Lex Fridman Podcast", source: "Lex Fridman · lexfridman.com/podcast", time: "Selective", note: "Long-form conversations with frontier researchers. Pick guests strategically: Karpathy, Altman, Sutskever, Amodei. Don't listen to everything." },
+    ],
+    habits: [
+      "20 minutes of reading every Monday before anything else",
+      "Revisit your understanding of one AI concept per month — it compounds",
+      "Talk about AI with non-technical people — teaching is the best test of understanding",
+    ],
+  },
+];
+
+const successMetrics = [
+  "You can hold an informed conversation with technical AI people without bluffing",
+  "You look at any workflow problem and immediately see where AI touches it",
+  "You've shipped at least 3 things using AI tools, however small",
+  "You understand why a model makes a specific mistake, not just that it made one",
+  "You're reading the field weekly and your mental model is self-updating",
+];
+
+let currentPhase = 0;
+let habitsOpen = false;
+
+function renderSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.innerHTML = phases.map((p, i) => `
+    <button class="phase-btn ${i === currentPhase ? 'active' : ''}"
+      onclick="setPhase(${i})"
+      style="${i === currentPhase ? `border-left-color: ${p.accent}` : ''}">
+      <div class="btn-num">Phase ${p.number}</div>
+      <div class="btn-title">${p.title}</div>
+      <div class="btn-dur">${p.duration}</div>
+    </button>
+  `).join('');
+}
+
+function renderMain() {
+  const p = phases[currentPhase];
+  const main = document.getElementById('main-content');
+  const costClass = p.cost === 'Free' ? 'cost-free' : 'cost-paid';
+
+  main.innerHTML = `
+    <div class="phase-header">
+      <div class="phase-num-box" style="background: ${p.accent}">${p.number}</div>
+      <div>
+        <div class="phase-title">${p.title}</div>
+        <div class="phase-meta">
+          <span class="phase-dur">${p.duration}</span>
+          <span class="phase-cost ${costClass}">${p.cost}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-goal" style="border-left-color: ${p.accent}">
+      ${p.goal}
+    </div>
+
+    <div class="section-label">Resources</div>
+    <div class="resources">
+      ${p.resources.map(r => `
+        <div class="resource-card">
+          <div class="resource-top">
+            <div>
+              <div class="resource-name">${r.name}</div>
+              <div class="resource-source">${r.source}</div>
+            </div>
+            <div class="resource-time">${r.time}</div>
+          </div>
+          <div class="resource-note">${r.note}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <button class="habits-toggle" onclick="toggleHabits()">
+      <span>Daily / Weekly Habits</span>
+      <span id="habits-icon">+</span>
+    </button>
+    <div class="habits-body ${habitsOpen ? 'open' : ''}" id="habits-body">
+      ${p.habits.map(h => `
+        <div class="habit-item">
+          <span class="habit-dot" style="color: ${p.accent}">·</span>
+          <span>${h}</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="phase-nav">
+      <button class="nav-btn" onclick="setPhase(${currentPhase - 1})" ${currentPhase === 0 ? 'disabled' : ''}>← Previous</button>
+      <button class="nav-btn primary" onclick="setPhase(${currentPhase + 1})" ${currentPhase === phases.length - 1 ? 'disabled' : ''}>Next Phase →</button>
+    </div>
+  `;
+}
+
+function renderFooter() {
+  document.getElementById('success-grid').innerHTML = successMetrics.map(m => `
+    <div class="success-item">
+      <span class="success-check">✓</span>
+      <span class="success-text">${m}</span>
+    </div>
+  `).join('');
+}
+
+function setPhase(i) {
+  if (i < 0 || i >= phases.length) return;
+  currentPhase = i;
+  habitsOpen = false;
+  renderSidebar();
+  renderMain();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleHabits() {
+  habitsOpen = !habitsOpen;
+  const body = document.getElementById('habits-body');
+  const icon = document.getElementById('habits-icon');
+  body.classList.toggle('open', habitsOpen);
+  icon.textContent = habitsOpen ? '−' : '+';
+}
+
+renderSidebar();
+renderMain();
+renderFooter();
+</script>
+</body>
+</html>

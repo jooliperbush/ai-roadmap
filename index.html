@@ -342,6 +342,50 @@
     footer { padding: 36px 24px; }
   }
 </style>
+<style id="sd-gate-style">html{background:#0b1418!important}body{visibility:hidden!important}#sd-gate,#sd-gate *{visibility:visible!important}</style>
+<script>
+(function(){
+  var SS_KEY="sd_unlocked_v1";
+  var HASH="663c85e0a5848f981b51d1c833b833c2a95ad572c4407ee0b8e5128efb0fc538";
+  var styleEl=document.getElementById("sd-gate-style");
+  try{ if(sessionStorage.getItem(SS_KEY)==="1"){ if(styleEl&&styleEl.parentNode){ styleEl.parentNode.removeChild(styleEl); } return; } }catch(e){}
+  function hex(buf){ var a=new Uint8Array(buf),s=""; for(var i=0;i<a.length;i++){ s+=a[i].toString(16).padStart(2,"0"); } return s; }
+  function sha256(str){ return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)).then(hex); }
+  function reveal(){
+    if(styleEl&&styleEl.parentNode){ styleEl.parentNode.removeChild(styleEl); }
+    var g=document.getElementById("sd-gate"); if(g&&g.parentNode){ g.parentNode.removeChild(g); }
+    if(document.body){ document.body.style.visibility=""; }
+  }
+  function buildGate(){
+    var g=document.createElement("div");
+    g.id="sd-gate";
+    g.setAttribute("style","position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;background:#0b1418;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif");
+    g.innerHTML='<div style="width:min(360px,86vw)">'
+      +'<div style="text-align:center;color:#C9A24C;font-size:13px;letter-spacing:.14em;font-weight:700;margin-bottom:6px">THE SHOE DOCTOR DXB</div>'
+      +'<div style="text-align:center;color:#8aa0ab;font-size:13px;margin-bottom:22px">Private — enter password to continue</div>'
+      +'<input id="sd-pass" type="password" placeholder="Password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%;box-sizing:border-box;background:#1c282e;border:1px solid #2a3942;border-radius:10px;padding:14px;color:#e9edef;font-size:16px;text-align:center;outline:none">'
+      +'<button id="sd-go" type="button" style="margin-top:12px;width:100%;background:#C9A24C;border:none;border-radius:10px;padding:14px;font-weight:700;font-size:15px;color:#06090c;cursor:pointer">Unlock</button>'
+      +'<div id="sd-err" style="height:18px;margin-top:12px;text-align:center;color:#e06b6b;font-size:13px"></div>'
+      +'</div>';
+    document.body.appendChild(g);
+    var inp=document.getElementById("sd-pass");
+    var btn=document.getElementById("sd-go");
+    var err=document.getElementById("sd-err");
+    function attempt(){
+      if(!inp.value){ return; }
+      sha256(inp.value).then(function(h){
+        if(h===HASH){ try{ sessionStorage.setItem(SS_KEY,"1"); }catch(e){} reveal(); }
+        else { err.textContent="Incorrect password"; inp.value=""; inp.focus(); }
+      });
+    }
+    btn.addEventListener("click",attempt);
+    inp.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); attempt(); } });
+    setTimeout(function(){ inp.focus(); },60);
+  }
+  if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded",buildGate); }
+  else { buildGate(); }
+})();
+</script>
 </head>
 <body>
 

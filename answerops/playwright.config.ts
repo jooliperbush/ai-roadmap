@@ -1,10 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
 
 /**
  * Real browser, real server, fresh database per run. Every user flow in the spec is driven
  * through the UI rather than through the API, because a flow that only works when a test
  * calls the service layer is not a flow a customer has.
  */
+
+// The build container ships a pinned Chromium at a fixed path. Anywhere else — a developer
+// machine, a different image — fall back to whichever browser Playwright installed itself,
+// rather than failing every flow on a path that does not exist.
+const PINNED_CHROMIUM = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const launchOptions = existsSync(PINNED_CHROMIUM) ? { executablePath: PINNED_CHROMIUM } : {};
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
@@ -17,7 +25,7 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4399',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    launchOptions: { executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' },
+    launchOptions,
     ...devices['Desktop Chrome'],
   },
   webServer: {

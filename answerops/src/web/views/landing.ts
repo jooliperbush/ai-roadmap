@@ -7,6 +7,8 @@
  * excluded from any customer-facing claim), and the worked example is labelled as one.
  * The numbers that do appear are the sampling constants and the prices, both of which
  * are verifiable on the methodology page.
+ *
+ * Second rule: plain words. If a sentence needs two readings, it is wrong.
  */
 import { html, raw, Raw } from '../html.js';
 
@@ -22,78 +24,78 @@ function measure(point: string, ciLow: string, ciHigh: string, n: number, tone: 
 const LOOP = [
   {
     n: '01',
-    title: 'Record what is true',
-    body: 'Every fact carries an effective date, an expiry, a source and an approver. Facts are true over an interval, not forever.',
+    title: 'Write down what is true',
+    body: 'Each fact gets a source, an owner, a start date and an expiry. Facts are true for a while, not forever.',
     where: 'Truth registry',
   },
   {
     n: '02',
     title: 'Ask what buyers ask',
-    body: 'Real question clusters, sampled repeatedly across four providers, with the exact surface stored: model, version, grounding, geo, personalisation.',
+    body: 'Real questions, asked again and again across four assistants. We save the exact setup: model, version, grounding, country.',
     where: 'Observatory',
   },
   {
     n: '03',
-    title: 'Verify claim by claim',
-    body: 'Each claim in each answer is adjudicated against the registry, and each cited source is checked for whether it actually supports the claim.',
+    title: 'Check every claim',
+    body: 'Each statement in the answer is checked against your facts, and each citation is checked for whether it actually backs the claim.',
     where: 'Answer desk',
   },
   {
     n: '04',
-    title: 'Correct the record',
-    body: 'A closed catalogue of interventions, each carrying its evidence and its stated assumptions. Publish a dated correction, fix the doc, add the comparison page.',
+    title: 'Fix the record',
+    body: 'A fixed list of moves: publish a dated correction, fix the doc, add the comparison page. Each carries its evidence.',
     where: 'Actions',
   },
   {
     n: '05',
     title: 'Prove it moved',
-    body: 'Re-sample against a matched baseline, report difference-in-differences with a p-value, and record what could not be ruled out.',
+    body: 'Ask again, compare against an untouched baseline, and report the difference with a p-value and what we still cannot rule out.',
     where: 'Experiments',
   },
 ];
 
 const REFUSALS = [
   {
-    title: 'One blended score you can screenshot',
-    why: 'A branded prompt nearly guarantees a mention. An unaided one does not. Averaging them makes a number that flatters you and tells you nothing, so metrics stay keyed by intent family.',
+    title: 'One score you can screenshot',
+    why: 'Ask an assistant about you by name and it will almost always mention you. Ask it to recommend a vendor and it might not. Averaging those two makes a flattering number that means nothing, so we keep them apart.',
     proof: 'assertNoBlending() throws · <b>tests/unit/intent.test.ts</b>',
   },
   {
-    title: 'A percentage without its sample size',
-    why: 'Every rate ships as a point estimate, a 95% Wilson interval and an n. Below the five-run floor the number is suppressed and labelled insufficient data, never rounded into a figure.',
+    title: 'A percentage with no sample size',
+    why: 'Every rate ships with its error bar and how many runs it came from. Under five runs you get "insufficient data" instead of a number.',
     proof: 'domain/stats.ts · <b>tests/unit/stats.test.ts</b>',
   },
   {
     title: 'An alert because a number wobbled',
-    why: 'A change is only reported after a two-proportion test at p < 0.05, a minimum effect of ten points, and a Benjamini-Hochberg correction across everything tested that round.',
+    why: 'We only report a change if it clears a significance test, moves at least ten points, and survives a correction for everything else tested that round.',
     proof: 'two-proportion z-test, BH at q=0.1 · <b>services/dashboard.ts</b>',
   },
   {
-    title: 'An invented impact percentage',
-    why: 'A recommendation gets an expected range only when this workspace already holds comparable confirmed experiments. Otherwise the range is null and the fix ships as an experiment, not a prediction.',
+    title: 'A made-up impact estimate',
+    why: 'A fix gets a predicted range only if your workspace already holds comparable experiments. Otherwise it ships as an experiment, not a promise.',
     proof: 'deriveExpectedRange() · <b>tests/unit/priority.test.ts</b>',
   },
   {
-    title: 'Reviews, mentions and posts we manufacture',
-    why: 'The intervention catalogue is a closed enum. There is no connector for third-party posting or review generation, and the only review action asks genuine customers.',
+    title: 'Reviews and posts we manufacture',
+    why: 'There is no connector for posting anywhere and none for generating reviews. The only review action asks your real customers.',
     proof: 'ACTION_TYPES closed enum · <b>tests/unit/product-copy.test.ts</b>',
   },
   {
     title: 'A promise to make the models obey',
-    why: 'Nobody outside a lab decides what a model says. We measure it, correct the record it draws on, and test whether the answers moved. A lint fails the build if this page ever claims otherwise.',
+    why: 'Nobody outside a lab decides what a model says. We measure it, fix what it reads, and test whether the answers moved. A lint fails the build if this page ever says otherwise.',
     proof: 'banned-claims lint over src/ · <b>tests/unit/product-copy.test.ts</b>',
   },
 ];
 
 const SPEC_ROWS: Array<[string, string]> = [
-  ['Minimum samples', '5 runs per cluster per window before any rate is displayed'],
-  ['Maximum samples', '20 runs, allocated by demand × value × volatility × defect risk'],
-  ['Interval', '95% Wilson score interval, correct at k=0 and k=n'],
-  ['Change detection', 'two-proportion z-test, p < 0.05, minimum effect 10 points'],
+  ['Fewest runs', '5 per question cluster per window before any rate is shown'],
+  ['Most runs', '20, spent where demand, value, volatility and defect risk are highest'],
+  ['Error bar', '95% Wilson score interval, still correct at 0 hits and at all hits'],
+  ['Change detection', 'two-proportion z-test, p < 0.05, at least a 10-point move'],
   ['Multiple testing', 'Benjamini-Hochberg at q = 0.1'],
-  ['Below the floor', 'suppressed and labelled "insufficient data"'],
-  ['Surface recorded', 'provider, model, version, access mode, grounding, search mode, geo, language, personalisation, system config hash, temperature, seed'],
-  ['Providers', 'OpenAI, Anthropic, Google, Perplexity'],
+  ['Under the floor', 'no number, just "insufficient data"'],
+  ['Saved with each run', 'provider, model, version, access mode, grounding, search mode, geo, language, personalisation, system config hash, temperature, seed'],
+  ['Assistants covered', 'OpenAI, Anthropic, Google, Perplexity'],
 ];
 
 const PLANS = [
@@ -101,7 +103,7 @@ const PLANS = [
     name: 'Answer Risk Audit',
     price: 'Free',
     unit: 'one time',
-    body: 'We seed your truth registry, sample your highest-intent questions, and hand back every defect we can evidence. You keep the report either way.',
+    body: 'We load your facts, ask your highest-intent questions, and hand back every wrong answer we can evidence. The report is yours either way.',
     cta: 'Start the audit',
     href: '#audit',
     lead: true,
@@ -110,7 +112,7 @@ const PLANS = [
     name: 'Monitor',
     price: '$750',
     unit: '/ month',
-    body: '50 intent clusters across four surfaces, weekly and adaptive sampling, alerting that survives a significance test.',
+    body: '50 question clusters across four assistants, sampled weekly, with alerts that have to clear a significance test.',
     cta: 'Talk it through',
     href: '#audit',
     lead: false,
@@ -119,7 +121,7 @@ const PLANS = [
     name: 'Operate',
     price: '$2,000',
     unit: '/ month',
-    body: '100 clusters, daily sampling, the full truth registry, the action catalogue and the experiment ledger.',
+    body: '100 clusters, sampled daily, plus the full fact registry, the action list and the experiment ledger.',
     cta: 'Talk it through',
     href: '#audit',
     lead: false,
@@ -128,7 +130,7 @@ const PLANS = [
     name: 'Enterprise',
     price: '$5,000+',
     unit: '/ month',
-    body: 'Multi-brand and agency workspaces, CRM handoff, governance and approval trails, full export.',
+    body: 'Multiple brands or clients in one place, CRM handoff, approval trails and full export.',
     cta: 'Talk it through',
     href: '#audit',
     lead: false,
@@ -145,10 +147,10 @@ export function landingView(): Raw {
     <span class="word">AnswerOps</span>
   </a>
   <nav class="lp-nav-links" aria-label="Sections">
-    <a href="#anatomy">The defect</a>
-    <a href="#loop">The loop</a>
+    <a href="#anatomy">The problem</a>
+    <a href="#loop">How it works</a>
     <a href="#refusals">What we refuse</a>
-    <a href="#design">Measurement</a>
+    <a href="#design">The rules</a>
     <a href="#plans">Pricing</a>
   </nav>
   <a class="btn btn-ghost" href="/login" data-testid="nav-signin">Sign in</a>
@@ -160,21 +162,19 @@ export function landingView(): Raw {
   <section class="shell hero">
     <div class="hero-copy">
       <p class="label">Answer integrity · measured, not controlled</p>
-      <h1>The worst thing an AI says about you is the part that <em>sounds right</em>.</h1>
+      <h1>AI is answering questions about your company. Some of the answers are wrong.</h1>
       <p class="lede">
-        Assistants describe your company to buyers all day. When they get it wrong, the answer is
-        still fluent, still positive, still convincing — and a tool that counts mentions scores it
-        as a win. AnswerOps finds those answers, corrects the record they were drawn from, and
-        proves whether the correction landed.
+        We ask ChatGPT, Claude, Gemini and Perplexity what your buyers ask, catch the answers that
+        are false, help you fix the page they read it from, then ask again to see if it changed.
       </p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="#audit" data-testid="cta-hero">Run a free answer risk audit</a>
-        <a class="btn btn-ghost" href="#refusals">See what we refuse to claim</a>
+        <a class="btn btn-primary" href="#audit" data-testid="cta-hero">Get a free answer audit</a>
+        <a class="btn btn-ghost" href="#refusals">What we refuse to claim</a>
       </div>
       <dl class="hero-proof">
-        <div><dt>Surfaces sampled</dt><dd>OpenAI · Anthropic · Google · Perplexity</dd></div>
-        <div><dt>Every rate ships as</dt><dd>point · 95% CI · n</dd></div>
-        <div><dt>Below 5 runs</dt><dd>suppressed, not rounded</dd></div>
+        <div><dt>We ask</dt><dd>OpenAI · Anthropic · Google · Perplexity</dd></div>
+        <div><dt>Every number shows</dt><dd>the rate, the error bar, the run count</dd></div>
+        <div><dt>Under 5 runs</dt><dd>no number at all</dd></div>
       </dl>
     </div>
 
@@ -182,7 +182,7 @@ export function landingView(): Raw {
     <figure class="exhibit" data-exhibit data-phase="idle" aria-labelledby="exhibit-cap">
       <figcaption class="exhibit-head">
         <span class="stamp is-muted">Exhibit</span>
-        <span class="who" id="exhibit-cap">Worked example · not a customer result</span>
+        <span class="who" id="exhibit-cap">Worked example, not a customer result</span>
         <span class="spacer"></span>
         <button type="button" class="replay" data-replay aria-label="Replay the exhibit">Replay</button>
       </figcaption>
@@ -220,7 +220,7 @@ export function landingView(): Raw {
 
         <div class="stage truth-card" data-shown="false">
           <div class="t-head">
-            <span>Conflicting canonical fact</span>
+            <span>Your approved fact says otherwise</span>
             <span class="stamp is-danger">Contradicted</span>
           </div>
           <p>Vanar Chain transaction fees are approximately $0.0002 per transaction.</p>
@@ -239,12 +239,12 @@ export function landingView(): Raw {
   <!-- --------------------------------------------------------------- anatomy -->
   <section class="shell section" id="anatomy">
     <div class="section-head">
-      <p class="label is-danger">Why a mention count cannot see this</p>
-      <h2>The answer above is positive, well sourced, and wrong.</h2>
+      <p class="label is-danger">Why counting mentions misses this</p>
+      <h2>That answer is friendly, sourced, and wrong.</h2>
       <p class="lede">
-        Sentiment is good. The brand is named. One of the two citations is your own documentation.
-        Every share-of-voice tool on the market records this as a success, because the thing that
-        broke is not the mention — it is the claim inside it.
+        The brand is named. The tone is positive. One of the two citations is your own documentation.
+        Every share-of-voice tool on the market scores that as a win, because what broke is the claim
+        inside the mention, not the mention.
       </p>
     </div>
 
@@ -267,20 +267,20 @@ export function landingView(): Raw {
         <div class="beat">
           <span class="idx">01</span>
           <div>
-            <h3>It is off by 250×</h3>
+            <h3>It is off by 250x</h3>
             <p>
-              A buyer comparing chains on cost reads $0.05, closes the tab, and never appears in any
-              funnel you measure. Nothing in your analytics records the loss.
+              A buyer comparing chains on cost reads $0.05 and closes the tab. They never reach your
+              site, so nothing in your analytics records the loss.
             </p>
           </div>
         </div>
         <div class="beat">
           <span class="idx">02</span>
           <div>
-            <h3>It was true once</h3>
+            <h3>It used to be true</h3>
             <p>
-              Most bad answers are not invented, they are expired. That is why every fact in the
-              registry carries a date range, and why an answer can be correctly sourced and still wrong.
+              Most bad answers are not invented, they are out of date. That is why every fact you give
+              us has a start date and an expiry, and why an answer can be correctly sourced and still wrong.
             </p>
           </div>
         </div>
@@ -289,9 +289,8 @@ export function landingView(): Raw {
           <div>
             <h3>The fix is upstream</h3>
             <p>
-              A spam listicle carried the claim and your own fees page did not rank against it. The
-              intervention is a dated correction and a documentation fix, then a re-sample to see
-              whether the answers actually changed.
+              A junk listicle carried the old price and your own fees page did not outrank it. Publish a
+              dated correction, fix the doc, then ask the assistants again and see if the answer moved.
             </p>
           </div>
         </div>
@@ -302,11 +301,11 @@ export function landingView(): Raw {
   <!-- ------------------------------------------------------------------ loop -->
   <section class="shell section" id="loop">
     <div class="section-head">
-      <p class="label">The operating loop</p>
-      <h2>Not a dashboard. Five steps that close.</h2>
+      <p class="label">How it works</p>
+      <h2>Five steps, not a dashboard.</h2>
       <p class="lede">
-        Visibility is an input here, never the deliverable. The product is the cycle that turns a
-        wrong answer into a corrected record and then into evidence that the correction worked.
+        How often you get mentioned is the input here, never the deliverable. What you buy is the loop
+        that turns a wrong answer into a corrected one, and then into evidence that the fix worked.
       </p>
     </div>
 
@@ -326,10 +325,10 @@ export function landingView(): Raw {
   <section class="shell section" id="refusals">
     <div class="section-head">
       <p class="label is-success">Six refusals, enforced in code</p>
-      <h2>The reason to trust the numbers is that we publish what we will not claim.</h2>
+      <h2>You can trust the numbers because we publish what we will not claim.</h2>
       <p class="lede">
-        Each of these is a failing test, not a paragraph of positioning. If a future release ships a
-        blended score or a bare percentage, the build goes red before a customer sees it.
+        Each of these is a failing test, not a paragraph of positioning. If a release ever ships a
+        blended score or a bare percentage, the build goes red before you see it.
       </p>
     </div>
 
@@ -351,16 +350,15 @@ export function landingView(): Raw {
   <section class="shell section" id="design">
     <div class="section-head">
       <p class="label">Measurement design</p>
-      <h2>Published in full, because it is the product.</h2>
+      <h2>The rules behind every number, published in full.</h2>
       <p class="lede">
-        These constants govern every figure the console will show you. They are on the methodology
-        page inside the product too, where that page doubles as the bug report: if any of it stops
-        being true, that is a defect.
+        These settings decide what the console will and will not show you. The same page ships inside
+        the product, where it doubles as a bug report: if any of it stops being true, that is a defect.
       </p>
     </div>
 
     <table class="spec">
-      <caption class="note">Sampling and inference parameters, current release.</caption>
+      <caption class="note">Sampling and inference settings, current release.</caption>
       <tbody>
         ${SPEC_ROWS.map(
           ([k, v]) => html`<tr>
@@ -372,10 +370,10 @@ export function landingView(): Raw {
     </table>
 
     <p class="note" style="margin-top: 24px; max-width: 72ch;">
-      Coverage at this depth costs real money in inference: fifty clusters across four providers,
-      sampled repeatedly for thirty days, runs roughly $400–$1,000 a month in model and grounded-search
-      spend before anything else. That is why serious monitoring is not sold at $49 — at $49 nobody
-      can afford to sample enough to know whether the answer they gave you is right.
+      Asking this many questions this often costs real money. Fifty clusters across four assistants for
+      a month runs roughly $400 to $1,000 in model and search spend before anything else. That is why
+      this is not a $49 tool: at $49 nobody can ask enough times to know whether the answer they gave
+      you is right.
     </p>
   </section>
 
@@ -383,7 +381,7 @@ export function landingView(): Raw {
   <section class="shell section" id="plans">
     <div class="section-head">
       <p class="label">Pricing</p>
-      <h2>Priced on monitored intent coverage, not on raw prompt count.</h2>
+      <h2>Priced on how much buyer intent you monitor.</h2>
     </div>
 
     <div class="plans">
@@ -402,23 +400,22 @@ export function landingView(): Raw {
   <section class="shell cta" id="audit">
     <div>
       <p class="label">Start with the free audit</p>
-      <h2>Find out what the models are telling your buyers this week.</h2>
+      <h2>See what the assistants are telling your buyers this week.</h2>
       <p class="lede">
-        The audit is the whole product run once, by hand, on your domain. It is free because the
-        finding is usually enough — most teams have never seen a transcript of what an assistant
-        actually says about them under an unaided question.
+        The audit is the whole product, run once, by hand, on your domain. It is free because the
+        transcript is usually enough on its own. Most teams have never read one.
       </p>
       <ul>
-        <li>We seed a truth registry from your documentation and you approve every fact before anything is sampled.</li>
-        <li>We sample your highest-intent question clusters across all four providers.</li>
-        <li>You get every defect we can evidence, with the transcripts, the surfaces and the citations.</li>
-        <li>If we find nothing worth fixing, we say so, and you owe us nothing.</li>
+        <li>We load your facts from your documentation, and you approve each one before we ask anything.</li>
+        <li>We ask your highest-intent questions across all four assistants.</li>
+        <li>You get every wrong answer we can evidence, with the transcripts, the setups and the citations.</li>
+        <li>If we find nothing worth fixing, we say so and you owe us nothing.</li>
       </ul>
     </div>
 
     <form class="audit-form" data-audit-form novalidate data-testid="audit-form">
-      <h3>Request an answer risk audit</h3>
-      <p class="note">Two fields. We reply with a scheduled window, not a sales sequence.</p>
+      <h3>Request an answer audit</h3>
+      <p class="note">Two fields. You get a scheduled window back, not a sales sequence.</p>
 
       <div class="field">
         <label for="audit-email">Work email</label>
@@ -455,8 +452,8 @@ export function landingView(): Raw {
       <div class="outcome" data-outcome role="status" aria-live="polite"></div>
 
       <p class="fineprint">
-        We store the request so we can run the audit and so you can ask us to delete it. Nothing is
-        sampled, and no email is sent to anyone else, until you approve the facts we seed.
+        We keep the request so we can run the audit and so you can ask us to delete it. We ask nothing
+        and email nobody else until you approve the facts we load.
       </p>
     </form>
   </section>
@@ -472,11 +469,10 @@ export function landingView(): Raw {
       <a href="#refusals">What we refuse to claim</a>
     </div>
     <p class="creed">
-      Measured, not controlled. Nobody controls what an external model says — we measure it, correct
-      the record, and prove whether it moved. Rates carry a 95% Wilson interval and a sample size, or
-      they are not shown. The exhibit on this page is a worked example built from the reference
-      workspace, which samples a deterministic stand-in upstream; simulated runs are labelled as such
-      everywhere in the product and are excluded from any customer-facing claim.
+      Measured, not controlled. Nobody decides what an outside model says, so we measure it, fix the
+      record it reads, and test whether it moved. Rates carry a 95% Wilson interval and a sample size
+      or they are not shown. The exhibit above is a worked example from our reference workspace, which
+      asks a stand-in model, not a real one.
     </p>
   </div>
 </footer>`;

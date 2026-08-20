@@ -13,7 +13,7 @@ describe('authentication', () => {
   it('serves the public page at the root and no workspace data with it', async () => {
     const res = await h.app.inject({ method: 'GET', url: '/' });
     expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('Run a free answer risk audit');
+    expect(res.body).toContain('Get a free answer audit');
     // The root is marketing when signed out. It must not leak the console or its numbers.
     expect(res.body).not.toContain('Answer desk —');
     expect(res.body).not.toContain('data-testid="whoami"');

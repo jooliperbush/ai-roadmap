@@ -10,10 +10,21 @@ beforeAll(async () => {
 });
 
 describe('authentication', () => {
-  it('redirects an anonymous visitor to the sign-in page', async () => {
+  it('serves the public page at the root and no workspace data with it', async () => {
     const res = await h.app.inject({ method: 'GET', url: '/' });
-    expect(res.statusCode).toBe(302);
-    expect(res.headers.location).toBe('/login');
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('Run a free answer risk audit');
+    // The root is marketing when signed out. It must not leak the console or its numbers.
+    expect(res.body).not.toContain('Answer desk —');
+    expect(res.body).not.toContain('data-testid="whoami"');
+  });
+
+  it('still redirects an anonymous visitor away from every route that holds data', async () => {
+    for (const url of ['/truth', '/observatory', '/actions', '/experiments', '/audit']) {
+      const res = await h.app.inject({ method: 'GET', url });
+      expect(res.statusCode, url).toBe(302);
+      expect(res.headers.location, url).toBe('/login');
+    }
   });
 
   it('rejects a wrong password without confirming whether the account exists', async () => {
@@ -37,13 +48,43 @@ describe('authentication', () => {
   it('invalidates the session server-side on sign out', async () => {
     const cookie = await login(h.app, DEMO_EMAIL, DEMO_PASSWORD);
     await h.app.inject({ method: 'POST', url: '/logout', headers: { cookie } });
-    const after = await get(h.app, '/', cookie);
+    const after = await get(h.app, '/truth', cookie);
     expect(after.statusCode).toBe(302);
   });
 
   it('rejects a forged session id', async () => {
-    const res = await get(h.app, '/', 'aops=deadbeef');
+    const res = await get(h.app, '/truth', 'aops=deadbeef');
     expect(res.statusCode).toBe(302);
+  });
+});
+
+describe('the public page', () => {
+  it('records an audit request and normalises the domain', async () => {
+    const res = await postJson(h.app, '/audit-request', '', { email: 'Ops@Example.com', domain: 'https://Example.com/pricing' });
+    expect(res.statusCode).toBe(201);
+    expect(JSON.parse(res.body)).toMatchObject({ ok: true, domain: 'example.com' });
+
+    const row = h.db.prepare('SELECT * FROM audit_requests ORDER BY created_at DESC LIMIT 1').get() as Record<string, string>;
+    expect(row.email).toBe('ops@example.com');
+    expect(row.domain).toBe('example.com');
+    expect(row.source).toBe('public_site');
+  });
+
+  it('rejects a malformed request rather than storing it', async () => {
+    const before = (h.db.prepare('SELECT COUNT(*) AS c FROM audit_requests').get() as { c: number }).c;
+    const res = await postJson(h.app, '/audit-request', '', { email: 'not-an-email', domain: 'x' });
+    expect(res.statusCode).toBe(400);
+    const after = (h.db.prepare('SELECT COUNT(*) AS c FROM audit_requests').get() as { c: number }).c;
+    expect(after).toBe(before);
+  });
+
+  it('carries every rate with its interval and its sample size', async () => {
+    const res = await h.app.inject({ method: 'GET', url: '/' });
+    // The one figure on the page is the worked example, and it ships the same way the
+    // console ships numbers: point estimate, 95% interval, n.
+    expect(res.body).toMatch(/95% CI 5%–15%/);
+    expect(res.body).toMatch(/n=116/);
+    expect(res.body).toContain('Worked example');
   });
 });
 

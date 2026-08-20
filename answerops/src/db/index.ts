@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { readFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, createHash, randomUUID } from 'node:crypto';
@@ -21,8 +21,12 @@ export function openDb(path: string): DB {
 }
 
 export function migrate(db: DB): void {
-  const sql = readFileSync(join(here, 'migrations', '001_init.sql'), 'utf8');
-  db.exec(sql);
+  // Every .sql file in migrations/, in filename order. Each is written to be idempotent,
+  // so re-running on an existing database is a no-op.
+  const dir = join(here, 'migrations');
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
+    db.exec(readFileSync(join(dir, file), 'utf8'));
+  }
 }
 
 export function id(prefix: string): string {

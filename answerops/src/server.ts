@@ -1,4 +1,5 @@
 import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { z } from 'zod';
 import cookie from '@fastify/cookie';
 import formbody from '@fastify/formbody';
 import fastifyStatic from '@fastify/static';
@@ -7,11 +8,12 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { DB } from './db/index.js';
-import { verifyPassword, jsonParse } from './db/index.js';
+import { verifyPassword, jsonParse, id as newId, nowIso } from './db/index.js';
 import * as repo from './db/repo/index.js';
-import { page, NavContext, flash } from './web/views/layout.js';
+import { page, marketingPage, NavContext, flash } from './web/views/layout.js';
 import { raw, Raw } from './web/html.js';
 import { loginView } from './web/views/login.js';
+import { landingView } from './web/views/landing.js';
 import { dashboardView, defectDetailView } from './web/views/dashboard.js';
 import {
   clustersView, clusterDetailView, truthView, truthHistoryView, observatoryView, runDetailView,
@@ -35,6 +37,17 @@ import { toCanonical } from './services/observatory.js';
 import type { BeliefProfile } from './providers/types.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+/** Inbound audit request from the public page. Validated server-side; the client-side
+ *  checks are a courtesy, not the boundary. */
+const AuditRequest = z.object({
+  email: z.string().trim().email('Enter a work email we can send the audit to.'),
+  domain: z
+    .string()
+    .trim()
+    .min(4, 'Enter the domain to audit.')
+    .regex(/^(https?:\/\/)?[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i, 'That does not look like a domain.'),
+});
 
 export interface ServerOptions {
   db: DB;
@@ -141,10 +154,39 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     return reply.redirect('/login');
   });
 
+  // --------------------------------------------------------- the public page
+  // The root is the only unauthenticated page that renders content. Every route that
+  // touches workspace data still goes through requireAuth, so anonymous access buys a
+  // marketing document and nothing else.
+  const PUBLIC_DESCRIPTION =
+    'Find the AI answers costing you trust or customers. Correct them. Prove the correction worked. ' +
+    'Every rate ships with its 95% interval and its sample size, or it is not shown.';
+
+  app.post('/audit-request', async (req, reply) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const parsed = AuditRequest.safeParse(body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'invalid request' });
+    }
+    const domain = parsed.data.domain
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '');
+    db.prepare(
+      'INSERT INTO audit_requests (id, email, domain, source, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run(newId('req'), parsed.data.email.trim().toLowerCase(), domain, 'public_site', nowIso());
+    return reply.code(201).send({ ok: true, domain });
+  });
+
   // -------------------------------------------------------------- dashboard
   app.get('/', async (req, reply) => {
-    const a = requireAuth(req, reply);
-    if (!a) return reply;
+    const a = auth(req);
+    if (!a) {
+      return reply
+        .type('text/html; charset=utf-8')
+        .send(marketingPage('AnswerOps — correct what AI tells your buyers', PUBLIC_DESCRIPTION, landingView()));
+    }
     const brand = brandOf(a);
     const requestedWindow = (req.query as Record<string, string | undefined>).window ?? null;
     const data = buildDashboard(db, a.tenantId, brand.id, requestedWindow);

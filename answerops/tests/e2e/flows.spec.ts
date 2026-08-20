@@ -20,8 +20,12 @@ async function signIn(page: Page, email = EMAIL, password = PASSWORD) {
 }
 
 // ---------------------------------------------------------------- flow 1
-test('flow 1 — sign in, reject bad credentials, sign out', async ({ page }) => {
+test('flow 1 — public page, sign in, reject bad credentials, sign out', async ({ page }) => {
+  // Signed out, the root is the public page; the console is one click away and nothing else leaks.
   await page.goto('/');
+  await expect(page.getByTestId('cta-hero')).toBeVisible();
+  await expect(page.getByTestId('whoami')).toHaveCount(0);
+  await page.getByTestId('nav-signin').click();
   await expect(page).toHaveURL(/\/login/);
 
   await page.getByTestId('email').fill(EMAIL);
@@ -34,7 +38,10 @@ test('flow 1 — sign in, reject bad credentials, sign out', async ({ page }) =>
 
   await page.getByTestId('logout').click();
   await expect(page).toHaveURL(/\/login/);
+  // A dead session buys the public page, never the desk.
   await page.goto('/');
+  await expect(page.getByTestId('cta-hero')).toBeVisible();
+  await page.goto('/truth');
   await expect(page).toHaveURL(/\/login/);
 });
 
@@ -291,4 +298,41 @@ test('flow 12 — methodology and audit are published, and tenants are isolated'
   await page.getByTestId('nav-audit').click();
   const auditBody = await page.locator('body').innerText();
   expect(auditBody).not.toContain('ops@vanar.example');
+});
+
+// ---------------------------------------------------------------- flow 13
+test('flow 13 — the public page states the offer, converts, and holds up on a phone', async ({ page }) => {
+  await page.goto('/');
+
+  // The claim, the proof standard, and the way in are all above the fold.
+  await expect(page.locator('h1')).toContainText('sounds right');
+  await expect(page.getByTestId('cta-hero')).toBeVisible();
+  await expect(page.locator('.exhibit .measure')).toContainText('95% CI 5%–15%');
+  await expect(page.locator('.exhibit .measure')).toContainText('n=116');
+
+  // A bad request is caught in the form and never sent.
+  await page.getByTestId('audit-submit').click();
+  await expect(page.locator('[data-err-for="audit-email"]')).toContainText('work email');
+  await expect(page.locator('#audit-email')).toHaveAttribute('aria-invalid', 'true');
+
+  // A good one is accepted, and the domain comes back normalised.
+  await page.locator('#audit-email').fill('ops@example.com');
+  await page.locator('#audit-domain').fill('https://Example.com/pricing');
+  await page.getByTestId('audit-submit').click();
+  await expect(page.locator('[data-outcome]')).toContainText('Request logged');
+  await expect(page.locator('[data-outcome]')).toContainText('example.com');
+
+  // Nothing may scroll the page sideways at any of the three breakpoints.
+  for (const width of [390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    // Evaluated as a string: this project's tsconfig deliberately omits the DOM lib,
+    // so a browser-side arrow function would not typecheck here.
+    const overflow = Number(await page.evaluate('document.documentElement.scrollWidth - window.innerWidth'));
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(1);
+  }
+
+  // Touch targets stay tappable on the narrowest layout.
+  await page.setViewportSize({ width: 390, height: 900 });
+  const box = await page.getByTestId('audit-submit').boundingBox();
+  expect(box!.height).toBeGreaterThanOrEqual(44);
 });

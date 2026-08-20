@@ -67,3 +67,32 @@ export function flash(message: string | null, kind: 'ok' | 'error' = 'ok'): Raw 
   if (!message) return raw('');
   return html`<div class="flash ${kind}" data-testid="flash-${kind}">${message}</div>`;
 }
+
+/**
+ * The public page renders outside the console shell: no app nav, no console stylesheet.
+ * The two design systems stay separate on purpose — the marketing page is a document,
+ * the console is an instrument, and neither should inherit the other's cascade.
+ */
+export function marketingPage(title: string, description: string, body: Raw): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<meta name="description" content="${description}">
+<meta name="color-scheme" content="light">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/landing.css">
+</head>
+<body>
+${body.value}
+<script src="/static/landing.js" defer></script>
+</body>
+</html>`;
+}

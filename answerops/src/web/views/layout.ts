@@ -58,7 +58,7 @@ function renderShell(ctx: NavContext, body: Raw): Raw {
 </nav>
 <main>${body}</main>
 <footer class="footer">
-  <span>Measured, not controlled. Nobody controls what an external model says — we measure it, correct the record, and prove whether it moved.</span>
+  <span>Measured, not controlled. Nobody controls what an external model says. We measure it, correct the record, and prove whether it moved.</span>
   <a href="/methodology">Sampling methodology &amp; limitations</a>
 </footer>`;
 }

@@ -8,7 +8,8 @@
  * The numbers that do appear are the sampling constants and the prices, both of which
  * are verifiable on the methodology page.
  *
- * Second rule: plain words. If a sentence needs two readings, it is wrong.
+ * Second rule: plain words. If a sentence needs two readings, it is wrong. No aphorisms,
+ * no rhetorical inversions, no "X because we Y" trust framing. State the fact and stop.
  */
 import { html, raw, Raw } from '../html.js';
 
@@ -25,19 +26,19 @@ const LOOP = [
   {
     n: '01',
     title: 'Write down what is true',
-    body: 'Each fact gets a source, an owner, a start date and an expiry. Facts are true for a while, not forever.',
+    body: 'Each fact gets a source, an owner, a start date and an expiry.',
     where: 'Truth registry',
   },
   {
     n: '02',
     title: 'Ask what buyers ask',
-    body: 'Real questions, asked again and again across four assistants. We save the exact setup: model, version, grounding, country.',
+    body: 'Real buyer questions, asked repeatedly across four assistants. We save the exact setup: model, version, grounding, country.',
     where: 'Observatory',
   },
   {
     n: '03',
     title: 'Check every claim',
-    body: 'Each statement in the answer is checked against your facts, and each citation is checked for whether it actually backs the claim.',
+    body: 'Every statement is checked against your facts. Every citation is checked for whether it backs the claim.',
     where: 'Answer desk',
   },
   {
@@ -49,7 +50,7 @@ const LOOP = [
   {
     n: '05',
     title: 'Prove it moved',
-    body: 'Ask again, compare against an untouched baseline, and report the difference with a p-value and what we still cannot rule out.',
+    body: 'Ask again, compare against an untouched baseline, report the difference with a p-value and what we cannot rule out.',
     where: 'Experiments',
   },
 ];
@@ -57,32 +58,32 @@ const LOOP = [
 const REFUSALS = [
   {
     title: 'One score you can screenshot',
-    why: 'Ask an assistant about you by name and it will almost always mention you. Ask it to recommend a vendor and it might not. Averaging those two makes a flattering number that means nothing, so we keep them apart.',
+    why: 'Ask about you by name and you get mentioned. Ask for a vendor recommendation and you might not. Averaging the two makes a flattering number that means nothing. We keep them apart.',
     proof: 'assertNoBlending() throws · <b>tests/unit/intent.test.ts</b>',
   },
   {
     title: 'A percentage with no sample size',
-    why: 'Every rate ships with its error bar and how many runs it came from. Under five runs you get "insufficient data" instead of a number.',
+    why: 'Every rate ships with its error bar and its run count. Under five runs you get "insufficient data".',
     proof: 'domain/stats.ts · <b>tests/unit/stats.test.ts</b>',
   },
   {
     title: 'An alert because a number wobbled',
-    why: 'We only report a change if it clears a significance test, moves at least ten points, and survives a correction for everything else tested that round.',
+    why: 'A change is reported only if it clears a significance test, moves at least ten points, and survives a correction for everything else tested that round.',
     proof: 'two-proportion z-test, BH at q=0.1 · <b>services/dashboard.ts</b>',
   },
   {
     title: 'A made-up impact estimate',
-    why: 'A fix gets a predicted range only if your workspace already holds comparable experiments. Otherwise it ships as an experiment, not a promise.',
+    why: 'A fix gets a predicted range only if your workspace already holds comparable experiments. Otherwise it ships as an experiment.',
     proof: 'deriveExpectedRange() · <b>tests/unit/priority.test.ts</b>',
   },
   {
     title: 'Reviews and posts we manufacture',
-    why: 'There is no connector for posting anywhere and none for generating reviews. The only review action asks your real customers.',
+    why: 'There is no connector for posting anywhere, and none for generating reviews. The one review action asks your real customers.',
     proof: 'ACTION_TYPES closed enum · <b>tests/unit/product-copy.test.ts</b>',
   },
   {
     title: 'A promise to make the models obey',
-    why: 'Nobody outside a lab decides what a model says. We measure it, fix what it reads, and test whether the answers moved. A lint fails the build if this page ever says otherwise.',
+    why: 'Nobody outside a lab decides what a model says. We measure it, fix what it reads, and test whether the answers moved. A lint fails the build if this page says otherwise.',
     proof: 'banned-claims lint over src/ · <b>tests/unit/product-copy.test.ts</b>',
   },
 ];
@@ -112,7 +113,7 @@ const PLANS = [
     name: 'Monitor',
     price: '$750',
     unit: '/ month',
-    body: '50 question clusters across four assistants, sampled weekly, with alerts that have to clear a significance test.',
+    body: '50 question clusters across four assistants, sampled weekly. Alerts have to clear a significance test.',
     cta: 'Talk it through',
     href: '#audit',
     lead: false,
@@ -161,12 +162,12 @@ export function landingView(): Raw {
   <!-- ------------------------------------------------------------------ hero -->
   <section class="shell hero">
     <div class="hero-copy">
-      <p class="label">Answer integrity · measured, not controlled</p>
+      <p class="label">Answer integrity</p>
       <h1>AnswerOps is quality control for what AI says about your company.</h1>
       <p class="lede">
-        ChatGPT, Claude, Gemini and Perplexity answer questions about you all day, and some of those
-        answers are wrong. We catch them, help you fix the page they came from, then ask again to
-        check the answer changed.
+        ChatGPT, Claude, Gemini and Perplexity answer buyer questions about you every day. Some of
+        those answers are wrong. We find them, fix the page they came from, then ask again to check
+        the answer changed.
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#audit" data-testid="cta-hero">Get a free answer audit</a>
@@ -241,11 +242,10 @@ export function landingView(): Raw {
   <section class="shell section" id="anatomy">
     <div class="section-head">
       <p class="label is-danger">Why counting mentions misses this</p>
-      <h2>That answer is friendly, sourced, and wrong.</h2>
+      <h2>The answer above is sourced, and wrong.</h2>
       <p class="lede">
-        The brand is named. The tone is positive. One of the two citations is your own documentation.
-        Every share-of-voice tool on the market scores that as a win, because what broke is the claim
-        inside the mention, not the mention.
+        The brand is named, the tone is positive, and one of the two citations is your own docs.
+        Every share-of-voice tool scores that as a win. The price in it is off by 250x.
       </p>
     </div>
 
@@ -280,8 +280,8 @@ export function landingView(): Raw {
           <div>
             <h3>It used to be true</h3>
             <p>
-              Most bad answers are not invented, they are out of date. That is why every fact you give
-              us has a start date and an expiry, and why an answer can be correctly sourced and still wrong.
+              Most bad answers are out of date rather than invented. Every fact you give us carries a
+              start date and an expiry, so an answer can be correctly sourced and still wrong.
             </p>
           </div>
         </div>
@@ -290,8 +290,8 @@ export function landingView(): Raw {
           <div>
             <h3>The fix is upstream</h3>
             <p>
-              A junk listicle carried the old price and your own fees page did not outrank it. Publish a
-              dated correction, fix the doc, then ask the assistants again and see if the answer moved.
+              A junk listicle carried the old price and your fees page did not outrank it. Publish a
+              dated correction, fix the doc, ask again, and see whether the answer moved.
             </p>
           </div>
         </div>
@@ -303,10 +303,10 @@ export function landingView(): Raw {
   <section class="shell section" id="loop">
     <div class="section-head">
       <p class="label">How it works</p>
-      <h2>Five steps, not a dashboard.</h2>
+      <h2>Five steps, run on a schedule.</h2>
       <p class="lede">
-        How often you get mentioned is the input here, never the deliverable. What you buy is the loop
-        that turns a wrong answer into a corrected one, and then into evidence that the fix worked.
+        Mention counts are an input here, never the deliverable. The loop turns a wrong answer into a
+        corrected one, then into evidence that the fix worked.
       </p>
     </div>
 
@@ -326,10 +326,10 @@ export function landingView(): Raw {
   <section class="shell section" id="refusals">
     <div class="section-head">
       <p class="label is-success">Six refusals, enforced in code</p>
-      <h2>You can trust the numbers because we publish what we will not claim.</h2>
+      <h2>Six things this product will not do.</h2>
       <p class="lede">
-        Each of these is a failing test, not a paragraph of positioning. If a release ever ships a
-        blended score or a bare percentage, the build goes red before you see it.
+        Each one is a failing test. If a release ships a blended score or a bare percentage, the build
+        goes red before you see it.
       </p>
     </div>
 
@@ -351,10 +351,10 @@ export function landingView(): Raw {
   <section class="shell section" id="design">
     <div class="section-head">
       <p class="label">Measurement design</p>
-      <h2>The rules behind every number, published in full.</h2>
+      <h2>The rules behind every number.</h2>
       <p class="lede">
-        These settings decide what the console will and will not show you. The same page ships inside
-        the product, where it doubles as a bug report: if any of it stops being true, that is a defect.
+        These settings decide what the console shows you. The same page ships inside the product. If
+        a line on it stops being true, that is a bug.
       </p>
     </div>
 
@@ -371,10 +371,9 @@ export function landingView(): Raw {
     </table>
 
     <p class="note" style="margin-top: 24px; max-width: 72ch;">
-      Asking this many questions this often costs real money. Fifty clusters across four assistants for
-      a month runs roughly $400 to $1,000 in model and search spend before anything else. That is why
-      this is not a $49 tool: at $49 nobody can ask enough times to know whether the answer they gave
-      you is right.
+      Fifty clusters across four assistants for a month costs $400 to $1,000 in model and search spend
+      before anything else. That is why this is not a $49 tool. At $49 nobody can ask often enough to
+      know whether the answer is right.
     </p>
   </section>
 
@@ -382,7 +381,7 @@ export function landingView(): Raw {
   <section class="shell section" id="plans">
     <div class="section-head">
       <p class="label">Pricing</p>
-      <h2>Priced on how much buyer intent you monitor.</h2>
+      <h2>Priced by how many buyer questions we watch.</h2>
     </div>
 
     <div class="plans">
@@ -403,20 +402,20 @@ export function landingView(): Raw {
       <p class="label">Start with the free audit</p>
       <h2>See what the assistants are telling your buyers this week.</h2>
       <p class="lede">
-        The audit is the whole product, run once, by hand, on your domain. It is free because the
-        transcript is usually enough on its own. Most teams have never read one.
+        The audit is the whole product, run once by hand on your domain. Most teams have never read a
+        transcript of what the assistants say about them.
       </p>
       <ul>
-        <li>We load your facts from your documentation, and you approve each one before we ask anything.</li>
+        <li>We load your facts from your docs. You approve each one before we ask anything.</li>
         <li>We ask your highest-intent questions across all four assistants.</li>
-        <li>You get every wrong answer we can evidence, with the transcripts, the setups and the citations.</li>
+        <li>You get every wrong answer we can evidence, with transcripts, setups and citations.</li>
         <li>If we find nothing worth fixing, we say so and you owe us nothing.</li>
       </ul>
     </div>
 
     <form class="audit-form" data-audit-form novalidate data-testid="audit-form">
       <h3>Request an answer audit</h3>
-      <p class="note">Two fields. You get a scheduled window back, not a sales sequence.</p>
+      <p class="note">Two fields. You get a scheduled window back.</p>
 
       <div class="field">
         <label for="audit-email">Work email</label>
@@ -453,8 +452,8 @@ export function landingView(): Raw {
       <div class="outcome" data-outcome role="status" aria-live="polite"></div>
 
       <p class="fineprint">
-        We keep the request so we can run the audit and so you can ask us to delete it. We ask nothing
-        and email nobody else until you approve the facts we load.
+        We keep your request so we can run the audit, and delete it if you ask. We ask nothing and
+        email nobody until you approve the facts we load.
       </p>
     </form>
   </section>
@@ -470,10 +469,9 @@ export function landingView(): Raw {
       <a href="#refusals">What we refuse to claim</a>
     </div>
     <p class="creed">
-      Measured, not controlled. Nobody decides what an outside model says, so we measure it, fix the
-      record it reads, and test whether it moved. Rates carry a 95% Wilson interval and a sample size
-      or they are not shown. The exhibit above is a worked example from our reference workspace, which
-      asks a stand-in model, not a real one.
+      Nobody outside a lab decides what a model says. We measure it, fix the record it reads, and test
+      whether it moved. Rates carry a 95% Wilson interval and a sample size, or they are not shown. The
+      exhibit above is a worked example against a stand-in model.
     </p>
   </div>
 </footer>`;

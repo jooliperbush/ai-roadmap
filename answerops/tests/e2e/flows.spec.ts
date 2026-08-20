@@ -305,7 +305,7 @@ test('flow 13 — the public page states the offer, converts, and holds up on a 
   await page.goto('/');
 
   // The claim, the proof standard, and the way in are all above the fold.
-  await expect(page.locator('h1')).toContainText('Some of the answers are wrong');
+  await expect(page.locator('h1')).toContainText('quality control');
   await expect(page.getByTestId('cta-hero')).toBeVisible();
   await expect(page.locator('.exhibit .measure')).toContainText('95% CI 5%–15%');
   await expect(page.locator('.exhibit .measure')).toContainText('n=116');

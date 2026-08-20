@@ -162,10 +162,11 @@ export function landingView(): Raw {
   <section class="shell hero">
     <div class="hero-copy">
       <p class="label">Answer integrity · measured, not controlled</p>
-      <h1>AI is answering questions about your company. Some of the answers are wrong.</h1>
+      <h1>AnswerOps is quality control for what AI says about your company.</h1>
       <p class="lede">
-        We ask ChatGPT, Claude, Gemini and Perplexity what your buyers ask, catch the answers that
-        are false, help you fix the page they read it from, then ask again to see if it changed.
+        ChatGPT, Claude, Gemini and Perplexity answer questions about you all day, and some of those
+        answers are wrong. We catch them, help you fix the page they came from, then ask again to
+        check the answer changed.
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#audit" data-testid="cta-hero">Get a free answer audit</a>

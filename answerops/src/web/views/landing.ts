@@ -165,9 +165,12 @@ export function landingView(): Raw {
       <p class="label">Answer integrity</p>
       <h1>AnswerOps is quality control for what AI says about your company.</h1>
       <p class="lede">
-        ChatGPT, Claude, Gemini and Perplexity answer buyer questions about you every day. Some of
-        those answers are wrong. We find them, fix the page they came from, then ask again to check
-        the answer changed.
+        Your buyers stopped opening ten links. They ask an assistant, get one answer, and act on it.
+        When that answer is out of date, you lose the deal before anyone reaches your site.
+      </p>
+      <p>
+        We find the wrong answers across ChatGPT, Claude, Gemini and Perplexity, fix the page they came
+        from, then ask again to check the answer changed.
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#audit" data-testid="cta-hero">Get a free answer audit</a>
@@ -184,21 +187,21 @@ export function landingView(): Raw {
     <figure class="exhibit" data-exhibit data-phase="idle" aria-labelledby="exhibit-cap">
       <figcaption class="exhibit-head">
         <span class="stamp is-muted">Exhibit</span>
-        <span class="who" id="exhibit-cap">Worked example, not a customer result</span>
+        <span class="who" id="exhibit-cap">Worked example, not a measurement of Slack</span>
         <span class="spacer"></span>
         <button type="button" class="replay" data-replay aria-label="Replay the exhibit">Replay</button>
       </figcaption>
 
       <div class="exhibit-body">
         <p class="answer" data-typed>
-          Vanar positions itself as a low-cost L1 for high-volume consumer transactions.
-          <span class="claim">Transaction fees are around $0.05 per transaction, which is competitive for
-          consumer applications.</span>
-          Vanar is headquartered in London and supports staking natively.<span class="cursor" aria-hidden="true"></span>
+          Slack's free plan works well for a small team.
+          <span class="claim">It keeps your 10,000 most recent messages, so nothing is lost while you stay
+          under that.</span>
+          Paid plans add unlimited history and Slack Connect.<span class="cursor" aria-hidden="true"></span>
         </p>
 
         <div class="stage meta-row" data-shown="false">
-          <span><b>surface</b> anthropic / claude · api</span>
+          <span><b>surface</b> assistant · api</span>
           <span><b>grounding</b> grounded_search</span>
           <span><b>geo</b> US/en</span>
           <span><b>temp</b> 0.7</span>
@@ -209,11 +212,11 @@ export function landingView(): Raw {
             <caption>Sources the answer cited</caption>
             <tbody>
               <tr>
-                <td>top10cryptolists.example.com/best-layer1-chains-2024</td>
+                <td>top10teamchat.example.com/best-slack-alternatives</td>
                 <td><span class="stamp is-danger">does not support it</span></td>
               </tr>
               <tr>
-                <td>vanarchain.com/docs/fees</td>
+                <td>slack.com/pricing</td>
                 <td><span class="stamp is-cite">supports it</span></td>
               </tr>
             </tbody>
@@ -225,8 +228,8 @@ export function landingView(): Raw {
             <span>Your approved fact says otherwise</span>
             <span class="stamp is-danger">Contradicted</span>
           </div>
-          <p>Vanar Chain transaction fees are approximately $0.0002 per transaction.</p>
-          <p class="t-dates">in force 2025-01-15 → current · sensitivity material · approved by ops@vanar.example</p>
+          <p>The Slack free plan keeps 90 days of message history. The 10,000-message limit ended on 1 September 2022.</p>
+          <p class="t-dates">in force 2022-09-01 → current · sensitivity material · approved by pricing-ops</p>
         </div>
       </div>
 
@@ -244,8 +247,12 @@ export function landingView(): Raw {
       <p class="label is-danger">Why counting mentions misses this</p>
       <h2>The answer above is sourced, and wrong.</h2>
       <p class="lede">
-        The brand is named, the tone is positive, and one of the two citations is your own docs.
-        Every share-of-voice tool scores that as a win. The price in it is off by 250x.
+        The brand is named, the tone is positive, and one of the two citations is Slack's own pricing
+        page. Every share-of-voice tool scores that as a win. The limit it quotes ended in 2022.
+      </p>
+      <p class="note">
+        Check it yourself: ask any assistant what Slack's free plan keeps, then open
+        <b>slack.com/pricing</b>.
       </p>
     </div>
 
@@ -253,14 +260,14 @@ export function landingView(): Raw {
       <div class="anatomy-visual">
         <div class="plate">
           <p>
-            Vanar positions itself as a low-cost L1 for high-volume consumer transactions.
-            <span class="bad">Transaction fees are around $0.05 per transaction.</span>
-            Vanar is headquartered in London and supports staking natively.
+            Slack's free plan works well for a small team.
+            <span class="bad">It keeps your 10,000 most recent messages.</span>
+            Paid plans add unlimited history and Slack Connect.
           </p>
         </div>
         <div class="overlay">
-          <span class="t-label">Approved record · in force 2025-01-15 → current</span>
-          <p>Vanar Chain transaction fees are approximately $0.0002 per transaction.</p>
+          <span class="t-label">Approved record · in force 2022-09-01 → current</span>
+          <p>The Slack free plan keeps 90 days of message history.</p>
         </div>
       </div>
 
@@ -268,10 +275,10 @@ export function landingView(): Raw {
         <div class="beat">
           <span class="idx">01</span>
           <div>
-            <h3>It is off by 250x</h3>
+            <h3>One answer, no second opinion</h3>
             <p>
-              A buyer comparing chains on cost reads $0.05 and closes the tab. They never reach your
-              site, so nothing in your analytics records the loss.
+              Search handed your buyer ten links to compare. An assistant hands them one answer. If they
+              act on the wrong one they never reach your site, so nothing in your analytics records it.
             </p>
           </div>
         </div>
@@ -280,8 +287,9 @@ export function landingView(): Raw {
           <div>
             <h3>It used to be true</h3>
             <p>
-              Most bad answers are out of date rather than invented. Every fact you give us carries a
-              start date and an expiry, so an answer can be correctly sourced and still wrong.
+              Slack really did keep 10,000 messages until September 2022, and thousands of comparison
+              pages still say so. Every fact you give us carries a start date and an expiry, because an
+              answer can be correctly sourced and still wrong.
             </p>
           </div>
         </div>
@@ -290,8 +298,8 @@ export function landingView(): Raw {
           <div>
             <h3>The fix is upstream</h3>
             <p>
-              A junk listicle carried the old price and your fees page did not outrank it. Publish a
-              dated correction, fix the doc, ask again, and see whether the answer moved.
+              A stale comparison page carried the old limit and the pricing page did not outrank it.
+              Publish a dated correction, fix the doc, ask again, and see whether the answer moved.
             </p>
           </div>
         </div>

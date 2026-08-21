@@ -159,7 +159,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   // touches workspace data still goes through requireAuth, so anonymous access buys a
   // marketing document and nothing else.
   const PUBLIC_DESCRIPTION =
-    'AnswerOps finds the wrong answers AI gives about your company, helps you correct the record they '
+    'Miscited finds the wrong answers AI gives about your company, helps you correct the record they '
     + 'came from, and proves the correction worked. ' +
     'Every rate ships with its 95% interval and its sample size, or it is not shown.';
 
@@ -186,7 +186,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     if (!a) {
       return reply
         .type('text/html; charset=utf-8')
-        .send(marketingPage('AnswerOps · quality control for what AI says about your company', PUBLIC_DESCRIPTION, landingView()));
+        .send(marketingPage('Miscited · quality control for what AI says about your company', PUBLIC_DESCRIPTION, landingView()));
     }
     const brand = brandOf(a);
     const requestedWindow = (req.query as Record<string, string | undefined>).window ?? null;

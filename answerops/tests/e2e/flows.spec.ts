@@ -7,7 +7,7 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 const EMAIL = 'ops@vanar.example';
-const PASSWORD = 'answerops-demo';
+const PASSWORD = 'miscited-demo';
 const OTHER_EMAIL = 'rival@othertenant.example';
 const OTHER_PASSWORD = 'other-demo';
 
@@ -305,7 +305,7 @@ test('flow 13 — the public page states the offer, converts, and holds up on a 
   await page.goto('/');
 
   // The claim, the proof standard, and the way in are all above the fold.
-  await expect(page.locator('h1')).toContainText('quality control');
+  await expect(page.locator('h1')).toContainText('Quality control for what AI says');
   await expect(page.getByTestId('cta-hero')).toBeVisible();
   await expect(page.locator('.exhibit .measure')).toContainText('95% CI 5%–15%');
   await expect(page.locator('.exhibit .measure')).toContainText('n=116');

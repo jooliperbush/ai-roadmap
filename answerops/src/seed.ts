@@ -18,7 +18,7 @@ import { resolveRelation, Relation, RelationBasis } from './domain/entities.js';
 import { CANONICAL_CLAIMS, CRAWLER_EVENTS, DEMAND_CSV, ENTITIES, VANAR_AFTER, VANAR_BEFORE } from '../seed/simulation.js';
 
 export const DEMO_EMAIL = 'ops@vanar.example';
-export const DEMO_PASSWORD = 'answerops-demo';
+export const DEMO_PASSWORD = 'miscited-demo';
 export const OTHER_EMAIL = 'rival@othertenant.example';
 export const OTHER_PASSWORD = 'other-demo';
 

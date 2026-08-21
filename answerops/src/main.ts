@@ -4,7 +4,7 @@ import { VANAR_AFTER, VANAR_BEFORE } from '../seed/simulation.js';
 import { ensureSeed } from './seed.js';
 
 const port = Number(process.env.PORT ?? 4300);
-const dbPath = process.env.ANSWEROPS_DB ?? 'data/answerops.sqlite';
+const dbPath = process.env.MISCITED_DB ?? 'data/miscited.sqlite';
 
 const db = openDb(dbPath);
 const seeded = await ensureSeed(db);
@@ -17,4 +17,4 @@ const app = buildServer({
 });
 
 await app.listen({ port, host: '0.0.0.0' });
-console.log(`AnswerOps listening on http://localhost:${port}`);
+console.log(`Miscited listening on http://localhost:${port}`);

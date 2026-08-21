@@ -1,4 +1,4 @@
--- AnswerOps core schema. SQLite dialect; column shapes chosen to port cleanly to Postgres.
+-- Miscited core schema. SQLite dialect; column shapes chosen to port cleanly to Postgres.
 -- Every tenant-scoped table carries tenant_id as the first discriminator.
 
 PRAGMA foreign_keys = ON;

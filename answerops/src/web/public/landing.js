@@ -1,4 +1,4 @@
-/* AnswerOps public page.
+/* Miscited public page.
    Two behaviours only: the exhibit sequencer, and the audit-request form.
    Both degrade to a complete, readable final state when JavaScript or motion is unavailable. */
 (function () {

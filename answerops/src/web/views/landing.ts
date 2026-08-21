@@ -143,9 +143,9 @@ export function landingView(): Raw {
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="lp-nav">
-  <a class="lp-brand" href="/" aria-label="AnswerOps home">
+  <a class="lp-brand" href="/" aria-label="Miscited home">
     <span class="mark" aria-hidden="true">◧</span>
-    <span class="word">AnswerOps</span>
+    <span class="word">Miscited</span>
   </a>
   <nav class="lp-nav-links" aria-label="Sections">
     <a href="#anatomy">The problem</a>
@@ -163,7 +163,7 @@ export function landingView(): Raw {
   <section class="shell hero">
     <div class="hero-copy">
       <p class="label">Answer integrity</p>
-      <h1>AnswerOps is quality control for what AI says about your company.</h1>
+      <h1>Quality control for what AI says about your company.</h1>
       <p class="lede">
         Your buyers stopped opening ten links. They ask an assistant, get one answer, and act on it.
         When that answer is out of date, you lose the deal before anyone reaches your site.
@@ -470,7 +470,7 @@ export function landingView(): Raw {
 <footer class="lp-footer">
   <div class="shell">
     <div class="rows">
-      <span class="lp-brand"><span class="mark" aria-hidden="true">◧</span> <span class="word">AnswerOps</span></span>
+      <span class="lp-brand"><span class="mark" aria-hidden="true">◧</span> <span class="word">Miscited</span></span>
       <span class="spacer"></span>
       <a href="/login">Sign in</a>
       <a href="#design">Measurement design</a>

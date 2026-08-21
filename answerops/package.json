@@ -1,12 +1,12 @@
 {
-  "name": "answerops",
+  "name": "miscited",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=22"
   },
-  "description": "AnswerOps \u2014 find the AI answers costing you trust or customers, correct them, prove the correction worked.",
+  "description": "Miscited: find the AI answers costing you trust or customers, correct them, prove the correction worked.",
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",

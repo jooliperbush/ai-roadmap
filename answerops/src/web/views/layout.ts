@@ -26,7 +26,7 @@ export function page(title: string, ctx: NavContext, body: Raw): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title} · AnswerOps</title>
+<title>${title} · Miscited</title>
 <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
@@ -41,7 +41,7 @@ function renderShell(ctx: NavContext, body: Raw): Raw {
 <header class="topbar">
   <a class="brandmark" href="/">
     <span class="mark">◧</span>
-    <span class="wordmark">AnswerOps</span>
+    <span class="wordmark">Miscited</span>
   </a>
   <div class="promise">Find the AI answers costing you trust or customers. Correct them. Prove the correction worked.</div>
   <div class="whoami" data-testid="whoami">

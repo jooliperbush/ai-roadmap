@@ -1,4 +1,4 @@
-# AnswerOps — Product & Technical Specification
+# Miscited — Product & Technical Specification
 
 **Version:** 1.0
 **Status:** Implemented (this repository is the reference implementation)
@@ -9,7 +9,7 @@
 
 > Find the AI answers costing you trust or customers. Correct them. Prove the correction worked.
 
-AnswerOps is not an AI-visibility dashboard. Visibility is an input, never the product.
+Miscited is not an AI-visibility dashboard. Visibility is an input, never the product.
 The product is an operating loop:
 
 ```
@@ -46,7 +46,7 @@ Canonical truth + buyer demand
 ### 1.3 Why not "Mentions plus automation"
 Mentions-class tools measure *whether you are mentioned*. That is a proxy. The failure mode
 that matters is an answer that is confident, positive, well-formatted, and **wrong** — which
-a sentiment-and-share-of-voice tool scores as a win. AnswerOps' fundamental object is:
+a sentiment-and-share-of-voice tool scores as a win. Miscited's fundamental object is:
 
 ```
 claim x buyer intent x model surface x market x time

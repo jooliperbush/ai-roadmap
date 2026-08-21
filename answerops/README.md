@@ -1,8 +1,8 @@
-# AnswerOps
+# Miscited
 
 **Find the AI answers costing you trust or customers. Correct them. Prove the correction worked.**
 
-AnswerOps is not an AI-visibility dashboard. Visibility is an input; the product is an
+Miscited is not an AI-visibility dashboard. Visibility is an input; the product is an
 operating loop:
 
 ```
@@ -50,7 +50,7 @@ npm start            # http://localhost:4300, seeds a demo workspace on first bo
 ```
 
 Sign in with the credentials printed on the sign-in page
-(`ops@vanar.example` / `answerops-demo`).
+(`ops@vanar.example` / `miscited-demo`).
 
 By default the app samples a **deterministic stand-in upstream** rather than live providers,
 so the whole pipeline is reproducible with no spend. Every such run is flagged `simulated`

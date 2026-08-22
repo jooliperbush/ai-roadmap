@@ -14,6 +14,7 @@ import * as sched from '../../src/db/repo/unattended.js';
 import { createAuditReport, runAudit, getAuditReportByToken, startMonitoring, poweredFor, notTested, inferCompetitors } from '../../src/services/audit.js';
 import { crawlSite, proposeCanonicalClaims, autoDemand, parsePage, inferBrandName, navLinks, isQuestionHeading, thinPages } from '../../src/services/siteReader.js';
 import { auditReportView } from '../../src/web/views/ops.js';
+import { costOf } from '../../src/domain/pricing.js';
 import { StubFetcher } from '../../src/domain/fetcher.js';
 import { TestClock } from '../../src/domain/clock.js';
 import { SimulatedProvider } from '../../src/providers/simulated.js';
@@ -461,5 +462,24 @@ describe('a page that answers 200 with no prose is declared, not counted as read
     const done = await northwindAudit();
     const notes = (JSON.parse(done.not_tested) as string[]).join(' ');
     expect(notes).not.toMatch(/almost no text/i);
+  });
+});
+
+describe('a simulated sample is not given a price', () => {
+  it('records the cost as unknown rather than inventing one', async () => {
+    const done = await northwindAudit();
+    expect(done.simulated_runs).toBe(done.sample_size);
+    expect(done.cost_known).toBe(0);
+  });
+
+  it('shows "partly unpriced" on the report instead of a dollar figure', async () => {
+    const html = renderReport(await northwindAudit());
+    expect(html).toContain('partly unpriced');
+    expect(html).not.toMatch(/audit-cost"[^>]*>\$[0-9]/);
+  });
+
+  it('still prices a round when a real provider reported usage', () => {
+    expect(costOf('gpt-5.1', { inputTokens: 2000, outputTokens: 700, searchCalls: 1 })).toBeCloseTo(0.0195, 4);
+    expect(costOf('gpt-5.1', null)).toBeNull();
   });
 });

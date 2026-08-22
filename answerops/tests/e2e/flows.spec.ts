@@ -319,7 +319,7 @@ test('flow 13 — the public page states the offer, converts, and holds up on a 
   await page.locator('#audit-email').fill('ops@example.com');
   await page.locator('#audit-domain').fill('https://Example.com/pricing');
   await page.getByTestId('audit-submit').click();
-  await expect(page.locator('[data-outcome]')).toContainText('Request logged');
+  await expect(page.locator('[data-outcome]')).toContainText('Running now');
   await expect(page.locator('[data-outcome]')).toContainText('example.com');
 
   // Nothing may scroll the page sideways at any of the three breakpoints.

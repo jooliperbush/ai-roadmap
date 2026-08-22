@@ -29,7 +29,7 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
   },
   webServer: {
-    command: 'rm -f data/e2e.sqlite data/e2e.sqlite-wal data/e2e.sqlite-shm && PORT=4399 MISCITED_DB=data/e2e.sqlite npx tsx src/main.ts',
+    command: 'rm -f data/e2e.sqlite data/e2e.sqlite-wal data/e2e.sqlite-shm && PORT=4399 MISCITED_DB=data/e2e.sqlite MISCITED_NO_SCHEDULER=1 MISCITED_DEMO_FETCH=1 npx tsx src/main.ts',
     url: 'http://127.0.0.1:4399/healthz',
     reuseExistingServer: false,
     timeout: 120_000,

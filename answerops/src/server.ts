@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import type { DB } from './db/index.js';
 import { verifyPassword, jsonParse, id as newId, nowIso } from './db/index.js';
 import * as repo from './db/repo/index.js';
-import { page, marketingPage, NavContext, flash } from './web/views/layout.js';
+import { page, marketingPage, reportPage, NavContext, flash } from './web/views/layout.js';
 import { raw, Raw } from './web/html.js';
 import { loginView } from './web/views/login.js';
 import { landingView } from './web/views/landing.js';
@@ -27,6 +27,28 @@ import { createAction, transitionAction, analyzeExperimentForAction, UnknownActi
 import { ActionState, ALLOWED_TRANSITIONS, IllegalTransitionError } from './domain/actions.js';
 import { MissingEvidenceError } from './domain/actions.js';
 import { measure, formatP, MIN_SAMPLES, MAX_SAMPLES, ALPHA, MIN_EFFECT, BH_Q } from './domain/stats.js';
+import { ROUTE_ROLES, CSRF_EXEMPT, routeKey, allows, type Role } from './domain/roles.js';
+import { RateLimiter, LIMIT_ON_FAILURE } from './domain/ratelimit.js';
+import { systemClock, type Clock } from './domain/clock.js';
+import * as sched from './db/repo/unattended.js';
+import * as agency from './db/repo/agency.js';
+import * as snapsRepo from './db/repo/snapshots.js';
+import { tick, runDigests } from './services/scheduler.js';
+import { generateAlerts } from './services/alerts.js';
+import { dispatchAlerts, buildDigest, RecordingTransport, type Transport } from './services/delivery.js';
+import { recheckCitation } from './services/recheck.js';
+import { computeNextRun, windowLabelFor, monthKey, CADENCES, type Cadence } from './domain/scheduler.js';
+import { MARKETS, marketLabel } from './domain/geo.js';
+import { setMarkets, marketBreakdown } from './services/demand.js';
+import { buildIndexReport, quarterOf, setConsent, EXPORT_FIELDS, K_ANON } from './services/index-report.js';
+import { createAuditReport, runAudit, getAuditReportByToken, startMonitoring, listAuditReports } from './services/audit.js';
+import { PRICE_TABLE, PRICE_TABLE_REVIEWED } from './domain/pricing.js';
+import { SNAPSHOT_RETENTION_DAYS, StubFetcher, type Fetcher } from './domain/fetcher.js';
+import {
+  schedulesView, alertsView, channelsView, snapshotView, portfolioView, marketsView,
+  indexView, auditReportView, auditAdminView,
+} from './web/views/ops.js';
+import { readFileSync, existsSync } from 'node:fs';
 import { FIXABILITY } from './domain/priority.js';
 import { summariseBlocks, classifyBot, relevantBotClassFor, BOT_CLASS_LABEL } from './domain/crawlers.js';
 import { resolveRelation, WeakBasisError, Relation, RelationBasis } from './domain/entities.js';
@@ -51,6 +73,11 @@ const AuditRequest = z.object({
 
 export interface ServerOptions {
   db: DB;
+  /** injected so tests can drive the scheduler and rate limiter without waiting */
+  clock?: Clock;
+  /** injected so nothing in a test or a demo reaches the network */
+  transports?: Record<string, Transport>;
+  fetcher?: Fetcher | null;
   /**
    * Belief profile the deterministic stand-in upstream draws from, selected per window.
    * Real deployments leave this undefined and sample live providers instead.
@@ -65,6 +92,7 @@ export interface Auth {
   userId: string;
   email: string;
   role: string;
+  csrf: string;
 }
 
 export const SAMPLE_CSV = `gsc,best l1 blockchain for payments,880
@@ -77,10 +105,26 @@ community,vanar chain transaction fees,180`;
 export function buildServer(opts: ServerOptions): FastifyInstance {
   const { db } = opts;
   const app = Fastify({ logger: opts.logger ?? false });
+  // Exposed for the test harness, which needs the session's CSRF token to post a form.
+  (app as unknown as { db: DB }).db = db;
+
+  // Every route as Fastify actually registered it. printRoutes renders a tree, which is for
+  // reading, not for checking; this is the list the role assertion and its test both use.
+  const registered: Array<{ method: string; url: string }> = [];
+  (app as unknown as { registeredRoutes: typeof registered }).registeredRoutes = registered;
+  app.addHook('onRoute', (route) => {
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    for (const method of methods) registered.push({ method: String(method).toUpperCase(), url: route.url });
+  });
 
   app.register(cookie);
   app.register(formbody);
   app.register(fastifyStatic, { root: join(here, 'web', 'public'), prefix: '/static/' });
+
+  const clock = opts.clock ?? systemClock;
+  const limiter = new RateLimiter(clock);
+  const transports = opts.transports ?? {};
+  const fetcher = opts.fetcher ?? null;
 
   // ------------------------------------------------------------------- auth
   function auth(req: FastifyRequest): Auth | null {
@@ -88,15 +132,48 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     if (!sid) return null;
     const s = repo.getSession(db, sid);
     if (!s) return null;
-    return { tenantId: s.tenant_id, userId: s.user_id, email: s.email, role: s.role };
+    return { tenantId: s.tenant_id, userId: s.user_id, email: s.email, role: s.role, csrf: s.csrf ?? '' };
+  }
+
+  /**
+   * Effective role for a brand: the per-brand row if there is one, otherwise the user's own
+   * role. An agency analyst can hold editor on one client and viewer on another.
+   */
+  function roleFor(a: Auth, brandId: string | null): string {
+    if (!brandId) return a.role;
+    return agency.brandRole(db, a.tenantId, a.userId, brandId) ?? a.role;
   }
 
   function ctx(a: Auth | null, active: string): NavContext {
-    if (!a) return { email: null, tenantName: null, brandName: null, active };
+    if (!a) return { email: null, tenantName: null, brandName: null, active, csrf: '', brands: [], brandId: null, role: null };
     const tenant = repo.getTenant(db, a.tenantId);
-    const brand = repo.primaryBrand(db, a.tenantId);
-    return { email: a.email, tenantName: tenant?.name ?? '', brandName: brand?.name ?? '', active };
+    const brands = repo.listBrands(db, a.tenantId);
+    const brand = currentBrand(a, null);
+    return {
+      email: a.email,
+      tenantName: tenant?.name ?? '',
+      brandName: brand?.name ?? '',
+      active,
+      csrf: a.csrf,
+      brands: brands.map((b) => ({ id: b.id, name: b.name })),
+      brandId: brand?.id ?? null,
+      role: roleFor(a, brand?.id ?? null),
+    };
   }
+
+  /** The brand in focus: an explicit cookie if it still resolves, else the first one. */
+  function currentBrand(a: Auth, req: FastifyRequest | null): repo.Row | undefined {
+    const wanted = req?.cookies?.brand ?? lastBrand.get(a.userId) ?? null;
+    if (wanted) {
+      const b = repo.getBrand(db, a.tenantId, wanted);
+      if (b) return b;
+    }
+    return repo.primaryBrand(db, a.tenantId);
+  }
+
+  // Remembering the switcher choice per user keeps ctx() honest without threading the request
+  // through every render. It is a UI convenience; nothing about access depends on it.
+  const lastBrand = new Map<string, string>();
 
   function requireAuth(req: FastifyRequest, reply: FastifyReply): Auth | null {
     const a = auth(req);
@@ -107,8 +184,8 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     return a;
   }
 
-  function brandOf(a: Auth): repo.Row {
-    const brand = repo.primaryBrand(db, a.tenantId);
+  function brandOf(a: Auth, req?: FastifyRequest): repo.Row {
+    const brand = currentBrand(a, req ?? null);
     if (!brand) throw new Error('no brand configured for this tenant');
     return brand;
   }
@@ -127,6 +204,56 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     return reply.redirect(`${path}${sep}msg=${encodeURIComponent(text)}&kind=${kind}`);
   }
 
+  /**
+   * One gate for every mutating request: rate limit, CSRF token, minimum role.
+   *
+   * It lives in a hook rather than in each handler because the failure mode of per-handler
+   * checks is a new route that quietly has none. A boot assertion below refuses to start if a
+   * non-GET route is registered without a declared minimum role.
+   */
+  app.addHook('preHandler', async (req, reply) => {
+    const method = req.method.toUpperCase();
+    if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
+    const pattern = (req as any).routeOptions?.url ?? req.url;
+    const key = routeKey(method, pattern);
+
+    // Routes that count failures are limited inside their handler, once the outcome is known.
+    if (LIMIT_ON_FAILURE.has(key)) return;
+    const limit = limiter.check(key, req.ip ?? 'unknown');
+    if (!limit.ok) {
+      return reply.code(429).header('retry-after', String(limit.retryAfterSec)).send({
+        error: 'too many requests',
+        retryAfterSeconds: limit.retryAfterSec,
+      });
+    }
+
+    if (CSRF_EXEMPT.has(key)) return;
+    const a = auth(req);
+
+    // CSRF. A JSON body is exempt because a cross-site HTML form cannot send
+    // application/json, which is the only way a browser could forge one of these without a
+    // CORS preflight the browser will refuse. Form posts carry the token.
+    const isJson = (req.headers['content-type'] ?? '').includes('application/json');
+    if (a && !isJson) {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const supplied = String(body._csrf ?? req.headers['x-csrf-token'] ?? '');
+      if (!supplied || supplied !== a.csrf) {
+        repo.audit(db, a.tenantId, a.email, 'csrf_rejected', 'route', key, '');
+        return reply.code(403).type('text/html').send(forbidden('That form was missing its security token. Reload the page and try again.'));
+      }
+    }
+
+    const minimum = ROUTE_ROLES[key];
+    if (minimum && a) {
+      const brandId = currentBrand(a, req)?.id ?? null;
+      const effective = roleFor(a, brandId);
+      if (!allows(effective, minimum)) {
+        repo.audit(db, a.tenantId, a.email, 'role_denied', 'route', key, `needs ${minimum}, has ${effective}`);
+        return reply.code(403).type('text/html').send(forbidden(`This action needs the ${minimum} role. Yours is ${effective}.`));
+      }
+    }
+  });
+
   // ------------------------------------------------------------------ login
   app.get('/login', async (req, reply) => {
     if (auth(req)) return reply.redirect('/');
@@ -138,10 +265,16 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     const body = req.body as Record<string, string>;
     const user = repo.findUserByEmail(db, body.email ?? '');
     if (!user || !verifyPassword(body.password ?? '', user.password_hash, user.password_salt)) {
+      // Only failures count toward the limit, so a busy office does not lock itself out.
+      const limit = limiter.check('POST /login', req.ip ?? 'unknown');
+      if (!limit.ok) {
+        return reply.code(429).header('retry-after', String(limit.retryAfterSec)).type('text/html')
+          .send(forbidden(`Too many failed sign-in attempts. Try again in ${Math.ceil(limit.retryAfterSec / 60)} minutes.`));
+      }
       return redirectWith(reply, '/login', 'Those credentials do not match an account.', 'error');
     }
     const sid = randomBytes(32).toString('hex');
-    repo.createSession(db, user.tenant_id, user.id, sid);
+    repo.createSession(db, user.tenant_id, user.id, sid, 24, randomBytes(24).toString('hex'));
     repo.audit(db, user.tenant_id, user.email, 'login', 'user', user.id, '');
     reply.setCookie('aops', sid, { path: '/', httpOnly: true, sameSite: 'lax' });
     return reply.redirect('/');
@@ -174,10 +307,25 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
       .toLowerCase()
       .replace(/^https?:\/\//, '')
       .replace(/\/.*$/, '');
+    const requestId = newId('req');
     db.prepare(
       'INSERT INTO audit_requests (id, email, domain, source, created_at) VALUES (?, ?, ?, ?, ?)',
-    ).run(newId('req'), parsed.data.email.trim().toLowerCase(), domain, 'public_site', nowIso());
-    return reply.code(201).send({ ok: true, domain });
+    ).run(requestId, parsed.data.email.trim().toLowerCase(), domain, 'public_site', nowIso());
+
+    // The audit itself. It used to be a person; now the request creates a report and the
+    // pipeline runs against the domain unattended. The response returns the report URL
+    // immediately, because a page that says "we will email you" and then does not is worse
+    // than one that says nothing.
+    const report = createAuditReport(db, requestId, domain);
+    if (fetcher) {
+      void runAudit(db, report.id, {
+        fetcher,
+        clock,
+        beliefs: opts.beliefsFor?.('audit') ?? null,
+        budgetRuns: Number(process.env.MISCITED_AUDIT_RUNS ?? 40),
+      }).catch(() => undefined);
+    }
+    return reply.code(201).send({ ok: true, domain, reportUrl: `/audit/${report.token}` });
   });
 
   // -------------------------------------------------------------- dashboard
@@ -423,12 +571,13 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     if (!a) return reply;
     const run = repo.getRun(db, a.tenantId, (req.params as any).id);
     if (!run) return reply.code(404).type('text/html').send(page('Not found', ctx(a, 'observatory'), notFound()));
-    return send(reply, 'Run', a, 'observatory', runDetailView({
+    const { text, kind } = msgOf(req);
+    return send(reply, 'Run', a, 'observatory', concat(flash(text, kind), runDetailView({
       run,
       observed: repo.observedForRun(db, a.tenantId, run.id),
       citations: repo.citationsForRun(db, a.tenantId, run.id),
       searchQueries: jsonParse<string[]>(run.search_queries, []),
-    }));
+    })));
   });
 
   // ---------------------------------------------------------------- actions
@@ -602,6 +751,10 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     if (!a) return reply;
     return send(reply, 'Methodology', a, 'methodology', methodologyView({
       stats: { minSamples: MIN_SAMPLES, maxSamples: MAX_SAMPLES, alpha: ALPHA, minEffect: MIN_EFFECT, bhQ: BH_Q, fixability: FIXABILITY },
+      extractor: extractorEval(),
+      prices: { table: PRICE_TABLE, reviewed: PRICE_TABLE_REVIEWED },
+      retentionDays: SNAPSHOT_RETENTION_DAYS,
+      snapshotCount: snapsRepo.countSnapshots(db),
     }));
   });
 
@@ -729,13 +882,379 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     return reply.send(repo.listAudit(db, a.tenantId));
   });
 
+
+  // ------------------------------------------------------------- schedules (P1)
+  app.get('/schedules', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const brand = brandOf(a, req);
+    const { text, kind } = msgOf(req);
+    const month = monthKey(clock.now());
+    return send(reply, 'Schedules', a, 'schedules', concat(flash(text, kind), schedulesView({
+      schedules: sched.listSchedules(db, a.tenantId),
+      brands: repo.listBrands(db, a.tenantId),
+      spend: sched.monthToDateSpend(db, a.tenantId, month),
+      month,
+      byProvider: sched.spendByProvider(db, a.tenantId, month),
+      windows: sched.listWindows(db, a.tenantId, brand.id),
+      lastTick: null,
+    })));
+  });
+
+  app.post('/schedules', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const b = req.body as Record<string, string>;
+    const cadence = (CADENCES as string[]).includes(b.cadence) ? (b.cadence as Cadence) : 'daily';
+    const brandId = b.brand_id && repo.getBrand(db, a.tenantId, b.brand_id) ? b.brand_id : brandOf(a, req).id;
+    sched.createSchedule(db, a.tenantId, {
+      brand_id: brandId,
+      cadence,
+      hour_utc: 6,
+      monthly_budget_usd: Math.max(10, Math.min(100000, Number(b.monthly_budget_usd) || 500)),
+      budget_runs: Math.max(MIN_SAMPLES, Math.min(600, Number(b.budget_runs) || 60)),
+      next_run_at: computeNextRun(cadence, clock.now(), 6).toISOString(),
+    });
+    repo.audit(db, a.tenantId, a.email, 'schedule_created', 'brand', brandId, `cadence=${cadence}`);
+    return redirectWith(reply, '/schedules', `A ${cadence} schedule is set. The next round runs without anyone asking.`);
+  });
+
+  app.post('/schedules/:id/toggle', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const s = sched.getSchedule(db, a.tenantId, (req.params as any).id);
+    if (!s) return reply.code(404).type('text/html').send(page('Not found', ctx(a, 'schedules'), notFound()));
+    sched.setScheduleEnabled(db, a.tenantId, s.id, s.enabled === 1 ? 0 : 1);
+    repo.audit(db, a.tenantId, a.email, s.enabled === 1 ? 'schedule_paused' : 'schedule_resumed', 'schedule', s.id, '');
+    return redirectWith(reply, '/schedules', s.enabled === 1 ? 'Schedule paused. Nothing will sample on its own until you resume it.' : 'Schedule resumed.');
+  });
+
+  /** Force one schedule due now and run a tick, so "does this actually work" is one click. */
+  app.post('/schedules/:id/run', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const s = sched.getSchedule(db, a.tenantId, (req.params as any).id);
+    if (!s) return reply.code(404).type('text/html').send(page('Not found', ctx(a, 'schedules'), notFound()));
+    sched.updateScheduleNextRun(db, a.tenantId, s.id, new Date(clock.now().getTime() - 1000).toISOString());
+    const result = await tick(db, {
+      clock,
+      owner: `manual-${a.userId.slice(0, 8)}`,
+      beliefsFor: opts.beliefsFor,
+      fetcher,
+      transports,
+    });
+    return redirectWith(
+      reply,
+      '/schedules',
+      result.ran > 0
+        ? `Ran ${result.ran} scheduled round(s) covering ${result.windows.join(', ')}; ${result.alertsCreated} alerts raised, ${result.delivered} delivered.`
+        : `Nothing ran. ${result.errors.join('; ') || 'The schedule was not due or is already leased.'}`,
+      result.ran > 0 ? 'ok' : 'error',
+    );
+  });
+
+  // ---------------------------------------------------------------- alerts (P1)
+  app.get('/alerts', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const brand = brandOf(a, req);
+    const { text, kind } = msgOf(req);
+    return send(reply, 'Alerts', a, 'alerts', concat(flash(text, kind), alertsView({
+      alerts: sched.listAlertsFor(db, a.tenantId, brand.id),
+      channels: sched.listChannels(db, a.tenantId),
+      attempts: sched.listAttempts(db, a.tenantId),
+    })));
+  });
+
+  app.post('/channels', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const b = req.body as Record<string, string>;
+    const kind = ['email', 'slack', 'webhook'].includes(b.kind) ? b.kind : 'email';
+    const target = (b.target ?? '').trim();
+    if (!target) return redirectWith(reply, '/alerts', 'A channel needs an address or URL.', 'error');
+    sched.createChannel(db, a.tenantId, {
+      kind,
+      target,
+      secret: randomBytes(16).toString('hex'),
+      min_severity: ['low', 'medium', 'high', 'critical'].includes(b.min_severity) ? b.min_severity : 'high',
+    });
+    repo.audit(db, a.tenantId, a.email, 'channel_created', 'channel', target, kind);
+    return redirectWith(reply, '/alerts', `Alerts will now go to ${target}.`);
+  });
+
+  app.post('/channels/:id/delete', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    sched.deleteChannel(db, a.tenantId, (req.params as any).id);
+    repo.audit(db, a.tenantId, a.email, 'channel_deleted', 'channel', (req.params as any).id, '');
+    return redirectWith(reply, '/alerts', 'Channel removed.');
+  });
+
+  app.post('/channels/:id/test', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const channel = sched.getChannel(db, a.tenantId, (req.params as any).id);
+    if (!channel) return reply.code(404).type('text/html').send(page('Not found', ctx(a, 'alerts'), notFound()));
+    const transport = transports[channel.kind];
+    if (!transport) return redirectWith(reply, '/alerts', `No transport is configured for ${channel.kind} in this deployment.`, 'error');
+    const body = JSON.stringify({ kind: 'test', at: clock.now().toISOString() });
+    const res = await transport.send({
+      kind: 'alert',
+      subject: 'Miscited: delivery test',
+      text: 'This is a delivery test. If you can read it, this channel works.',
+      target: channel.target,
+      secret: channel.secret ?? '',
+      body,
+    });
+    sched.recordAttempt(db, a.tenantId, { channel_id: channel.id, kind: 'alert', attempt: 1, status: res.ok ? 'sent' : 'failed', error: res.error ?? '' });
+    return redirectWith(reply, '/alerts', res.ok ? 'Test delivered.' : `Test failed: ${res.error}`, res.ok ? 'ok' : 'error');
+  });
+
+  app.post('/alerts/:id/read', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    sched.markAlertDelivered(db, a.tenantId, (req.params as any).id, clock.now().toISOString());
+    return redirectWith(reply, '/alerts', 'Marked as seen.');
+  });
+
+  // -------------------------------------------------------------- evidence (P2)
+  app.get('/snapshot/:sha', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const snapshot = snapsRepo.getSnapshot(db, (req.params as any).sha);
+    if (!snapshot) return reply.code(404).type('text/html').send(page('Not found', ctx(a, 'observatory'), notFound()));
+    return send(reply, 'Snapshot', a, 'observatory', snapshotView({ snapshot, citation: null }));
+  });
+
+  app.post('/citations/:id/recheck', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const citation = repo.getCitation(db, a.tenantId, (req.params as any).id);
+    if (!citation) return reply.code(404).type('text/html').send(page('Not found', ctx(a, 'observatory'), notFound()));
+    if (!fetcher) return redirectWith(reply, `/runs/${citation.run_id}`, 'Citation fetching is disabled in this deployment.', 'error');
+    const result = await recheckCitation(db, a.tenantId, citation.id, fetcher, clock);
+    const message = result.error
+      ? `Re-check could not read the page (${result.error}).`
+      : result.changed
+        ? `Support changed from ${result.before} to ${result.after}.${result.regressed ? ' That is a regression, and an alert was raised.' : ''}`
+        : `No change: still ${result.after}.`;
+    return redirectWith(reply, `/runs/${citation.run_id}`, message, result.error ? 'error' : 'ok');
+  });
+
+  // ------------------------------------------------------------- agency (P6)
+  app.post('/brands/switch', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const b = req.body as Record<string, string>;
+    const brand = repo.getBrand(db, a.tenantId, b.brand_id ?? '');
+    if (!brand) return redirectWith(reply, '/portfolio', 'That brand is not in this workspace.', 'error');
+    lastBrand.set(a.userId, brand.id);
+    reply.setCookie('brand', brand.id, { path: '/', httpOnly: true, sameSite: 'lax' });
+    return redirectWith(reply, '/', `Now showing ${brand.name}.`);
+  });
+
+  app.get('/portfolio', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const { text, kind } = msgOf(req);
+    const rows = repo.listBrands(db, a.tenantId).map((brand) => {
+      const windows = sched.listWindows(db, a.tenantId, brand.id);
+      const last = windows[0] ?? null;
+      const label = last?.window_label ?? latestWindow(db, a.tenantId, brand.id).current;
+      let critical = 0;
+      let defects = 0;
+      let runs = 0;
+      try {
+        const data = buildDashboard(db, a.tenantId, brand.id, label);
+        critical = data.defects.filter((d) => d.severity === 'critical').length;
+        defects = data.defects.length;
+        runs = data.totalRuns;
+      } catch {
+        // A brand with no runs has no dashboard yet, which is a zero row rather than an error.
+      }
+      return { brand, critical, defects, runs, lastWindow: label, partial: last?.status === 'partial' };
+    });
+    rows.sort((x, y) => y.critical - x.critical || y.defects - x.defects);
+    return send(reply, 'Portfolio', a, 'portfolio', concat(flash(text, kind), portfolioView({ rows })));
+  });
+
+  app.get('/clusters/:id/markets', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const brand = brandOf(a, req);
+    const cluster = repo.getCluster(db, a.tenantId, (req.params as any).id);
+    if (!cluster) return reply.code(404).type('text/html').send(page('Not found', ctx(a, 'clusters'), notFound()));
+    const { text, kind } = msgOf(req);
+    return send(reply, 'Markets', a, 'clusters', concat(flash(text, kind), marketsView({
+      cluster,
+      variants: repo.listVariants(db, a.tenantId, cluster.id),
+      breakdown: marketBreakdown(db, a.tenantId, brand.id, latestWindow(db, a.tenantId, brand.id).current),
+      geos: jsonParse<string[]>(cluster.geos, ['US']),
+      languages: jsonParse<string[]>(cluster.languages, ['en']),
+    })));
+  });
+
+  app.post('/clusters/:id/markets', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const cluster = repo.getCluster(db, a.tenantId, (req.params as any).id);
+    if (!cluster) return reply.code(404).type('text/html').send(page('Not found', ctx(a, 'clusters'), notFound()));
+    const b = req.body as Record<string, string | string[]>;
+    const chosen = Array.isArray(b.market) ? b.market : b.market ? [b.market] : [];
+    const geos = [...new Set(chosen.map((m) => String(m).split(':')[0]))];
+    const languages = [...new Set(chosen.map((m) => String(m).split(':')[1] ?? 'en'))];
+    const result = setMarkets(db, a.tenantId, cluster.id, geos, languages);
+    repo.audit(db, a.tenantId, a.email, 'markets_set', 'cluster', cluster.id, geos.join(','));
+    return redirectWith(
+      reply,
+      `/clusters/${cluster.id}/markets`,
+      `${result.created} new market variants created, ${result.kept} already existed. Existing runs are untouched.`,
+    );
+  });
+
+  // --------------------------------------------------------------- index (P8)
+  app.get('/index', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const tenant = repo.getTenant(db, a.tenantId);
+    const { text, kind } = msgOf(req);
+    return send(reply, 'Accuracy index', a, 'methodology', concat(flash(text, kind), indexView({
+      report: buildIndexReport(db, quarterOf(clock.now())),
+      consent: tenant?.index_consent === 1,
+      tenantName: tenant?.name ?? '',
+    })));
+  });
+
+  app.post('/index-consent', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    const wants = String((req.body as any)?.consent ?? '0') === '1';
+    setConsent(db, a.tenantId, wants, clock.now().toISOString());
+    return redirectWith(
+      reply,
+      '/index',
+      wants
+        ? `Contributing. Exactly these fields leave this workspace: ${EXPORT_FIELDS.join(', ')}.`
+        : 'No longer contributing. The next report excludes this workspace.',
+    );
+  });
+
+  // ------------------------------------------------- self-serve audit (P4)
+  app.get('/audit/:token', async (req, reply) => {
+    const report = getAuditReportByToken(db, (req.params as any).token);
+    if (!report) {
+      return reply.code(404).type('text/html').send(
+        reportPage('Not found', 'No such audit.', raw('<h1>Not found</h1><p class="lede">No audit exists at this address.</p>')),
+      );
+    }
+    if (report.status !== 'complete') {
+      return reply.type('text/html; charset=utf-8').send(reportPage(
+        `Audit of ${report.domain}`,
+        'Your answer risk audit is running.',
+        raw(`<h1>Auditing ${escapeText(report.domain)}</h1>` +
+          `<p class="lede" data-testid="audit-status">Status: ${escapeText(report.status)}.` +
+          (report.error ? ` ${escapeText(report.error)}` : ' Reload in a minute; this page fills in when the sample completes.') +
+          '</p>'),
+      ));
+    }
+    return reply.type('text/html; charset=utf-8').send(reportPage(
+      `Answer risk audit: ${report.brand_name || report.domain}`,
+      `A dated, evidence-linked audit of what AI answers say about ${report.domain}.`,
+      auditReportView({
+        report,
+        findings: jsonParse<any>(report.findings, {}),
+        candidates: jsonParse<any[]>(report.candidates, []),
+        surfaces: jsonParse<string[]>(report.surfaces, []),
+        notTested: jsonParse<string[]>(report.not_tested, []),
+      }),
+    ));
+  });
+
+  app.post('/audit/:token/start', async (req, reply) => {
+    const b = req.body as Record<string, string>;
+    try {
+      const out = startMonitoring(db, {
+        token: (req.params as any).token,
+        email: (b.email ?? '').trim().toLowerCase(),
+        password: b.password ?? '',
+        clock,
+      });
+      const sid = randomBytes(32).toString('hex');
+      repo.createSession(db, out.tenantId, out.userId, sid, 24, randomBytes(24).toString('hex'));
+      reply.setCookie('aops', sid, { path: '/', httpOnly: true, sameSite: 'lax' });
+      return reply.redirect('/?msg=' + encodeURIComponent('Monitoring started. The first scheduled round runs tomorrow morning.'));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'could not start monitoring';
+      return reply.redirect(`/audit/${(req.params as any).token}?msg=${encodeURIComponent(message)}&kind=error`);
+    }
+  });
+
+  app.get('/audits', async (req, reply) => {
+    const a = requireAuth(req, reply);
+    if (!a) return reply;
+    return send(reply, 'Audit requests', a, 'audit', auditAdminView({ reports: listAuditReports(db) }));
+  });
+
   app.get('/healthz', async (_req, reply) => reply.send({ ok: true }));
+
+  /**
+   * A non-GET route with no declared minimum role is a route nobody decided about. Failing at
+   * boot is the only version of this check that cannot be ignored.
+   */
+  // Synchronous, not inside app.ready(): a ready callback that throws is a warning nobody
+  // reads, and the whole point of this check is that it cannot be ignored.
+  const undeclared = undeclaredMutatingRoutes(registered);
+  if (undeclared.length > 0) {
+    throw new Error(
+      `These mutating routes have no minimum role in ROUTE_ROLES: ${undeclared.join(', ')}. ` +
+        'Add them to src/domain/roles.ts, or to PUBLIC_ROUTES if they are reachable before a session exists.',
+    );
+  }
 
   return app;
 }
 
+/**
+ * Mutating routes with no minimum role. Exported so the boot assertion and its test are the
+ * same code: a check the test can pass while the server fails is not a check.
+ */
+export function undeclaredMutatingRoutes(routes: Array<{ method: string; url: string }>): string[] {
+  const out: string[] = [];
+  for (const { method, url } of routes) {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(method)) continue;
+    const key = routeKey(method, url);
+    if (!ROUTE_ROLES[key] && !CSRF_EXEMPT.has(key) && !out.includes(key)) out.push(key);
+  }
+  return out;
+}
+
+function forbidden(message: string): string {
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Not permitted</title>` +
+    `<link rel="stylesheet" href="/static/app.css"></head><body><main><h1>Not permitted</h1>` +
+    `<p class="lede" data-testid="forbidden">${message}</p><p><a href="/">Back to the answer desk</a></p></main></body></html>`;
+}
+
 function concat(...parts: Array<Raw | null | undefined>): Raw {
   return raw(parts.map((p) => p?.value ?? '').join(''));
+}
+
+/**
+ * The published extractor numbers, read from the file the eval writes rather than typed into
+ * the template. If nobody has run it, the page says the precision is unmeasured, which is the
+ * honest thing for a page whose whole job is to say how the numbers are produced.
+ */
+export function extractorEval(path = 'docs/extractor-eval.json'): any | null {
+  try {
+    if (!existsSync(path)) return null;
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function escapeText(s: string): string {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function notFound(): Raw {

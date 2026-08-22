@@ -423,7 +423,7 @@ export function landingView(): Raw {
 
     <form class="audit-form" data-audit-form novalidate data-testid="audit-form">
       <h3>Request an answer audit</h3>
-      <p class="note">Two fields. You get a scheduled window back.</p>
+      <p class="note">Two fields. The sample starts immediately and the report link appears here.</p>
 
       <div class="field">
         <label for="audit-email">Work email</label>
@@ -435,6 +435,7 @@ export function landingView(): Raw {
           spellcheck="false"
           placeholder="you@company.com"
           aria-describedby="err-audit-email"
+          data-testid="audit-email"
         />
         <span class="err" id="err-audit-email" data-err-for="audit-email" role="alert"></span>
       </div>
@@ -449,6 +450,7 @@ export function landingView(): Raw {
           spellcheck="false"
           placeholder="company.com"
           aria-describedby="err-audit-domain"
+          data-testid="audit-domain"
         />
         <span class="err" id="err-audit-domain" data-err-for="audit-domain" role="alert"></span>
       </div>

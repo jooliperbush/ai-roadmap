@@ -21,6 +21,11 @@ export function createTenant(db: DB, name: string, plan = 'operate'): Row {
   return t;
 }
 
+/** Every tenant. Cross-tenant by necessity: the scheduler and digest jobs iterate them. */
+export function listTenants(db: DB): Row[] {
+  return db.prepare('SELECT * FROM tenants ORDER BY created_at').all() as Row[];
+}
+
 export function getTenant(db: DB, tenantId: string): Row | undefined {
   return db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId) as Row | undefined;
 }
@@ -37,15 +42,16 @@ export function findUserByEmail(db: DB, email: string): Row | undefined {
   return db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase()) as Row | undefined;
 }
 
-export function createSession(db: DB, tenantId: string, userId: string, sessionId: string, ttlHours = 24): Row {
+export function createSession(db: DB, tenantId: string, userId: string, sessionId: string, ttlHours = 24, csrf = ''): Row {
   const s = {
     id: sessionId,
     tenant_id: tenantId,
     user_id: userId,
+    csrf,
     created_at: nowIso(),
     expires_at: new Date(Date.now() + ttlHours * 3600_000).toISOString(),
   };
-  db.prepare('INSERT INTO sessions (id, tenant_id, user_id, created_at, expires_at) VALUES (@id, @tenant_id, @user_id, @created_at, @expires_at)').run(s);
+  db.prepare('INSERT INTO sessions (id, tenant_id, user_id, csrf, created_at, expires_at) VALUES (@id, @tenant_id, @user_id, @csrf, @created_at, @expires_at)').run(s);
   return s;
 }
 
@@ -127,12 +133,24 @@ export function createCluster(db: DB, tenantId: string, brandId: string, c: Row)
     economic_value: c.economic_value ?? 0.5,
     volatility: c.volatility ?? 0.2,
     is_control: c.is_control ?? 0,
+    geos: c.geos ?? '["US"]',
+    languages: c.languages ?? '["en"]',
+    demand_basis: c.demand_basis ?? 'imported',
     created_at: nowIso(),
   };
   db.prepare(
-    'INSERT INTO intent_clusters (id, tenant_id, brand_id, label, intent_family, buyer_stage, demand_volume, demand_weight, economic_value, volatility, is_control, created_at) VALUES (@id, @tenant_id, @brand_id, @label, @intent_family, @buyer_stage, @demand_volume, @demand_weight, @economic_value, @volatility, @is_control, @created_at)',
+    `INSERT INTO intent_clusters (id, tenant_id, brand_id, label, intent_family, buyer_stage, demand_volume,
+      demand_weight, economic_value, volatility, is_control, geos, languages, demand_basis, created_at)
+     VALUES (@id, @tenant_id, @brand_id, @label, @intent_family, @buyer_stage, @demand_volume,
+      @demand_weight, @economic_value, @volatility, @is_control, @geos, @languages, @demand_basis, @created_at)`,
   ).run(row);
   return row;
+}
+
+/** Markets a cluster is sampled in. Empty or malformed falls back to US/en, never to nothing. */
+export function setClusterMarkets(db: DB, tenantId: string, clusterId: string, geos: string[], languages: string[]): void {
+  db.prepare('UPDATE intent_clusters SET geos = ?, languages = ? WHERE tenant_id = ? AND id = ?')
+    .run(JSON.stringify(geos.length ? geos : ['US']), JSON.stringify(languages.length ? languages : ['en']), tenantId, clusterId);
 }
 
 export function listClusters(db: DB, tenantId: string, brandId: string): Row[] {
@@ -256,12 +274,21 @@ export function runsForCluster(db: DB, tenantId: string, clusterId: string, wind
 }
 
 export function insertObservedClaim(db: DB, tenantId: string, o: Row): Row {
-  const row = { id: id('obs'), tenant_id: tenantId, created_at: nowIso(), ...o };
+  const row = {
+    id: id('obs'),
+    tenant_id: tenantId,
+    created_at: nowIso(),
+    extractor_stage: 'pattern',
+    extractor_version: 'v1',
+    ...o,
+  };
   db.prepare(
     `INSERT INTO observed_claims (id, tenant_id, run_id, statement, subject, predicate, object, polarity, temporal_marker,
-      brand_role, verdict, canonical_claim_id, severity, misconception_key, adjudication, evaluator_votes, created_at)
+      brand_role, verdict, canonical_claim_id, severity, misconception_key, adjudication, evaluator_votes,
+      extractor_stage, extractor_version, created_at)
      VALUES (@id, @tenant_id, @run_id, @statement, @subject, @predicate, @object, @polarity, @temporal_marker,
-      @brand_role, @verdict, @canonical_claim_id, @severity, @misconception_key, @adjudication, @evaluator_votes, @created_at)`,
+      @brand_role, @verdict, @canonical_claim_id, @severity, @misconception_key, @adjudication, @evaluator_votes,
+      @extractor_stage, @extractor_version, @created_at)`,
   ).run(row);
   return row;
 }
@@ -271,41 +298,89 @@ export function observedForRun(db: DB, tenantId: string, runId: string): Row[] {
 }
 
 export function insertCitation(db: DB, tenantId: string, c: Row): Row {
-  const row = { id: id('cit'), tenant_id: tenantId, created_at: nowIso(), ...c };
+  const row = {
+    id: id('cit'),
+    tenant_id: tenantId,
+    created_at: nowIso(),
+    snapshot_sha256: null,
+    snapshot_fetched_at: null,
+    http_status: null,
+    fetch_error: null,
+    checked_claim: '',
+    reason: '',
+    ...c,
+  };
   db.prepare(
-    `INSERT INTO citations (id, tenant_id, run_id, url, title, source_class, support, supported_claim_id, snapshot_ref, created_at)
-     VALUES (@id, @tenant_id, @run_id, @url, @title, @source_class, @support, @supported_claim_id, @snapshot_ref, @created_at)`,
+    `INSERT INTO citations (id, tenant_id, run_id, url, title, source_class, support, supported_claim_id,
+      snapshot_ref, snapshot_sha256, snapshot_fetched_at, http_status, fetch_error, checked_claim, reason, created_at)
+     VALUES (@id, @tenant_id, @run_id, @url, @title, @source_class, @support, @supported_claim_id,
+      @snapshot_ref, @snapshot_sha256, @snapshot_fetched_at, @http_status, @fetch_error, @checked_claim, @reason, @created_at)`,
   ).run(row);
   return row;
+}
+
+export function getCitation(db: DB, tenantId: string, citationId: string): Row | undefined {
+  return db.prepare('SELECT * FROM citations WHERE tenant_id = ? AND id = ?').get(tenantId, citationId) as Row | undefined;
+}
+
+export function updateCitationCheck(db: DB, tenantId: string, citationId: string, patch: Row): void {
+  db.prepare(
+    `UPDATE citations SET support = @support, source_class = @source_class, reason = @reason,
+        snapshot_sha256 = @snapshot_sha256, snapshot_fetched_at = @snapshot_fetched_at,
+        http_status = @http_status, fetch_error = @fetch_error, checked_claim = @checked_claim
+      WHERE tenant_id = @tenant_id AND id = @id`,
+  ).run({ ...patch, tenant_id: tenantId, id: citationId });
+}
+
+/** Every citation in a window, in one statement, for the dashboard's query budget. */
+export function citationsForWindow(db: DB, tenantId: string, brandId: string, windowLabel: string): Row[] {
+  return db
+    .prepare(
+      `SELECT c.* FROM citations c JOIN model_runs r ON r.id = c.run_id AND r.tenant_id = c.tenant_id
+        WHERE c.tenant_id = ? AND r.brand_id = ? AND r.window_label = ?`,
+    )
+    .all(tenantId, brandId, windowLabel) as Row[];
+}
+
+/**
+ * Every observed claim in a window keyed by run. One statement instead of one per run, which
+ * is the difference between a dashboard that works at 300 runs and one that works at 30,000.
+ */
+export function observedForWindow(db: DB, tenantId: string, brandId: string, windowLabel: string): Map<string, Row[]> {
+  const rows = db
+    .prepare(
+      `SELECT o.* FROM observed_claims o JOIN model_runs r ON r.id = o.run_id AND r.tenant_id = o.tenant_id
+        WHERE o.tenant_id = ? AND r.brand_id = ? AND r.window_label = ?
+        ORDER BY o.created_at`,
+    )
+    .all(tenantId, brandId, windowLabel) as Row[];
+  const byRun = new Map<string, Row[]>();
+  for (const row of rows) {
+    const list = byRun.get(row.run_id) ?? [];
+    list.push(row);
+    byRun.set(row.run_id, list);
+  }
+  return byRun;
+}
+
+/** Every run in a window, in one statement. */
+export function runsForWindow(db: DB, tenantId: string, brandId: string, windowLabel: string): Row[] {
+  return db
+    .prepare('SELECT * FROM model_runs WHERE tenant_id = ? AND brand_id = ? AND window_label = ? ORDER BY created_at')
+    .all(tenantId, brandId, windowLabel) as Row[];
 }
 
 export function citationsForRun(db: DB, tenantId: string, runId: string): Row[] {
   return db.prepare('SELECT * FROM citations WHERE tenant_id = ? AND run_id = ? ORDER BY created_at').all(tenantId, runId) as Row[];
 }
 
-/** Defect counts per misconception across a window — the unit a customer actually fixes. */
-export function misconceptionRollup(db: DB, tenantId: string, brandId: string, windowLabel = 'post'): Row[] {
-  return db
-    .prepare(
-      `SELECT o.misconception_key AS misconception_key,
-              MIN(o.statement) AS example_statement,
-              o.verdict AS verdict,
-              MAX(o.severity) AS severity,
-              COUNT(DISTINCT o.run_id) AS defect_runs,
-              GROUP_CONCAT(DISTINCT r.provider) AS providers,
-              GROUP_CONCAT(DISTINCT r.cluster_id) AS clusters,
-              MIN(o.canonical_claim_id) AS canonical_claim_id
-         FROM observed_claims o
-         JOIN model_runs r ON r.id = o.run_id AND r.tenant_id = o.tenant_id
-        WHERE o.tenant_id = ? AND r.brand_id = ? AND r.window_label = ?
-          AND o.verdict IN ('CONTRADICTED','STALE')
-          AND o.adjudication IN ('not_required','agreed')
-          AND o.misconception_key IS NOT NULL
-        GROUP BY o.misconception_key, o.verdict
-        ORDER BY defect_runs DESC`,
-    )
-    .all(tenantId, brandId, windowLabel) as Row[];
-}
+/*
+ * `misconceptionRollup` lived here and used GROUP_CONCAT to return comma-joined provider and
+ * cluster lists. It is gone for two reasons that turned out to be the same reason: it issued a
+ * query per defect from the dashboard, and the comma delimiter was safe only because cluster
+ * ids happen to contain no commas today. The rollup is now computed in memory from one
+ * prefetched window in `services/dashboard.ts`.
+ */
 
 export function runCountForWindow(db: DB, tenantId: string, brandId: string, windowLabel: string): number {
   const row = db
@@ -479,3 +554,40 @@ export function listAudit(db: DB, tenantId: string, limit = 200): Row[] {
 }
 
 export { jsonParse };
+
+/** Completeness of a sampling window, or undefined for windows recorded before the ledger. */
+export function getWindowStatus(db: DB, tenantId: string, brandId: string, windowLabel: string): Row | undefined {
+  return db
+    .prepare('SELECT * FROM windows WHERE tenant_id = ? AND brand_id = ? AND window_label = ?')
+    .get(tenantId, brandId, windowLabel) as Row | undefined;
+}
+
+// -------------------------------------------------------------- connectors (P5)
+
+export function setActionConnector(db: DB, tenantId: string, actionId: string, patch: Row): void {
+  db.prepare(
+    `UPDATE actions SET connector = @connector, external_ref = @external_ref, external_url = @external_url,
+        last_error = @last_error, updated_at = @updated_at
+      WHERE tenant_id = @tenant_id AND id = @id`,
+  ).run({ ...patch, tenant_id: tenantId, id: actionId, updated_at: nowIso() });
+}
+
+export function setActionShipped(db: DB, tenantId: string, actionId: string, at: string): void {
+  db.prepare('UPDATE actions SET shipped_at = ?, updated_at = ? WHERE tenant_id = ? AND id = ?')
+    .run(at, nowIso(), tenantId, actionId);
+}
+
+export function setActionCrawled(db: DB, tenantId: string, actionId: string, at: string): void {
+  db.prepare('UPDATE actions SET crawled_at = ?, updated_at = ? WHERE tenant_id = ? AND id = ?')
+    .run(at, nowIso(), tenantId, actionId);
+}
+
+/** Crawler hits of a given class since a timestamp — the gate between shipped and crawled. */
+export function crawlerEventsSince(db: DB, tenantId: string, brandId: string, botClass: string, sinceIso: string): Row[] {
+  return db
+    .prepare(
+      `SELECT * FROM crawler_events WHERE tenant_id = ? AND brand_id = ? AND bot_class = ? AND occurred_at >= ?
+        ORDER BY occurred_at`,
+    )
+    .all(tenantId, brandId, botClass, sinceIso) as Row[];
+}

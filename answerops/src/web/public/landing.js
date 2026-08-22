@@ -224,13 +224,17 @@
         .then(function (r) {
           if (!r.ok) throw new Error(r.body && r.body.error ? r.body.error : 'request failed');
           form.reset();
+          var safeDomain = String(r.body.domain).replace(/[<>&"]/g, '');
+          var safeUrl = String(r.body.reportUrl || '').replace(/[^a-zA-Z0-9/_-]/g, '');
           outcome(
             'ok',
-            '<b>Request logged.</b> We seed a truth registry for ' +
-              '<span class="mono">' +
-              String(r.body.domain).replace(/[<>&]/g, '') +
-              '</span>' +
-              ', sample the four surfaces, and send back every defect we can evidence. No sampling starts until you approve the facts.',
+            '<b>Running now.</b> We are reading <span class="mono">' + safeDomain + '</span>, ' +
+              'taking what it says about itself as the comparison, and sampling the surfaces. ' +
+              (safeUrl
+                ? 'Your report: <a href="' + safeUrl + '" data-testid="audit-report-url">' + safeUrl + '</a>. ' +
+                  'It fills in as the sample completes.'
+                : 'We will send the link by email.') +
+              ' Nothing enters a truth registry until a person approves it.',
           );
         })
         .catch(function () {

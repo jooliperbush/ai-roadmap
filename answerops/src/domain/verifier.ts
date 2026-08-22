@@ -71,7 +71,7 @@ export const PREDICATE_PATTERNS: PredicatePattern[] = [
       /\b(?:does not|doesn't|does not currently|lacks|has no|no) (?:support |offer |provide |have )?((?:sso|single sign-on|saml|scim|api access|webhooks|audit logs|two-factor authentication|mfa|staking|bridging|smart contracts)\b)/i,
   ] },
   { predicate: 'integration', negatable: true, patterns: [
-      /\bintegrat(?:es|ion) with ([A-Z][\w&.\- ]+?)(?=[,.;]|\s+and\b|$)/,
+      /\b[Ii]ntegrat(?:es|ion|ions) (?:with|for) ([A-Z][\w&.\- ]+?)(?=[,.;]|\s+and\b|\s+is\b|$)/,
       /\bno(?:t)? (?:native )?integration with ([A-Z][\w&.\- ]+?)(?=[,.;]|$)/,
   ] },
   { predicate: 'availability', negatable: true, patterns: [
@@ -93,7 +93,9 @@ export const PREDICATE_PATTERNS: PredicatePattern[] = [
   ] },
 ];
 
-const NEGATION_RE = /\b(?:does not|doesn't|do not|don't|cannot|can't|lacks|has no|no longer|not (?:available|listed|supported|offered))\b/i;
+// Negation for the negatable predicates. Deliberately enumerated rather than "any nearby no":
+// a bare negative particle floating in a sentence flips claims it was never about.
+export const NEGATION_RE = /\b(?:does not|doesn't|do not|don't|cannot|can't|lacks|has no|have no|there is no|there's no|no longer|without (?:any )?(?:native |direct |official )?(?:support|integration|listing)|no (?:native |direct |official )?(?:support|integration|listing|access)|not (?:available|listed|supported|offered|integrated))\b/i;
 const YEAR_RE = /\b(19|20)\d{2}\b/;
 const RELATIVE_TIME_RE = /\b(?:last year|this year|recently|as of \w+ (?:19|20)\d{2}|since (?:19|20)\d{2})\b/i;
 
@@ -122,7 +124,11 @@ export function extractClaims(answerText: string, subjectHint: string): Extracte
         for (const re of pp.patterns) {
           const m = clause.match(re);
           if (!m) continue;
-          const object = (m[1] ?? m[0]).trim();
+          // Trailing sentence punctuation is not part of the value. Left in, "$0.0008." never
+          // matches "$0.0008" on the cited page, and the citation check silently reports the
+          // page as not containing a claim it states plainly.
+          const object = (m[1] ?? m[0]).trim().replace(/[.,;:]+$/, '');
+          if (!object) continue;
           const negated = pp.negatable ? NEGATION_RE.test(clause) : false;
           const temporal = clause.match(YEAR_RE)?.[0] ?? clause.match(RELATIVE_TIME_RE)?.[0] ?? null;
           out.push({
@@ -177,6 +183,11 @@ export const PREDICATE_LABEL: Record<string, string> = {
   compliance: 'your compliance status',
   token_supply: 'your token supply',
   headquarters: 'where you are based',
+  funding: 'how much you have raised',
+  employee_count: 'how big your team is',
+  founded_year: 'when you were founded',
+  certification: 'your licences and certifications',
+  partnership: 'who you work with',
   brand_presence: 'your presence in the answer',
 };
 

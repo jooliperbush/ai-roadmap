@@ -12,13 +12,25 @@ export interface Harness {
   otherCookie: string;
 }
 
-export async function makeHarness(): Promise<Harness> {
+/**
+ * Cookie to CSRF token. Forms carry the token, so a test that posts a form has to have it;
+ * looking it up here rather than at every call site keeps the tests about the feature under
+ * test instead of about the security hook.
+ */
+const csrfByCookie = new Map<string, string>();
+
+export function csrfFor(cookie: string): string {
+  return csrfByCookie.get(cookie) ?? '';
+}
+
+export async function makeHarness(overrides: Partial<Parameters<typeof buildServer>[0]> = {}): Promise<Harness> {
   const db = openDb(':memory:');
   const info = await seed(db);
   const app = buildServer({
     db,
     beliefsFor: (w) => (w === 'baseline' ? VANAR_BEFORE : VANAR_AFTER),
     demoHint: null,
+    ...overrides,
   });
   await app.ready();
   const cookie = await login(app, DEMO_EMAIL, DEMO_PASSWORD);
@@ -39,7 +51,14 @@ export async function login(app: FastifyInstance, email: string, password: strin
   const raw = res.headers['set-cookie'];
   const header = Array.isArray(raw) ? raw[0] : raw;
   if (!header) throw new Error(`login failed for ${email}: ${res.statusCode} ${res.headers.location ?? ''}`);
-  return header.split(';')[0];
+  const cookie = header.split(';')[0];
+  const sid = cookie.split('=')[1];
+  const row = (app as any).db ?? null;
+  if (row) {
+    const s = row.prepare('SELECT csrf FROM sessions WHERE id = ?').get(sid) as { csrf?: string } | undefined;
+    if (s?.csrf) csrfByCookie.set(cookie, s.csrf);
+  }
+  return cookie;
 }
 
 export function get(app: FastifyInstance, url: string, cookie: string) {
@@ -47,6 +66,14 @@ export function get(app: FastifyInstance, url: string, cookie: string) {
 }
 
 export function postForm(app: FastifyInstance, url: string, cookie: string, payload: Record<string, string>) {
+  return app.inject({
+    method: 'POST', url, payload: encodeForm({ _csrf: csrfFor(cookie), ...payload }),
+    headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+  });
+}
+
+/** Deliberately omits the token, for the tests that assert the CSRF gate actually gates. */
+export function postFormNoCsrf(app: FastifyInstance, url: string, cookie: string, payload: Record<string, string>) {
   return app.inject({
     method: 'POST', url, payload: encodeForm(payload),
     headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },

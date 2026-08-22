@@ -47,7 +47,8 @@ describe('authentication', () => {
 
   it('invalidates the session server-side on sign out', async () => {
     const cookie = await login(h.app, DEMO_EMAIL, DEMO_PASSWORD);
-    await h.app.inject({ method: 'POST', url: '/logout', headers: { cookie } });
+    // Sign out is a state-changing POST, so it carries the CSRF token like every other one.
+    await postForm(h.app, '/logout', cookie, {});
     const after = await get(h.app, '/truth', cookie);
     expect(after.statusCode).toBe(302);
   });

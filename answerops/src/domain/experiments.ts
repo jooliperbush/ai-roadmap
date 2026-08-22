@@ -17,6 +17,7 @@ import {
   measure,
   Measurement,
 } from './stats.js';
+import { parallelTrends, versionChangeExplanation, type PreWindow, type VersionGroup, type TrendCheck } from './sequential.js';
 
 export type ExperimentVerdict = 'pending' | 'confirmed' | 'rejected' | 'inconclusive';
 
@@ -29,6 +30,10 @@ export interface ExperimentCounts {
   controlBaselineN?: number | null;
   controlPostK?: number | null;
   controlPostN?: number | null;
+  /** pre-intervention windows, oldest first, used to test the parallel-trends assumption */
+  preWindows?: PreWindow[];
+  /** per-model-version breakdown of the post window, used to refuse pooling across versions */
+  postVersions?: VersionGroup[];
 }
 
 export interface ExperimentAnalysis {
@@ -43,6 +48,9 @@ export interface ExperimentAnalysis {
   underpowered: boolean;
   alternativeExplanations: string[];
   narrative: string;
+  /** null when there is no control, so parallel trends is not a question that applies */
+  trends: TrendCheck | null;
+  versionsPooled: boolean;
 }
 
 const BASE_ALTERNATIVES = [
@@ -114,8 +122,17 @@ export function analyzeExperiment(counts: ExperimentCounts, hasControl: boolean)
   const effectForVerdict = controlAvailable ? didEffect : rawDelta;
   const clearsMinimumEffect = Math.abs(effectForVerdict) >= MIN_EFFECT;
 
+  // Difference-in-differences is only causal if the two arms were already moving together.
+  // We have the pre-periods, so we check rather than assume, and a visible pre-trend
+  // divergence downgrades the verdict the same way being underpowered does.
+  const trends = controlAvailable && counts.preWindows && counts.preWindows.length >= 2
+    ? parallelTrends(counts.preWindows)
+    : null;
+  const trendsBroken = trends !== null && !trends.parallel;
+
   let verdict: ExperimentVerdict;
   if (underpowered) verdict = 'inconclusive';
+  else if (trendsBroken) verdict = 'inconclusive';
   else if (test.pValue < ALPHA && clearsMinimumEffect && effectForVerdict > 0) verdict = 'confirmed';
   else if (test.pValue < ALPHA && clearsMinimumEffect && effectForVerdict < 0) verdict = 'rejected';
   else verdict = 'inconclusive';
@@ -129,6 +146,9 @@ export function analyzeExperiment(counts: ExperimentCounts, hasControl: boolean)
   if (underpowered) {
     alternatives.unshift(`Sample sizes below the ${MIN_SAMPLES}-run floor cannot support a causal reading.`);
   }
+  if (trendsBroken && trends) alternatives.unshift(trends.reason);
+  const versionNote = counts.postVersions ? versionChangeExplanation(counts.postVersions) : null;
+  if (versionNote) alternatives.unshift(versionNote);
 
   const pct = (x: number | null) => (x === null ? 'n/a' : `${Math.round(x * 100)}%`);
   const narrative =
@@ -136,7 +156,9 @@ export function analyzeExperiment(counts: ExperimentCounts, hasControl: boolean)
       ? `Rose from ${pct(baseline.point)} to ${pct(post.point)}${controlAvailable ? ` while matched controls moved ${signed(controlDelta(counts))}` : ''}; probability the improvement is real: ${Math.round(pReal * 100)}%.`
       : verdict === 'rejected'
         ? `Moved from ${pct(baseline.point)} to ${pct(post.point)} — the change did not help and may have hurt.`
-        : controlAvailable && test.pValue < ALPHA && !clearsMinimumEffect
+        : trendsBroken && trends
+          ? `Moved from ${pct(baseline.point)} to ${pct(post.point)}, but treatment and control were not on parallel paths before the change (worst pre-period gap ${Math.round(trends.divergence * 100)} points), so this cannot be read as caused by the edit.`
+          : controlAvailable && test.pValue < ALPHA && !clearsMinimumEffect
           ? `Moved from ${pct(baseline.point)} to ${pct(post.point)}, but matched controls moved ${signed(controlDelta(counts))} over the same window — a residual of ${Math.round(didEffect * 100)} points, below the ${Math.round(MIN_EFFECT * 100)}-point bar for claiming a win.`
           : `Moved from ${pct(baseline.point)} to ${pct(post.point)}, which this sample cannot distinguish from noise (p=${test.pValue.toFixed(3)}).`;
 
@@ -152,6 +174,8 @@ export function analyzeExperiment(counts: ExperimentCounts, hasControl: boolean)
     underpowered,
     alternativeExplanations: alternatives,
     narrative,
+    trends,
+    versionsPooled: (counts.postVersions?.length ?? 0) > 1,
   };
 }
 

@@ -15,7 +15,11 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eval:extractor": "tsx scripts/eval-extractor.mts",
+    "gold:build": "tsx scripts/build-gold-set.mts",
+    "scheduler": "tsx scripts/scheduler.mts",
+    "walkthrough": "tsx scripts/walkthrough.mts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

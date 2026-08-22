@@ -12,6 +12,8 @@
  */
 
 import type { ProviderAdapter, RunRequest, RunResult, SurfaceDescriptor } from './types.js';
+import { costOf, usageOf } from '../domain/pricing.js';
+import { ProviderHttpError } from './resilience.js';
 
 interface LiveConfig {
   key: string;
@@ -157,15 +159,25 @@ export class LiveProvider implements ProviderAdapter {
       headers: this.cfg.headers(apiKey),
       body: JSON.stringify(this.cfg.buildBody(req)),
     });
-    if (!res.ok) throw new Error(`${this.cfg.displayName} run failed: ${res.status}`);
+    if (!res.ok) {
+      const retryAfter = Number(res.headers.get('retry-after'));
+      throw new ProviderHttpError(
+        res.status,
+        `${this.cfg.displayName} run failed: ${res.status}`,
+        Number.isFinite(retryAfter) ? retryAfter : undefined,
+      );
+    }
     const json = await res.json();
     const parsed = this.cfg.parse(json);
+    // Cost comes from the provider's own usage block. If it did not send one, the run is
+    // unpriced and says so, rather than reporting a confident zero.
+    const cost = costOf(this.cfg.surfaces[0].modelId, usageOf(this.cfg.key, json));
     return {
       answerText: parsed.answerText,
       citations: parsed.citations.map((c) => ({ ...c, snapshotText: null })),
       searchQueries: parsed.searchQueries,
       latencyMs: Date.now() - started,
-      costUsd: 0,
+      costUsd: cost,
       simulated: false,
       systemConfigHash: `${this.cfg.key}:${req.surface.modelVersion}:${req.temperature}:${req.personalization}`,
       modelVersion: req.surface.modelVersion,

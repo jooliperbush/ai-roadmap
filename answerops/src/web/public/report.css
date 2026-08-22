@@ -70,3 +70,17 @@ button.primary:hover { background: #000; }
 .report-foot { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 12px; color: var(--faint); }
 
 @media (max-width: 600px) { .report-wrap { padding: 32px 18px 64px; } }
+
+/* --------------------------------------------------------------- disclosures
+   A caveat placed under the numbers is a caveat nobody reads. These sit above
+   the h1's first section, before any figure, because both of them change what
+   every figure below is worth. */
+.disclosure { border: 1px solid var(--rule); border-left-width: 4px; background: var(--card); padding: 18px 20px; margin: 24px 0 8px; border-radius: 3px; }
+.disclosure h2 { font-size: 19px; line-height: 1.3; margin: 0 0 8px; letter-spacing: -0.02em; }
+.disclosure p { font-size: 15px; color: var(--ink); margin: 0 0 8px; max-width: 74ch; }
+.disclosure p:last-child { margin-bottom: 0; }
+.disclosure .hint { font-size: 13.5px; color: var(--faint); }
+.disclosure.danger { border-left-color: var(--red); }
+.disclosure.danger h2 { color: var(--red); }
+.disclosure.warn { border-left-color: var(--clay); }
+.disclosure.warn h2 { color: var(--clay); }

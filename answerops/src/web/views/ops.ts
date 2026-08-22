@@ -423,9 +423,51 @@ const EXPORT_FIELDS_TEXT = 'provider, model_version, predicate_class, verdict, i
 export function auditReportView(v: { report: any; findings: any; candidates: any[]; surfaces: string[]; notTested: string[] }): Raw {
   const r = v.report;
   const empty = (v.findings.defects ?? []).length === 0 && (v.findings.missed ?? []).length === 0;
+  // Two things a reader cannot infer from the numbers, and must be told before reading them:
+  // whether a real model was asked at all, and whether there was anything to check answers
+  // against. Both were already known to the system and neither reached this page.
+  const simulated = Number(r.simulated_runs ?? 0);
+  const allSimulated = simulated > 0 && simulated >= Number(r.sample_size ?? 0);
+  const factsRead = Number(r.facts_read ?? 0);
   return html`
 <article class="audit">
 <h1>Answer risk audit: ${r.brand_name || r.domain}</h1>
+
+${simulated > 0
+  ? html`<div class="disclosure danger" data-testid="audit-simulated-banner">
+      <h2>${allSimulated ? 'No real assistant was asked for this report' : 'Part of this sample did not come from a real assistant'}</h2>
+      <p>
+        ${allSimulated
+          ? html`All ${simulated} answers below were produced by a deterministic stand-in that this deployment
+              runs when no provider API key is configured. Nothing here was said by ChatGPT, Claude, Gemini or
+              Perplexity, and no number in this report is a measurement of what those assistants tell your
+              buyers.`
+          : html`${simulated} of the ${r.sample_size} answers below came from a deterministic stand-in rather than
+              a real assistant, because a provider key was missing or its adapter failed mid-round.`}
+      </p>
+      <p class="hint">
+        The stand-in exists so the pipeline can be rehearsed end to end at no cost, and every such run is
+        flagged in the database. It is not a forecast: it cannot tell you what a real model would say.
+      </p>
+    </div>`
+  : null}
+
+${factsRead === 0
+  ? html`<div class="disclosure warn" data-testid="audit-no-facts-banner">
+      <h2>We could not read a checkable fact from your site, so accuracy was not tested</h2>
+      <p>
+        An answer is only wrong relative to something. This audit reads your own published pages for
+        statements it can check — a price, a fee, a founding year, a headquarters, a certification, an
+        integration — and found none it could extract. Every defect count in this report therefore has an
+        empty registry behind it. <b>Zero defects here means "not checked", not "nothing wrong".</b>
+      </p>
+      <p class="hint">
+        The absence and demand figures below are unaffected: whether you appear in an answer does not depend
+        on the registry. See "what this did not test" for why your pages may have read as empty.
+      </p>
+    </div>`
+  : null}
+
 <p class="lede">
   Dated ${when(r.completed_at ?? r.created_at)}. We read ${r.domain}, took what it says about itself as the
   comparison, asked ${(v.findings.familySummaries ?? []).length} families of buyer question across
@@ -439,22 +481,44 @@ export function auditReportView(v: { report: any; findings: any; candidates: any
     <div class="stat"><span class="stat-label">Cost of the sample</span><span class="stat-value" data-testid="audit-cost">${r.cost_known === 1 ? `$${Number(r.cost_usd).toFixed(2)}` : 'partly unpriced'}</span></div>
     <div class="stat"><span class="stat-label">Powered to detect</span><span class="stat-value" data-testid="audit-power">${Math.round(Number(r.powered_for ?? 1) * 100)} points</span></div>
   </div>
-  <p class="hint">Surfaces: ${v.surfaces.join('; ') || 'none recorded'}.</p>
+  <p class="hint">
+    Surfaces: ${v.surfaces.join('; ') || 'none recorded'}.
+    ${simulated > 0 ? html` <b data-testid="audit-surface-sim">A "sim-" model id means the stand-in, not that vendor's model.</b>` : null}
+  </p>
 </section>
 
 ${empty
   ? html`<section class="section" data-testid="audit-nothing-found">
-      <div class="section-head"><h2>We found no defect at this sample size</h2></div>
-      <p>
-        That is the finding. Across ${r.sample_size} sampled answers nothing contradicted or outdated what
-        your own pages say. At this sample size a difference of about
-        <b>${Math.round(Number(r.powered_for ?? 1) * 100)} points</b> would have been detectable, so a smaller
-        problem could still exist and this audit would not have seen it.
-      </p>
+      <div class="section-head">
+        <h2>${factsRead === 0 ? 'Nothing was checked, so nothing was found' : 'We found no defect at this sample size'}</h2>
+      </div>
+      ${factsRead === 0
+        ? html`<p data-testid="audit-empty-unchecked">
+            Across ${r.sample_size} sampled answers nothing was compared against anything, because no
+            checkable fact was read from your site. This is an empty result, not a clean one. The fastest way
+            to a real answer is to publish the facts that matter in plain text on a page we can read, or to
+            approve a registry by hand once monitoring starts.
+          </p>`
+        : html`<p>
+            That is the finding. Across ${r.sample_size} sampled answers nothing contradicted or outdated what
+            your own pages say. At this sample size a difference of about
+            <b>${Math.round(Number(r.powered_for ?? 1) * 100)} points</b> would have been detectable, so a smaller
+            problem could still exist and this audit would not have seen it.
+          </p>`}
     </section>`
   : html`
 <section class="section">
-  <div class="section-head"><h2>1. Answer defects</h2><span class="count" data-testid="audit-defect-count">${(v.findings.defects ?? []).length}</span></div>
+  <div class="section-head">
+    <h2>1. Answer defects</h2>
+    <span class="count" data-testid="audit-defect-count">${factsRead === 0 ? 'not checked' : (v.findings.defects ?? []).length}</span>
+  </div>
+  ${factsRead === 0
+    ? html`<p data-testid="audit-defects-unchecked">
+        No count is shown. Defects are found by comparing an answer with a fact you published, and no fact
+        could be read from your site, so this section had nothing to test against. A zero here would have
+        been an artefact of the empty registry rather than a finding about your answers.
+      </p>`
+    : null}
   ${(v.findings.defects ?? []).map((d: any) => html`<div class="finding" data-testid="audit-defect">
     <h3>${d.headline}</h3>
     <p class="mono">${d.measurementText}</p>
@@ -490,6 +554,14 @@ ${empty
     Candidates, not an approved registry. Nobody has confirmed these; they are what your own published pages
     state, read the same way we read a model's answer.
   </p>
+  ${v.candidates.length === 0
+    ? html`<p class="hint" data-testid="audit-candidates-empty">
+        None. We look for statements of price, fees, availability, product status, integrations, feature
+        support, headquarters, founding year, funding, employee count, leadership, partnerships, compliance
+        and certification. Your pages either state none of those in a form a reader could check, or state
+        them only in copy rendered after the page loads.
+      </p>`
+    : null}
   <div class="table-wrap"><table>
     <thead><tr><th>Subject</th><th>Predicate</th><th>Value</th><th>Source</th></tr></thead>
     <tbody>

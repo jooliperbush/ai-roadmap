@@ -57,6 +57,7 @@ import { truthHistory } from './domain/truth.js';
 import { predicateLabel } from './domain/verifier.js';
 import { toCanonical } from './services/observatory.js';
 import type { BeliefProfile } from './providers/types.js';
+import { liveProviderCount } from './providers/registry.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -334,7 +335,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     if (!a) {
       return reply
         .type('text/html; charset=utf-8')
-        .send(marketingPage('Miscited · quality control for what AI says about your company', PUBLIC_DESCRIPTION, landingView()));
+        .send(marketingPage('Miscited · quality control for what AI says about your company', PUBLIC_DESCRIPTION, landingView({ liveProviders: liveProviderCount() })));
     }
     const brand = brandOf(a);
     const requestedWindow = (req.query as Record<string, string | undefined>).window ?? null;

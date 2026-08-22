@@ -951,3 +951,14 @@ p { max-width: var(--measure); color: var(--color-ink-soft); }
   .claim::after { transform: scaleX(1); }
   .answer .cursor { display: none; }
 }
+
+/* The stand-in notice on the audit form. Sits inside the form, above the fields, because a
+   caveat placed after the submit button is a caveat read after the request. */
+.audit-form .note.rehearsal {
+  border-left: 3px solid var(--color-accent);
+  background: var(--tint-accent);
+  padding: 10px 12px;
+  margin: 12px 0 4px;
+  border-radius: 3px;
+  color: var(--color-ink-soft);
+}

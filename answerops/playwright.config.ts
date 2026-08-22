@@ -29,7 +29,12 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
   },
   webServer: {
-    command: 'rm -f data/e2e.sqlite data/e2e.sqlite-wal data/e2e.sqlite-shm && PORT=4399 MISCITED_DB=data/e2e.sqlite MISCITED_NO_SCHEDULER=1 MISCITED_DEMO_FETCH=1 npx tsx src/main.ts',
+    // A fixed database filename made two suites run back to back share a file: the previous
+    // server can still hold handles to data/e2e.sqlite while this one deletes and recreates it,
+    // which showed up once as an unreproducible failure in flow 9. Each run now gets its own
+    // file, and sweeps any left by a crashed run. `retries` stays at 0 — a flow that needs a
+    // second attempt is a flow that is telling us something.
+    command: 'rm -f data/e2e-*.sqlite data/e2e-*.sqlite-wal data/e2e-*.sqlite-shm && PORT=4399 MISCITED_DB=data/e2e-$$.sqlite MISCITED_NO_SCHEDULER=1 MISCITED_DEMO_FETCH=1 npx tsx src/main.ts',
     url: 'http://127.0.0.1:4399/healthz',
     reuseExistingServer: false,
     timeout: 120_000,

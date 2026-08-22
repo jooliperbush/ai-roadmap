@@ -210,29 +210,39 @@ test('flow 8 — an action without evidence is rejected; with evidence it is cre
 test('flow 9 — the lifecycle advances legally and blocks illegal transitions', async ({ page }) => {
   await signIn(page);
   await page.getByTestId('nav-actions').click();
-  await page.getByTestId('action-link').first().click();
+
+  // This used to open whichever action sorted first and only assert the guard `if` that action
+  // happened to be Detected. It usually was not, so the assertions below almost never ran, and
+  // they were hiding a real defect: data-illegal was interpolated as an escaped value, so the
+  // attribute never reached the browser and the guard never fired. Find a Detected action on
+  // purpose, and fail loudly if the fixture stops providing one.
+  const detected = page.locator('[data-testid="action-row"]', {
+    has: page.locator('[data-testid="action-state"]', { hasText: /^Detected$/ }),
+  }).first();
+  await expect(detected, 'flow 8 leaves a Detected action for this flow to advance').toBeVisible();
+  await detected.getByTestId('action-link').click();
 
   await expect(page.getByTestId('state-track')).toBeVisible();
-  const state = await page.locator('.state-track .current').innerText();
+  await expect(page.locator('.state-track .current')).toHaveText('Detected');
 
-  if (state === 'Detected') {
-    // The browser disables an illegal target before it can be submitted.
-    await page.getByTestId('transition-select').selectOption('confirmed');
-    await expect(page.getByTestId('transition-submit')).toBeDisabled();
-    await expect(page.getByTestId('transition-submit')).toHaveText('Illegal transition');
+  // The browser disables an illegal target before it can be submitted.
+  await page.getByTestId('transition-select').selectOption('confirmed');
+  await expect(page.getByTestId('transition-submit')).toBeDisabled();
+  await expect(page.getByTestId('transition-submit')).toHaveText('Illegal transition');
 
-    await page.getByTestId('transition-select').selectOption('approved');
-    await expect(page.getByTestId('transition-submit')).toBeEnabled();
-    await page.getByTestId('transition-note').fill('Reviewed against the truth registry');
-    await page.getByTestId('transition-submit').click();
-    await expect(page.getByTestId('flash-ok')).toContainText('Advanced to approved');
+  await page.getByTestId('transition-select').selectOption('approved');
+  await expect(page.getByTestId('transition-submit')).toBeEnabled();
+  await expect(page.getByTestId('transition-submit')).toHaveText('Advance');
+  await page.getByTestId('transition-note').fill('Reviewed against the truth registry');
+  await page.getByTestId('transition-submit').click();
+  await expect(page.getByTestId('flash-ok')).toContainText('Advanced to approved');
 
-    await page.getByTestId('transition-select').selectOption('shipped');
-    await page.getByTestId('transition-submit').click();
-    await expect(page.getByTestId('flash-ok')).toContainText('Advanced to shipped');
-    await expect(page.getByTestId('action-experiment-link')).toBeVisible();
-  }
+  await page.getByTestId('transition-select').selectOption('shipped');
+  await page.getByTestId('transition-submit').click();
+  await expect(page.getByTestId('flash-ok')).toContainText('Advanced to shipped');
+  await expect(page.getByTestId('action-experiment-link')).toBeVisible();
 
+  // And the server refuses the illegal one even when the browser guard is bypassed entirely.
   await expect(page.getByTestId('transition-row').first()).toBeVisible();
 });
 

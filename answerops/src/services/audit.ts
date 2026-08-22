@@ -20,7 +20,7 @@ import { id, nowIso, hashPassword } from '../db/index.js';
 import * as repo from '../db/repo/index.js';
 import * as sched from '../db/repo/unattended.js';
 import type { Row } from '../db/repo/index.js';
-import { crawlSite, proposeCanonicalClaims, autoDemand, type CrawlResult } from './siteReader.js';
+import { crawlSite, proposeCanonicalClaims, autoDemand, thinPages, type CrawlResult } from './siteReader.js';
 import { runSamplingRound } from './observatory.js';
 import { buildDashboard, type DashboardData } from './dashboard.js';
 import { BUYER_STAGE } from '../domain/intent.js';
@@ -70,15 +70,20 @@ export function createAuditReport(db: DB, requestId: string | null, domain: stri
     cost_known: 1,
     powered_for: null,
     not_tested: '[]',
+    simulated_runs: 0,
+    facts_read: 0,
+    thin_pages: '[]',
     error: null,
     created_at: nowIso(),
     completed_at: null,
   };
   db.prepare(
     `INSERT INTO audit_reports (id, request_id, token, domain, brand_name, tenant_id, status, findings, candidates,
-      clusters, sample_size, surfaces, cost_usd, cost_known, powered_for, not_tested, error, created_at, completed_at)
+      clusters, sample_size, surfaces, cost_usd, cost_known, powered_for, not_tested, simulated_runs, facts_read,
+      thin_pages, error, created_at, completed_at)
      VALUES (@id, @request_id, @token, @domain, @brand_name, @tenant_id, @status, @findings, @candidates,
-      @clusters, @sample_size, @surfaces, @cost_usd, @cost_known, @powered_for, @not_tested, @error, @created_at, @completed_at)`,
+      @clusters, @sample_size, @surfaces, @cost_usd, @cost_known, @powered_for, @not_tested, @simulated_runs,
+      @facts_read, @thin_pages, @error, @created_at, @completed_at)`,
   ).run(row);
   return row;
 }
@@ -172,12 +177,15 @@ export async function runAudit(db: DB, reportId: string, opts: AuditOptions): Pr
 
     const data = buildDashboard(db, tenant.id, brand.id, 'audit');
     const findings = summarise(data);
-    const surfaces = [...new Set(repo.runsForWindow(db, tenant.id, brand.id, 'audit').map((r) => `${r.provider} ${r.model_id} ${r.grounding}`))];
+    const runs = repo.runsForWindow(db, tenant.id, brand.id, 'audit');
+    const surfaces = [...new Set(runs.map((r) => `${r.provider} ${r.model_id} ${r.grounding}`))];
+    // Every run already carries this flag; the report is where it was going unread.
+    const simulatedRuns = runs.filter((r) => r.simulated === 1).length;
 
     db.prepare(
       `UPDATE audit_reports SET status = 'complete', brand_name = ?, tenant_id = ?, findings = ?, candidates = ?,
           clusters = ?, sample_size = ?, surfaces = ?, cost_usd = ?, cost_known = ?, powered_for = ?, not_tested = ?,
-          completed_at = ? WHERE id = ?`,
+          simulated_runs = ?, facts_read = ?, thin_pages = ?, completed_at = ? WHERE id = ?`,
     ).run(
       crawl.brandName,
       tenant.id,
@@ -190,6 +198,9 @@ export async function runAudit(db: DB, reportId: string, opts: AuditOptions): Pr
       round.costKnown ? 1 : 0,
       poweredFor(round.runsCreated),
       JSON.stringify(notTested(crawl, competitors)),
+      simulatedRuns,
+      candidates.length,
+      JSON.stringify(thinPages(crawl).map((p) => p.path)),
       clock.now().toISOString(),
       reportId,
     );
@@ -251,6 +262,16 @@ export function notTested(crawl: CrawlResult, competitors: string[]): string[] {
   ];
   if (competitors.length === 0) out.push('Comparison questions against named competitors, because none were identified from your site.');
   if (crawl.failed.length > 0) out.push(`${crawl.failed.length} pages on your site could not be read (${crawl.failed.map((f) => f.error).join(', ')}).`);
+  // The failure that emptied the first real audit. A 200 with no prose in it is not a page we
+  // read, and saying so is the difference between "nothing is wrong" and "we could not look".
+  const thin = thinPages(crawl);
+  if (thin.length > 0) {
+    out.push(
+      `${thin.length} of the ${crawl.pages.length} pages we reached returned almost no text to a plain HTTP read ` +
+        `(${thin.map((p) => p.path).join(', ')}). Sites that render their copy in the browser look like this. ` +
+        'Anything stated only in the rendered page was not read, and so was not checked.',
+    );
+  }
   return out;
 }
 

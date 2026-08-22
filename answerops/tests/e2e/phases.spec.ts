@@ -92,20 +92,25 @@ test('flow 15 — alerts carry their sample size, and a delivery channel can be 
 test('flow 16 — a citation carries a dated snapshot you can open, and can be re-checked', async ({ page }) => {
   await signIn(page);
   await page.getByTestId('nav-observatory').click();
-  await page.getByTestId('run-link').first().click();
-  await expect(page.locator('h1')).toContainText('Run ');
 
-  const cited = page.getByTestId('citation-row');
-  await expect(cited.first()).toBeVisible();
-
-  // Find a run whose citation actually has a snapshot; not every answer cites a reachable page,
-  // which is itself one of the outcomes the product reports.
+  // Whichever run sorts first is whichever round an earlier flow happened to sample last, and
+  // an answer that cites nothing is a normal outcome the product reports rather than a fault.
+  // Asserting on run-link.first() therefore asserted on an accident of ordering: it passed or
+  // failed depending on which flow ran before it. Scan for a run that actually cites something,
+  // and only then require a snapshot behind one of those citations.
+  let found = false;
   let link = page.getByTestId('snapshot-link').first();
-  for (let i = 0; i < 8 && (await link.count()) === 0; i++) {
+  const runs = await page.getByTestId('run-link').count();
+  for (let i = 0; i < Math.min(runs, 12); i++) {
     await page.goto('/observatory');
-    await page.getByTestId('run-link').nth(i + 1).click();
+    await page.getByTestId('run-link').nth(i).click();
+    await expect(page.locator('h1')).toContainText('Run ');
+    if ((await page.getByTestId('citation-row').count()) === 0) continue;
+    found = true;
     link = page.getByTestId('snapshot-link').first();
+    if ((await link.count()) > 0) break;
   }
+  expect(found, 'no sampled answer in the window cited anything at all').toBe(true);
   expect(await link.count(), 'no sampled answer cited a retrievable page').toBeGreaterThan(0);
 
   await link.click();
@@ -238,6 +243,15 @@ test('flow 22 — a stranger requests an audit and gets a dated report they can 
   await expect(page.getByTestId('audit-power')).toContainText('points');
   await expect(page.getByTestId('audit-not-tested')).toContainText(/market|search console/i);
   await expect(page.getByTestId('audit-candidate').first()).toBeVisible();
+
+  // The demo deployment has no provider keys, so this sample came from the stand-in. A stranger
+  // must be told that before reading a single number, not in a footnote under them.
+  const simBanner = page.getByTestId('audit-simulated-banner');
+  await expect(simBanner).toBeVisible();
+  await expect(simBanner).toContainText(/No real assistant was asked/i);
+  const bannerBox = await simBanner.boundingBox();
+  const firstStat = await page.getByTestId('audit-sample').boundingBox();
+  expect(bannerBox!.y, 'the disclosure has to sit above the first figure').toBeLessThan(firstStat!.y);
 
   // One action, and it converts the workspace the audit already built.
   await page.getByTestId('convert-email').fill('founder@demo.example');

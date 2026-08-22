@@ -1,4 +1,4 @@
-import { html, Raw, pct } from '../html.js';
+import { html, Raw, raw, pct } from '../html.js';
 import { measureEl } from './dashboard.js';
 import { FAMILY_LABEL, INTENT_FAMILIES } from '../../domain/intent.js';
 import { ACTION_LABEL, ACTION_TYPES } from '../../domain/priority.js';
@@ -436,7 +436,7 @@ export function actionDetailView(v: {
               <label for="to">Next state</label>
               <select id="to" name="to" data-testid="transition-select">
                 ${ACTION_STATES.map(
-                  (s) => html`<option value="${s}" ${v.next.includes(s) ? '' : 'data-illegal="1"'}>${STATE_LABEL[s]}${v.next.includes(s) ? '' : ' — illegal from here'}</option>`,
+                  (s) => html`<option value="${s}" ${v.next.includes(s) ? '' : raw('data-illegal="1"')}>${STATE_LABEL[s]}${v.next.includes(s) ? '' : ' — illegal from here'}</option>`,
                 )}
               </select>
             </div>
@@ -637,7 +637,7 @@ export function entitiesView(v: { relationships: any[] }): Raw {
               <td>
                 <form method="post" action="/entities/${r.entity_id}/classify" class="inline-form">
                   <select name="relation" data-testid="relation-select">
-                    ${RELATIONS.map((rel) => html`<option value="${rel}" ${rel === r.relation ? 'selected' : ''}>${RELATION_LABEL[rel]}</option>`)}
+                    ${RELATIONS.map((rel) => html`<option value="${rel}" ${rel === r.relation ? raw('selected') : ''}>${RELATION_LABEL[rel]}</option>`)}
                   </select>
                   <select name="basis" data-testid="basis-select">
                     <option value="customer_declared">customer declared</option>

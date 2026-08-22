@@ -138,7 +138,8 @@ const PLANS = [
   },
 ];
 
-export function landingView(): Raw {
+export function landingView(opts: { liveProviders?: number } = {}): Raw {
+  const rehearsal = (opts.liveProviders ?? 0) === 0;
   return html`
 <a class="skip" href="#main">Skip to content</a>
 
@@ -415,7 +416,9 @@ export function landingView(): Raw {
       </p>
       <ul>
         <li>We load your facts from your docs. You approve each one before we ask anything.</li>
-        <li>We ask your highest-intent questions across all four assistants.</li>
+        <li>${rehearsal
+          ? raw('We ask your highest-intent questions across every assistant this deployment has a key for.')
+          : raw('We ask your highest-intent questions across all four assistants.')}</li>
         <li>You get every wrong answer we can evidence, with transcripts, setups and citations.</li>
         <li>If we find nothing worth fixing, we say so and you owe us nothing.</li>
       </ul>
@@ -424,6 +427,14 @@ export function landingView(): Raw {
     <form class="audit-form" data-audit-form novalidate data-testid="audit-form">
       <h3>Request an answer audit</h3>
       <p class="note">Two fields. The sample starts immediately and the report link appears here.</p>
+      ${rehearsal
+        ? html`<p class="note rehearsal" data-testid="rehearsal-notice">
+            <b>This deployment has no assistant API keys configured.</b> An audit requested now runs the full
+            pipeline against a deterministic stand-in, not against ChatGPT, Claude, Gemini or Perplexity. The
+            report will say so at the top, and none of its numbers describe what a real assistant tells your
+            buyers.
+          </p>`
+        : null}
 
       <div class="field">
         <label for="audit-email">Work email</label>

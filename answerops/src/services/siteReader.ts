@@ -19,6 +19,29 @@ export const CANDIDATE_PATHS = [
 
 export const MAX_PAGES = 12;
 
+/**
+ * The client-rendered signature: a large response carrying almost no prose.
+ *
+ * This is what silently emptied the first real audit. The fetcher reads server-rendered HTML,
+ * so a site that builds its copy in the browser answers 200 with a shell. onvanar.com's
+ * homepage came back as 190,811 bytes of markup and script containing 843 characters of text.
+ * The crawl counted it as a page read, the extractor found no facts in it, and the report said
+ * "0 answer defects" with an empty registry behind the zero.
+ *
+ * The test is deliberately not "is this page short". A genuinely short page that arrived whole
+ * was read completely, and there is nothing to disclose about it. What has to be disclosed is a
+ * page where most of what a person sees never reached us. A thin page is still kept — its title
+ * and headings are real — but it is named on the report, so a reader can tell "we checked and
+ * found nothing wrong" apart from "we could not read your site".
+ */
+export const THIN_TEXT_CHARS = 1200;
+export const THIN_HTML_BYTES = 20_000;
+
+/** Pages whose markup was substantial but whose readable text was not. */
+export function thinPages(crawl: CrawlResult): SitePage[] {
+  return crawl.pages.filter((p) => p.bytes >= THIN_HTML_BYTES && p.text.length < THIN_TEXT_CHARS);
+}
+
 export interface SitePage {
   url: string;
   path: string;
@@ -27,6 +50,8 @@ export interface SitePage {
   headings: string[];
   updatedAt: string | null;
   status: number | null;
+  /** Size of the response we parsed, so a shell can be told from a small page. */
+  bytes: number;
 }
 
 export interface CrawlResult {
@@ -84,7 +109,7 @@ export function parsePage(url: string, host: string, html: string, status: numbe
   } catch {
     /* keep '/' */
   }
-  return { url, path, title, text: textOf(html), headings, updatedAt, status };
+  return { url, path, title, text: textOf(html), headings, updatedAt, status, bytes: html.length };
 }
 
 /** Same-host links in a page's markup, in document order, deduplicated. */
@@ -196,6 +221,23 @@ export interface DemandCandidate {
  * Every cluster built from these is labelled `estimated`. Estimated demand may rank a defect;
  * it may not appear in a sentence about money.
  */
+/**
+ * Is this heading a buyer question, or a section label?
+ *
+ * The first version accepted any heading opening with an interrogative word, which let "How it
+ * works." onto a customer's report as though buyers were asking it, and then spent five runs
+ * sampling it. Marketing pages are full of those: "What we do", "Why choose us", "How it
+ * works". They open with a question word and are not questions.
+ *
+ * A question mark is the only signal on a page that the author meant a question, so it is the
+ * only signal accepted here. Losing an unpunctuated real FAQ heading costs one estimated
+ * cluster; keeping a nav label costs the customer's trust in the whole report, and the
+ * templates already supply generic buyer questions.
+ */
+export function isQuestionHeading(heading: string): boolean {
+  return /\?\s*$/.test(heading.trim());
+}
+
 export function autoDemand(crawl: CrawlResult, competitors: string[] = []): DemandCandidate[] {
   const out: DemandCandidate[] = [];
   const brand = crawl.brandName;
@@ -210,9 +252,7 @@ export function autoDemand(crawl: CrawlResult, competitors: string[] = []): Dema
   for (const page of crawl.pages) {
     for (const h of page.headings) {
       // A heading that is already a question is the closest thing to real demand on the site.
-      if (/\?$/.test(h) || /^(how|what|can|does|do|is|are|why|when|where|which)\b/i.test(h)) {
-        push(h.replace(/\?+$/, '').trim(), 'site_faq', 40);
-      }
+      if (isQuestionHeading(h)) push(h.replace(/\?+$/, '').trim(), 'site_faq', 40);
     }
   }
 

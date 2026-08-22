@@ -58,6 +58,13 @@ import { predicateLabel } from './domain/verifier.js';
 import { toCanonical } from './services/observatory.js';
 import type { BeliefProfile } from './providers/types.js';
 import { liveProviderCount } from './providers/registry.js';
+import {
+  renderRobots, renderSitemap, sitemapEntries, renderLlmsTxt, faviconSvg,
+  organizationLd, softwareLd, faqLd, blogPostingLd, breadcrumbLd, canonical, SITE_NAME,
+} from './web/seo.js';
+import { POSTS, postBySlug, postsNewestFirst } from './content/posts.js';
+import { blogIndexView, postView } from './web/views/blog.js';
+import { publicPage } from './web/views/layout.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -292,10 +299,43 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   // The root is the only unauthenticated page that renders content. Every route that
   // touches workspace data still goes through requireAuth, so anonymous access buys a
   // marketing document and nothing else.
+  // Search results truncate around 155 characters and a description cut mid-clause reads as
+  // neglect in the one place a stranger forms a first impression. This one is 152.
   const PUBLIC_DESCRIPTION =
-    'Miscited finds the wrong answers AI gives about your company, helps you correct the record they '
-    + 'came from, and proves the correction worked. ' +
-    'Every rate ships with its 95% interval and its sample size, or it is not shown.';
+    'Find the wrong answers AI assistants give about your company, correct the pages they came ' +
+    'from, and prove the answers changed. Every rate carries its n.';
+
+  /**
+   * The questions a buyer actually types, answered in the 40 to 60 words an answer engine will
+   * lift. These are the same answers a salesperson would give; a FAQ written for extraction and
+   * a FAQ written for a human diverge only when one of them is dishonest.
+   */
+  const HOME_FAQ = [
+    {
+      q: 'What does Miscited do?',
+      a: 'Miscited measures whether AI assistants state true things about your company. It checks every claim in an answer against a dated registry of your own facts, checks whether each citation actually supports the claim attached to it, helps you correct the source pages, then re-samples to test whether the answers changed.',
+    },
+    {
+      q: 'How is Miscited different from AI visibility tools?',
+      a: 'Visibility tools count mentions, sentiment and share of voice. Miscited checks whether the claim is true. An answer that names you, sounds positive, cites your own pricing page and quotes a price you retired two years ago scores as a success for a visibility tool and as a defect here.',
+    },
+    {
+      q: 'Can you control what ChatGPT says about my company?',
+      a: 'No, and neither can anyone else outside a frontier lab. What is possible is to measure what the assistants say, correct the sources they read, and run a controlled test of whether the answers moved. Miscited refuses to claim otherwise, and a failing test enforces that in the codebase.',
+    },
+    {
+      q: 'Which AI assistants does Miscited check?',
+      a: 'OpenAI, Anthropic, Google and Perplexity. Every run records the provider, model, model version, access mode, grounding mode, country, language and system configuration, because those change the answer and a result without them cannot be reproduced.',
+    },
+    {
+      q: 'How much does Miscited cost?',
+      a: 'The Answer Risk Audit is free and one-time. Monitor is $750 a month for 50 question clusters sampled weekly. Operate is $2,000 a month for 100 clusters sampled daily, with the fact registry, action list and experiment ledger. Enterprise starts at $5,000 a month for multiple brands.',
+    },
+    {
+      q: 'How many prompts do you need to measure AI answers accurately?',
+      a: 'More than most tools use. A rate needs at least five runs per question cluster before Miscited will show it at all, and detecting a ten-point change at a 40% base rate takes roughly 388 runs per side at 80% power. Any percentage without its sample size cannot be checked.',
+    },
+  ];
 
   app.post('/audit-request', async (req, reply) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
@@ -333,9 +373,14 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   app.get('/', async (req, reply) => {
     const a = auth(req);
     if (!a) {
-      return reply
-        .type('text/html; charset=utf-8')
-        .send(marketingPage('Miscited · quality control for what AI says about your company', PUBLIC_DESCRIPTION, landingView({ liveProviders: liveProviderCount() })));
+      return reply.type('text/html; charset=utf-8').send(
+        marketingPage(
+          'Miscited · quality control for what AI says about your company',
+          PUBLIC_DESCRIPTION,
+          landingView({ liveProviders: liveProviderCount() }),
+          [organizationLd(), softwareLd(), faqLd(HOME_FAQ)],
+        ),
+      );
     }
     const brand = brandOf(a);
     const requestedWindow = (req.query as Record<string, string | undefined>).window ?? null;
@@ -1195,6 +1240,89 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     const a = requireAuth(req, reply);
     if (!a) return reply;
     return send(reply, 'Audit requests', a, 'audit', auditAdminView({ reports: listAuditReports(db) }));
+  });
+
+  // ------------------------------------------------------------------ seo
+
+  /**
+   * Crawler policy, the sitemap and a plain-text brief for a model that arrives with one
+   * question. A product that measures what assistants say about companies has to be legible to
+   * those assistants; blocking them here would be the defect this product exists to find.
+   */
+  app.get('/robots.txt', async (_req, reply) =>
+    reply.type('text/plain; charset=utf-8').header('cache-control', 'public, max-age=3600').send(renderRobots()),
+  );
+
+  app.get('/sitemap.xml', async (_req, reply) =>
+    reply
+      .type('application/xml; charset=utf-8')
+      .header('cache-control', 'public, max-age=3600')
+      .send(renderSitemap(sitemapEntries(postsNewestFirst().map((p) => ({ slug: p.slug, updated: p.updated }))))),
+  );
+
+  app.get('/llms.txt', async (_req, reply) =>
+    reply
+      .type('text/plain; charset=utf-8')
+      .header('cache-control', 'public, max-age=3600')
+      .send(renderLlmsTxt(postsNewestFirst().map((p) => ({ slug: p.slug, title: p.title, summary: p.summary })))),
+  );
+
+  app.get('/favicon.svg', async (_req, reply) =>
+    reply.type('image/svg+xml').header('cache-control', 'public, max-age=86400').send(faviconSvg()),
+  );
+
+  // ----------------------------------------------------------------- blog
+
+  app.get('/blog', async (_req, reply) => {
+    const posts = postsNewestFirst();
+    return reply.type('text/html; charset=utf-8').send(
+      publicPage(
+        {
+          title: `Writing · ${SITE_NAME}`,
+          description:
+            'How to measure what AI assistants say about a company without fooling yourself: sample sizes, intervals, and what separates a wrong answer from a missing one.',
+          path: '/blog',
+          stylesheet: '/static/blog.css',
+          script: null,
+          extra: [breadcrumbLd([{ name: 'Miscited', path: '/' }, { name: 'Writing', path: '/blog' }])],
+        },
+        blogIndexView(posts),
+      ),
+    );
+  });
+
+  app.get('/blog/:slug', async (req, reply) => {
+    const post = postBySlug(String((req.params as any).slug));
+    if (!post) {
+      return reply.code(404).type('text/html; charset=utf-8').send(
+        publicPage(
+          { title: `Not found · ${SITE_NAME}`, description: 'No such page.', path: '/blog', stylesheet: '/static/blog.css', script: null },
+          raw('<article class="post"><header class="post-head"><p class="kicker"><a href="/">Miscited</a> · <a href="/blog">Writing</a></p><h1>Not found</h1><p class="lede">No post exists at this address.</p></header></article>'),
+        ),
+      );
+    }
+    const others = postsNewestFirst().filter((p) => p.slug !== post.slug);
+    return reply.type('text/html; charset=utf-8').send(
+      publicPage(
+        {
+          title: `${post.metaTitle} · ${SITE_NAME}`,
+          description: post.metaDescription,
+          path: `/blog/${post.slug}`,
+          stylesheet: '/static/blog.css',
+          script: null,
+          extra: [
+            blogPostingLd(post),
+            faqLd(post.faq),
+            breadcrumbLd([
+              { name: 'Miscited', path: '/' },
+              { name: 'Writing', path: '/blog' },
+              { name: post.metaTitle, path: `/blog/${post.slug}` },
+            ]),
+          ],
+        },
+        postView(post, others),
+      ),
+    );
   });
 
   app.get('/healthz', async (_req, reply) => reply.send({ ok: true }));

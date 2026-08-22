@@ -285,3 +285,29 @@ test('flow 23 — every state-changing form carries its security token', async (
   await page.getByTestId('run-sampling').click();
   await expect(page.getByTestId('forbidden')).toContainText('security token');
 });
+
+// ---------------------------------------------------------------- flow 24
+test('flow 24 — a stranger reads the writing and can reach the audit from it', async ({ page }) => {
+  await page.goto('/blog');
+  await expect(page.locator('h1')).toContainText('Writing');
+
+  const cards = page.locator('.post-card');
+  await expect(cards.first()).toBeVisible();
+  const count = await cards.count();
+  expect(count, 'the index lists every post').toBeGreaterThanOrEqual(3);
+
+  await cards.first().click();
+  await expect(page.locator('h1')).toBeVisible();
+  await expect(page.locator('.dateline').first()).toContainText(/Published/);
+
+  // A post has to carry its own structured data or it cannot be cited as a source.
+  const ld = await page.locator('script[type="application/ld+json"]').count();
+  expect(ld, 'BlogPosting, FAQPage and BreadcrumbList').toBeGreaterThanOrEqual(3);
+
+  // The FAQ answers are visible, not schema-only. Marking up an answer the page does not show
+  // is the machine-readable version of a citation that does not support its claim.
+  await expect(page.locator('.faq .qa').first()).toBeVisible();
+
+  await page.locator('.post-cta a.btn').click();
+  await expect(page.getByTestId('audit-form')).toBeVisible();
+});

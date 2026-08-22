@@ -1,4 +1,5 @@
-import { html, Raw, raw } from '../html.js';
+import { html, Raw, raw, escapeHtml } from '../html.js';
+import { canonical, SITE_NAME } from '../seo.js';
 
 export interface NavContext {
   email: string | null;
@@ -136,26 +137,66 @@ export function reportPage(title: string, description: string, body: Raw): strin
  * The two design systems stay separate on purpose — the marketing page is a document,
  * the console is an instrument, and neither should inherit the other's cascade.
  */
-export function marketingPage(title: string, description: string, body: Raw): string {
+export interface HeadMeta {
+  title: string;
+  description: string;
+  /** Path only. The canonical host lives in seo.ts so it cannot drift between pages. */
+  path: string;
+  /** Extra <head> content: JSON-LD blocks, article meta. */
+  extra?: Raw[];
+  /** Stylesheet to load, defaulting to the marketing one. */
+  stylesheet?: string;
+  /** Deferred script, if the page needs one. */
+  script?: string | null;
+  bodyClass?: string;
+}
+
+/**
+ * The public shell.
+ *
+ * Everything a machine reads about this page before it reads the page. Canonical first, because
+ * without it every query string and every trailing slash is a separate URL competing with itself.
+ * The description is trimmed rather than truncated by the renderer, since a description cut
+ * mid-clause reads as neglect in exactly the place a stranger forms an impression.
+ */
+export function publicPage(meta: HeadMeta, body: Raw): string {
+  const url = canonical(meta.path);
+  const desc = escapeHtml(meta.description);
+  const title = escapeHtml(meta.title);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
-<meta name="description" content="${description}">
+<meta name="description" content="${desc}">
+<link rel="canonical" href="${url}">
 <meta name="color-scheme" content="light">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:site_name" content="${SITE_NAME}">
 <meta property="og:title" content="${title}">
-<meta property="og:description" content="${description}">
+<meta property="og:description" content="${desc}">
+<meta property="og:url" content="${url}">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="en_GB">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${desc}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/landing.css">
+<link rel="stylesheet" href="${meta.stylesheet ?? '/static/landing.css'}">
+${(meta.extra ?? []).map((e) => e.value).join('\n')}
 </head>
-<body>
+<body${meta.bodyClass ? ` class="${meta.bodyClass}"` : ''}>
 ${body.value}
-<script src="/static/landing.js" defer></script>
+${meta.script === null ? '' : `<script src="${meta.script ?? '/static/landing.js'}" defer></script>`}
 </body>
 </html>`;
+}
+
+/** Kept for the landing page's existing call sites. */
+export function marketingPage(title: string, description: string, body: Raw, extra: Raw[] = []): string {
+  return publicPage({ title, description, path: '/', extra }, body);
 }

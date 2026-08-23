@@ -63,6 +63,7 @@ import {
   organizationLd, softwareLd, faqLd, blogPostingLd, breadcrumbLd, canonical, SITE_NAME,
 } from './web/seo.js';
 import { POSTS, postBySlug, postsNewestFirst } from './content/posts.js';
+import { CANONICAL_HOST } from './web/seo.js';
 import { blogIndexView, postView } from './web/views/blog.js';
 import { publicPage } from './web/views/layout.js';
 
@@ -123,6 +124,23 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   app.addHook('onRoute', (route) => {
     const methods = Array.isArray(route.method) ? route.method : [route.method];
     for (const method of methods) registered.push({ method: String(method).toUpperCase(), url: route.url });
+  });
+
+  /**
+   * One host, one canonical URL.
+   *
+   * www and the apex serving the same pages is two addresses for one site: link equity splits
+   * between them, and a crawler has to be told by a canonical tag which one counts. The tag is
+   * there, but a redirect settles it before the request is even answered, and it means a link
+   * someone typed with www in front still lands.
+   *
+   * Only the exact www form of our own domain is redirected. Preview URLs, the Railway
+   * subdomain, localhost and the e2e host all have to keep working untouched.
+   */
+  app.addHook('onRequest', async (req, reply) => {
+    const host = String(req.headers.host ?? '').toLowerCase().split(':')[0];
+    if (host !== `www.${CANONICAL_HOST}`) return;
+    return reply.code(301).redirect(`https://${CANONICAL_HOST}${req.url}`);
   });
 
   app.register(cookie);

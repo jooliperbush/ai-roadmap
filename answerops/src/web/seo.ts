@@ -17,6 +17,8 @@ import type { Raw } from './html.js';
 import { raw } from './html.js';
 
 export const SITE_URL = 'https://miscited.com';
+/** Host only, for the www redirect and anything else that compares a Host header. */
+export const CANONICAL_HOST = 'miscited.com';
 export const SITE_NAME = 'Miscited';
 export const SITE_TAGLINE = 'Quality control for what AI says about your company';
 

@@ -316,3 +316,41 @@ describe('the writing is held to the product standard', () => {
     }
   });
 });
+
+/**
+ * www and the apex are two addresses for one site. The canonical tag tells a crawler which one
+ * counts; this settles it before the request is answered, so a link someone typed with www in
+ * front still lands on the page rather than splitting the site in two.
+ *
+ * The DNS for www was correct all along. What was missing was the domain being registered with
+ * the host, so no certificate covered it and the handshake failed before any of this ran.
+ */
+describe('one host, one canonical URL', () => {
+  it('sends www to the apex permanently, keeping the path', async () => {
+    const res = await app.inject({ method: 'GET', url: '/blog', headers: { host: 'www.miscited.com' } });
+    expect(res.statusCode).toBe(301);
+    expect(res.headers.location).toBe('https://miscited.com/blog');
+  });
+
+  it('keeps the query string, so a campaign link survives the hop', async () => {
+    const res = await app.inject({ method: 'GET', url: '/?utm_source=x&utm_campaign=y', headers: { host: 'www.miscited.com' } });
+    expect(res.headers.location).toBe('https://miscited.com/?utm_source=x&utm_campaign=y');
+  });
+
+  it('ignores the port when matching the host', async () => {
+    const res = await app.inject({ method: 'GET', url: '/', headers: { host: 'www.miscited.com:443' } });
+    expect(res.statusCode).toBe(301);
+  });
+
+  it('leaves every other host alone', async () => {
+    for (const host of ['miscited.com', 'answerops-production.up.railway.app', 'localhost:4300', '127.0.0.1:4399']) {
+      const res = await app.inject({ method: 'GET', url: '/', headers: { host } });
+      expect(res.statusCode, `${host} must not be redirected`).toBe(200);
+    }
+  });
+
+  it('does not redirect a lookalike host that merely contains our name', async () => {
+    const res = await app.inject({ method: 'GET', url: '/', headers: { host: 'www.miscited.com.evil.example' } });
+    expect(res.statusCode).not.toBe(301);
+  });
+})

@@ -962,3 +962,59 @@ p { max-width: var(--measure); color: var(--color-ink-soft); }
   border-radius: 3px;
   color: var(--color-ink-soft);
 }
+
+/* ------------------------------------------------------------------ catches
+   What we find, in the buyer's own nouns. Six short cards rather than prose,
+   because a reader scanning for "is this my problem" wants to find their own
+   situation in one pass, not read an argument. */
+.catches {
+  display: grid;
+  /* Fixed three, not auto-fit: six cards in an auto-fit grid land 4 + 2 at desktop and leave
+     the container's own rule colour showing through as an empty grey block. */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--color-line);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.catch { background: var(--color-surface); padding: 20px 22px 18px; }
+.catch h3 {
+  font-size: 16px; line-height: 1.3; letter-spacing: -.018em; font-weight: 700;
+  margin: 0 0 7px; color: var(--color-text);
+}
+.catch p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--color-ink-soft); }
+
+/* -------------------------------------------------------------------- trust
+   Promise first, mechanism second. The method is still on the page because a
+   technical evaluator will look for it, but it is set as a small monospace
+   footnote so it never stands between a marketing reader and the point. */
+.trust {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--color-line);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.trust-row { background: var(--color-surface); padding: 22px 24px 20px; }
+.trust-row h3 {
+  font-size: 17px; line-height: 1.28; letter-spacing: -.02em; font-weight: 700;
+  margin: 0 0 8px; color: var(--color-text);
+}
+.trust-row p { margin: 0 0 14px; font-size: 15px; line-height: 1.55; color: var(--color-ink-soft); }
+.trust-row .method {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: .04em; color: var(--color-faint);
+  background: var(--tint-accent); border: 1px solid rgba(156, 111, 74, .22);
+  border-radius: 2px; padding: 4px 8px;
+}
+
+@media (max-width: 900px) {
+  .catches, .trust { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .catches, .trust { grid-template-columns: 1fr; }
+}

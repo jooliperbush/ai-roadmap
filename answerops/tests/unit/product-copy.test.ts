@@ -169,3 +169,49 @@ describe('attributes are emitted as attributes, not as escaped text', () => {
     expect(view).not.toContain('data-illegal=&quot;');
   });
 });
+
+/**
+ * The public page is read by a marketing lead in about ninety seconds, not by an engineer
+ * auditing our methodology. It once labelled its own "how it works" steps with the console's
+ * screen names — Truth registry, Observatory, Answer desk — which are the right nouns for the
+ * product and inert to the person who signs for it.
+ *
+ * The rigour stays on the page, because it is the reason to believe us and a technical
+ * evaluator will look for it. What is enforced here is the order: the promise a buyer
+ * understands comes first, the mechanism that delivers it comes second.
+ */
+describe('the public page speaks the buyer\'s language', () => {
+  const landing = landingView({ liveProviders: 4 }).value;
+  const headings = [...landing.matchAll(/<h[123][^>]*>([\s\S]*?)<\/h[123]>/g)].map((m) =>
+    m[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
+  );
+
+  it('never puts a console screen name in a heading', () => {
+    const internal = /\b(observatory|answer desk|truth registry|experiment ledger|action catalogue|demand graph)\b/i;
+    const offenders = headings.filter((h) => internal.test(h));
+    expect(offenders, 'these are our nouns, not the buyer\'s').toEqual([]);
+  });
+
+  it('never leads a heading with a statistical method', () => {
+    const jargon = /\b(wilson|benjamini|hochberg|z-test|p\s*<|q\s*=|difference-in-differences|two-proportion)\b/i;
+    const offenders = headings.filter((h) => jargon.test(h));
+    expect(offenders, 'the method belongs under the promise, not in front of it').toEqual([]);
+  });
+
+  it('still carries the methods somewhere on the page, because they are the reason to believe it', () => {
+    for (const method of ['Wilson', 'Benjamini-Hochberg', 'two-proportion z-test', 'difference-in-differences']) {
+      expect(landing, `${method} is the proof and must not be deleted in the name of simplicity`).toContain(method);
+    }
+  });
+
+  it('names the concrete failures a marketer recognises', () => {
+    for (const phrase of [/price you changed/i, /plan or limit you retired/i, /integration you sunset/i]) {
+      expect(landing).toMatch(phrase);
+    }
+  });
+
+  it('says who does the work at each step, since the answer is mostly us', () => {
+    expect(landing).toMatch(/You, once/);
+    expect(landing).toMatch(/Us, every week/);
+  });
+});

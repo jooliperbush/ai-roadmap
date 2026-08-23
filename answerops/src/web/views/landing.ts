@@ -22,37 +22,65 @@ function measure(point: string, ciLow: string, ciHigh: string, n: number, tone: 
   ></span>`;
 }
 
+/**
+ * How it works, for the person who actually buys this.
+ *
+ * The previous version of this list was labelled with the console's own screen names — Truth
+ * registry, Observatory, Answer desk — which are the right nouns for the product and the wrong
+ * ones for a marketing lead reading the page for ninety seconds. "Observatory" tells a buyer
+ * nothing. Worse, the list described our machinery rather than their week, so the reader had to
+ * do the translation into their own job, and most will not bother.
+ *
+ * Each step now says who does the work, because the honest answer is that we do almost all of
+ * it, and that is the strongest thing on the page.
+ */
 const LOOP = [
   {
     n: '01',
-    title: 'Write down what is true',
-    body: 'Each fact gets a source, an owner, a start date and an expiry.',
-    where: 'Truth registry',
+    title: 'You tell us what is true',
+    body: 'Your prices, your plans, your integrations, your certifications. One short session, and we read most of it off your own site first.',
+    who: 'You, once',
   },
   {
     n: '02',
-    title: 'Ask what buyers ask',
-    body: 'Real buyer questions, asked repeatedly across four assistants. We save the exact setup: model, version, grounding, country.',
-    where: 'Observatory',
+    title: 'We ask what your buyers ask',
+    body: 'The real questions people type before they buy from you, asked over and over across ChatGPT, Claude, Gemini and Perplexity.',
+    who: 'Us, every week',
   },
   {
     n: '03',
-    title: 'Check every claim',
-    body: 'Every statement is checked against your facts. Every citation is checked for whether it backs the claim.',
-    where: 'Answer desk',
+    title: 'We show you what is wrong',
+    body: 'Every answer that contradicts a fact you gave us, with the transcript, the date and the page the assistant leaned on.',
+    who: 'Us, with receipts',
   },
   {
     n: '04',
-    title: 'Fix the record',
-    body: 'A fixed list of moves: publish a dated correction, fix the doc, add the comparison page. Each carries its evidence.',
-    where: 'Actions',
+    title: 'You fix the page it came from',
+    body: 'Usually one paragraph on a page you already own. We tell you which page and what it needs to say.',
+    who: 'You, ten minutes',
   },
   {
     n: '05',
-    title: 'Prove it moved',
-    body: 'Ask again, compare against an untouched baseline, report the difference with a p-value and what we cannot rule out.',
-    where: 'Experiments',
+    title: 'We check whether it worked',
+    body: 'We ask again, compare against questions we deliberately left alone, and tell you plainly whether the answer moved or the model just changed.',
+    who: 'Us, and we will say if it failed',
   },
+];
+
+/**
+ * What this catches, in the buyer's own nouns.
+ *
+ * The exhibit above proves the category exists. This proves it applies to them. A marketing lead
+ * does not think "stale predicate in the truth registry", they think "we killed that plan in
+ * March and something is still selling it".
+ */
+const CATCHES = [
+  { t: 'A price you changed last year', b: 'Assistants keep quoting the old one, often citing your own pricing page.' },
+  { t: 'A plan or limit you retired', b: 'Buyers arrive expecting a tier that no longer exists, and blame you for the surprise.' },
+  { t: 'A feature you never shipped', b: 'Somebody is being sold something you cannot deliver, and it lands in your renewal calls.' },
+  { t: 'An integration you sunset', b: 'The answer says you connect to a tool you dropped two releases ago.' },
+  { t: 'A competitor named as your alternative', b: 'On questions specifically about you, not about the category.' },
+  { t: 'A claim your own docs contradict', b: 'Two pages of yours disagree, so the assistant picks one, and it is often the older one.' },
 ];
 
 const REFUSALS = [
@@ -88,15 +116,45 @@ const REFUSALS = [
   },
 ];
 
-const SPEC_ROWS: Array<[string, string]> = [
-  ['Fewest runs', '5 per question cluster per window before any rate is shown'],
-  ['Most runs', '20, spent where demand, value, volatility and defect risk are highest'],
-  ['Error bar', '95% Wilson score interval, still correct at 0 hits and at all hits'],
-  ['Change detection', 'two-proportion z-test, p < 0.05, at least a 10-point move'],
-  ['Multiple testing', 'Benjamini-Hochberg at q = 0.1'],
-  ['Under the floor', 'no number, just "insufficient data"'],
-  ['Saved with each run', 'provider, model, version, access mode, grounding, search mode, geo, language, personalisation, system config hash, temperature, seed'],
-  ['Assistants covered', 'OpenAI, Anthropic, Google, Perplexity'],
+/**
+ * The measurement rules, led by their consequence.
+ *
+ * The old table listed the method and left the reader to work out why it mattered: "Benjamini-
+ * Hochberg at q = 0.1" is precise, checkable and completely inert to a marketing lead. The
+ * method is still here, because it is the reason to believe us and a technical buyer will look
+ * for it, but it now sits behind the promise it delivers rather than in front of it.
+ */
+const TRUST_ROWS: Array<{ promise: string; because: string; method: string }> = [
+  {
+    promise: 'We will not show you a number we cannot stand behind',
+    because: 'If we have asked a question fewer than five times in a window, you get "not enough data" instead of a percentage.',
+    method: '5-run floor per cluster per window',
+  },
+  {
+    promise: 'Every number tells you how sure it is',
+    because: 'A rate never appears without the range it could really be and how many times we asked. 40% from ten asks and 40% from a thousand are different findings.',
+    method: '95% Wilson interval, always with its n',
+  },
+  {
+    promise: 'We will not email you about noise',
+    because: 'A change has to be big enough to matter and survive a statistical test before it reaches you, so your inbox is not a random number generator.',
+    method: 'Two-proportion z-test, p < 0.05, 10-point minimum move',
+  },
+  {
+    promise: 'Watching more questions will not create false alarms',
+    because: 'Test enough things and something always looks significant by chance. We correct for that, so tracking more does not mean panicking more.',
+    method: 'Benjamini-Hochberg at q = 0.1',
+  },
+  {
+    promise: 'We will tell you when your fix did not work',
+    because: 'We hold back a set of questions and change nothing about them. If they move as much as the ones you fixed, the model changed, not your page, and we say so.',
+    method: 'Matched controls, difference-in-differences',
+  },
+  {
+    promise: 'One score you can screenshot is not on offer',
+    because: 'Being named when someone asks about you and being recommended when they ask for a vendor are different results. Averaging them makes a flattering number that means nothing.',
+    method: 'Metrics keyed by intent family, never blended',
+  },
 ];
 
 const PLANS = [
@@ -151,8 +209,9 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <nav class="lp-nav-links" aria-label="Sections">
     <a href="#anatomy">The problem</a>
     <a href="#loop">How it works</a>
+    <a href="#catches">What we find</a>
     <a href="#refusals">What we refuse</a>
-    <a href="#design">The rules</a>
+    <a href="#design">Why trust it</a>
     <a href="#plans">Pricing</a>
   </nav>
   <a class="btn btn-ghost" href="/login" data-testid="nav-signin">Sign in</a>
@@ -312,10 +371,10 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <section class="shell section" id="loop">
     <div class="section-head">
       <p class="label">How it works</p>
-      <h2>Five steps, run on a schedule.</h2>
+      <h2>Five steps. You do two of them.</h2>
       <p class="lede">
-        Mention counts are an input here, never the deliverable. The loop turns a wrong answer into a
-        corrected one, then into evidence that the fix worked.
+        No tags to install, no tracking code, nothing to plug into your stack. Tell us what is true
+        about your company and we do the asking, the checking and the proving.
       </p>
     </div>
 
@@ -325,10 +384,36 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
           <span class="n">${s.n}</span>
           <h3>${s.title}</h3>
           <p>${s.body}</p>
-          <span class="where">${s.where}</span>
+          <span class="where">${s.who}</span>
         </article>`,
       )}
     </div>
+  </section>
+
+  <!-- --------------------------------------------------------------- catches -->
+  <section class="shell section" id="catches">
+    <div class="section-head">
+      <p class="label is-danger">What we find</p>
+      <h2>It is almost never a lie. It is almost always something that used to be true.</h2>
+      <p class="lede">
+        Assistants are not inventing your company. They are repeating a version of it that you have
+        moved on from. Here is what that looks like in practice.
+      </p>
+    </div>
+
+    <div class="catches">
+      ${CATCHES.map(
+        (c) => html`<article class="catch">
+          <h3>${c.t}</h3>
+          <p>${c.b}</p>
+        </article>`,
+      )}
+    </div>
+
+    <p class="note" style="margin-top:26px;max-width:70ch">
+      Every one of these is fixable, because every one of them traces back to a page. Usually a page
+      you own.
+    </p>
   </section>
 
   <!-- -------------------------------------------------------------- refusals -->
@@ -359,30 +444,30 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <!-- ------------------------------------------------------- measurement spec -->
   <section class="shell section" id="design">
     <div class="section-head">
-      <p class="label">Measurement design</p>
-      <h2>The rules behind every number.</h2>
+      <p class="label">Why you can trust the numbers</p>
+      <h2>Six promises, and the boring machinery behind each one.</h2>
       <p class="lede">
-        These settings decide what the console shows you. The same page ships inside the product. If
-        a line on it stops being true, that is a bug.
+        You are going to take these numbers into a meeting and someone will push back on them. Here is
+        what holds up when they do.
       </p>
     </div>
 
-    <table class="spec">
-      <caption class="note">Sampling and inference settings, current release.</caption>
-      <tbody>
-        ${SPEC_ROWS.map(
-          ([k, v]) => html`<tr>
-            <th scope="row">${k}</th>
-            <td>${v}</td>
-          </tr>`,
-        )}
-      </tbody>
-    </table>
+    <div class="trust">
+      ${TRUST_ROWS.map(
+        (r) => html`<article class="trust-row">
+          <h3>${r.promise}</h3>
+          <p>${r.because}</p>
+          <span class="method">${r.method}</span>
+        </article>`,
+      )}
+    </div>
 
-    <p class="note" style="margin-top: 24px; max-width: 72ch;">
-      Fifty clusters across four assistants for a month costs $400 to $1,000 in model and search spend
-      before anything else. That is why this is not a $49 tool. At $49 nobody can ask often enough to
-      know whether the answer is right.
+    <p class="note" style="margin-top: 26px; max-width: 72ch;">
+      If you want the arithmetic rather than the promise, we published it:
+      <a href="/blog/how-many-prompts-ai-visibility-sample-size">how many times you have to ask before a
+      percentage means anything</a>. Asking fifty question clusters across four assistants for a month
+      costs $400 to $1,000 in model and search spend before anything else, which is why this is not a
+      $49 tool. At $49 nobody can ask often enough to know whether the answer is right.
     </p>
   </section>
 

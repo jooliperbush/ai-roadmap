@@ -367,6 +367,30 @@ test('flow 25 — the hero exhibit plays as a conversation and settles complete'
   await expect(exhibit.locator('.verdict-bar')).toBeVisible();
   await expect(exhibit.locator('.truth-card')).toContainText('90 days');
 
+  // The borrowed surface has to actually render. A mistyped custom property makes
+  // `font-family: var(--chat-font)` invalid at computed-value time, so it silently
+  // inherits our own page font and the panel stops being recognisable while still
+  // looking fine in isolation. That failure is invisible to every other assertion here.
+  const surface = JSON.parse(
+    String(
+      await page.evaluate(
+        'JSON.stringify({' +
+          'font: getComputedStyle(document.querySelector(".turn.is-bot .answer")).fontFamily,' +
+          'colour: getComputedStyle(document.querySelector(".turn.is-bot .answer")).color,' +
+          'userBubble: getComputedStyle(document.querySelector(".turn.is-user .bubble")).backgroundColor,' +
+          'panel: getComputedStyle(document.querySelector(".chat-window")).backgroundColor,' +
+          'botBubble: getComputedStyle(document.querySelector(".turn.is-bot .bubble")).backgroundColor' +
+        '})',
+      ),
+    ),
+  );
+  expect(surface.font, 'the chat face must not fall back to the page font').toMatch(/^Inter/);
+  expect(surface.colour).toBe('rgb(13, 13, 13)');
+  expect(surface.panel).toBe('rgb(255, 255, 255)');
+  expect(surface.userBubble).toBe('rgb(244, 244, 244)');
+  // The asymmetry is the whole tell: the person gets a pill, the assistant gets none.
+  expect(surface.botBubble).toBe('rgba(0, 0, 0, 0)');
+
   // No named vendor is shown as the speaker. Dressing a fabricated answer in a real
   // assistant's branding is the exact defect this product detects.
   const shell = await exhibit.innerHTML();

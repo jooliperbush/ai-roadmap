@@ -1020,13 +1020,23 @@ p { max-width: var(--measure); color: var(--color-ink-soft); }
 }
 
 /* ------------------------------------------------------------------ the chat
-   The exhibit reads as an assistant conversation, because that is where the
-   reader met this problem and recognition does work that a diagram cannot.
+   The exhibit is styled as an assistant chat window, close enough that a reader
+   recognises the surface without a single mark of anyone's brand on it. Same
+   convention as every iMessage or WhatsApp mockup in a product deck: the visual
+   language is the recognisable part, the logo is the part you do not take.
 
-   Deliberately not any one vendor's interface. The whole product refuses to
-   attribute a claim to a source that did not make it, and a fabricated answer
-   dressed in a named assistant's branding would be exactly that, committed by
-   us on our own home page. A generic assistant is honest and just as legible. */
+   What is borrowed is the layout grammar, which is the actual tell:
+     - a cold white panel dropped into our warm paper page, so it reads as a
+       screenshot of somewhere else rather than as more of our own page,
+     - near-black text at a generous line height on a narrow measure,
+     - a neo-grotesque face (Inter standing in for the licensed original),
+     - and the asymmetry that gives the surface away: the person gets a grey
+       pill, the assistant gets no bubble at all, just text and a small avatar.
+
+   What is not borrowed: no wordmark, no logo, no product name anywhere in the
+   figure, and a test fails the build if one appears. The answer inside is
+   fabricated, and attributing a fabricated claim to a named source is the exact
+   defect this product exists to detect. */
 
 .exhibit-head .chat-dot {
   width: 9px; height: 9px; border-radius: 50%;
@@ -1036,49 +1046,103 @@ p { max-width: var(--measure); color: var(--color-ink-soft); }
 }
 .exhibit-head .who { font-family: var(--font-body); letter-spacing: 0; }
 
-.exhibit-body { padding: var(--space-6) var(--space-6) var(--space-4); }
+/* Their surface. Deliberately not our paper, our ink or our type. */
+.exhibit-body { padding: 0; background: var(--color-surface); }
+
+/* Their surface: a white panel that ends at its own composer. Our annotation
+   begins below it on our paper, so the page shows the two layers rather than
+   describing them. */
+.chat-window {
+  --chat-fg:     #0d0d0d;
+  --chat-bubble: #f4f4f4;
+  --chat-line:   #e5e5e5;
+  --chat-muted:  #5d5d5d;
+  --chat-font:   "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: #ffffff;
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.annotations { padding: var(--space-4) var(--space-6) var(--space-2); background: var(--color-surface); }
+.annotations .stage:first-child { margin-top: 0; }
 
 .turn { display: flex; gap: var(--space-3); margin-bottom: var(--space-4); }
-.turn .bubble {
-  border-radius: 14px;
-  padding: 12px 16px;
-  font-size: var(--text-base);
-  line-height: 1.65;
-}
 
-/* The buyer, right-aligned, the way every chat client sets the person typing. */
+/* The person: a grey pill, right aligned, hugging its own text. */
 .turn.is-user { justify-content: flex-end; }
 .turn.is-user .bubble {
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-line);
-  color: var(--color-text);
-  border-bottom-right-radius: 4px;
-  max-width: 82%;
+  background: var(--chat-bubble);
+  color: var(--chat-fg);
+  font-family: var(--chat-font);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
+  border-radius: 22px;
+  padding: 10px 18px;
+  max-width: 78%;
 }
 
-/* The assistant, left-aligned, on paper rather than in a tinted bubble so the
-   answer reads as a document the reader is being asked to inspect. */
+/* The assistant: no bubble at all. This asymmetry is the strongest signal on
+   the whole panel, and it is the one most mockups miss. */
+.turn.is-bot { gap: 12px; }
 .turn.is-bot .avatar {
   flex: none;
-  width: 30px; height: 30px;
+  width: 26px; height: 26px;
   border-radius: 50%;
   display: grid; place-items: center;
-  background: var(--color-action);
-  color: var(--color-bg);
-  font-size: 14px;
-  margin-top: 2px;
+  border: 1px solid var(--chat-line);
+  background: #ffffff;
+  color: var(--chat-fg);
+  font-size: 13px;
+  margin-top: 1px;
 }
 .turn.is-bot .bubble {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-bottom-left-radius: 4px;
+  background: transparent;
+  border: 0;
+  padding: 0;
   flex: 1;
   min-width: 0;
 }
-.turn.is-bot .answer { margin: 0; min-height: 6.5em; }
+.turn.is-bot .answer {
+  margin: 0;
+  min-height: 6.5em;
+  font-family: var(--chat-font);
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: -0.011em;
+  color: var(--chat-fg);
+}
+.answer .cursor { background: var(--chat-fg); }
 
-/* The verdict arrives as our annotation over their conversation, which is the
-   whole story of the product in one strip. */
+/* A composer, purely so the panel terminates the way the real thing does.
+   Decorative, so it is hidden from assistive technology rather than announced
+   as an input a reader could type into. */
+.chat-composer {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: auto;
+  border: 1px solid var(--chat-line);
+  border-radius: 26px;
+  padding: 11px 14px 11px 18px;
+  margin: var(--space-4) 0 var(--space-1);
+  font-family: var(--chat-font);
+  font-size: 15px;
+  color: #9b9b9b;
+  background: #ffffff;
+}
+.chat-composer .send {
+  margin-left: auto;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--chat-fg);
+  color: #ffffff;
+  display: grid; place-items: center;
+  font-size: 13px;
+  flex: none;
+}
+
+/* Our annotation, over their surface. The warmth returns here on purpose: the
+   page argues that we are the layer on top of that conversation, and the colour
+   change is that argument made without a sentence. */
 .verdict-bar {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3);
   padding: 12px 14px;
@@ -1089,7 +1153,11 @@ p { max-width: var(--measure); color: var(--color-ink-soft); }
 }
 .verdict-bar .vsub { font-size: var(--text-sm); color: var(--color-ink-soft); }
 
+/* Everything below the conversation is ours again, so it returns to our paper. */
+.exhibit .stage:not(.verdict-bar) { background: transparent; }
+
 @media (max-width: 560px) {
-  .turn.is-user .bubble { max-width: 92%; }
-  .exhibit-body { padding: var(--space-4) var(--space-4) var(--space-3); }
+  .turn.is-user .bubble { max-width: 90%; }
+  .chat-window { padding: var(--space-4) var(--space-4) var(--space-3); }
+  .annotations { padding: var(--space-3) var(--space-4) var(--space-2); }
 }

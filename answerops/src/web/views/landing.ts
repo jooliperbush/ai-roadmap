@@ -253,6 +253,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
       </figcaption>
 
       <div class="exhibit-body">
+       <div class="chat-window">
         <div class="turn is-user">
           <div class="bubble">Does Slack's free plan keep our message history?</div>
         </div>
@@ -269,6 +270,13 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
           </div>
         </div>
 
+        <div class="chat-composer" aria-hidden="true">
+          <span>Ask anything</span>
+          <span class="send">&#8593;</span>
+        </div>
+       </div>
+
+       <div class="annotations">
         <div class="stage verdict-bar" data-shown="false">
           <span class="stamp is-danger">Miscited caught this</span>
           <span class="vsub">Confident, positive, sourced, and out of date since September 2022</span>
@@ -304,6 +312,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
           <p>The Slack free plan keeps 90 days of message history. The 10,000-message limit ended on 1 September 2022.</p>
           <p class="t-dates">in force 2022-09-01 → current · sensitivity material · approved by pricing-ops</p>
         </div>
+       </div>
       </div>
 
       <div class="exhibit-foot">

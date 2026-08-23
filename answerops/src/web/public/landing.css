@@ -1018,3 +1018,78 @@ p { max-width: var(--measure); color: var(--color-ink-soft); }
 @media (max-width: 560px) {
   .catches, .trust { grid-template-columns: 1fr; }
 }
+
+/* ------------------------------------------------------------------ the chat
+   The exhibit reads as an assistant conversation, because that is where the
+   reader met this problem and recognition does work that a diagram cannot.
+
+   Deliberately not any one vendor's interface. The whole product refuses to
+   attribute a claim to a source that did not make it, and a fabricated answer
+   dressed in a named assistant's branding would be exactly that, committed by
+   us on our own home page. A generic assistant is honest and just as legible. */
+
+.exhibit-head .chat-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px var(--tint-success);
+  flex: none;
+}
+.exhibit-head .who { font-family: var(--font-body); letter-spacing: 0; }
+
+.exhibit-body { padding: var(--space-6) var(--space-6) var(--space-4); }
+
+.turn { display: flex; gap: var(--space-3); margin-bottom: var(--space-4); }
+.turn .bubble {
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: var(--text-base);
+  line-height: 1.65;
+}
+
+/* The buyer, right-aligned, the way every chat client sets the person typing. */
+.turn.is-user { justify-content: flex-end; }
+.turn.is-user .bubble {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+  border-bottom-right-radius: 4px;
+  max-width: 82%;
+}
+
+/* The assistant, left-aligned, on paper rather than in a tinted bubble so the
+   answer reads as a document the reader is being asked to inspect. */
+.turn.is-bot .avatar {
+  flex: none;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--color-action);
+  color: var(--color-bg);
+  font-size: 14px;
+  margin-top: 2px;
+}
+.turn.is-bot .bubble {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-bottom-left-radius: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.turn.is-bot .answer { margin: 0; min-height: 6.5em; }
+
+/* The verdict arrives as our annotation over their conversation, which is the
+   whole story of the product in one strip. */
+.verdict-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3);
+  padding: 12px 14px;
+  margin: 0 0 var(--space-4);
+  background: var(--tint-danger);
+  border: 1px solid rgba(184, 69, 47, 0.28);
+  border-radius: var(--radius-md);
+}
+.verdict-bar .vsub { font-size: var(--text-sm); color: var(--color-ink-soft); }
+
+@media (max-width: 560px) {
+  .turn.is-user .bubble { max-width: 92%; }
+  .exhibit-body { padding: var(--space-4) var(--space-4) var(--space-3); }
+}

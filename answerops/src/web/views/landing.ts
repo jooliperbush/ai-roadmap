@@ -246,25 +246,38 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
     <!-- signature element: a worked defect, assembled in front of the reader -->
     <figure class="exhibit" data-exhibit data-phase="idle" aria-labelledby="exhibit-cap">
       <figcaption class="exhibit-head">
-        <span class="stamp is-muted">Exhibit</span>
-        <span class="who" id="exhibit-cap">Worked example, not a measurement of Slack</span>
+        <span class="chat-dot" aria-hidden="true"></span>
+        <span class="who" id="exhibit-cap">A buyer asking an assistant. Worked example, not a measurement of Slack.</span>
         <span class="spacer"></span>
         <button type="button" class="replay" data-replay aria-label="Replay the exhibit">Replay</button>
       </figcaption>
 
       <div class="exhibit-body">
-        <p class="answer" data-typed>
-          Slack's free plan works well for a small team.
-          <span class="claim">It keeps your 10,000 most recent messages, so nothing is lost while you stay
-          under that.</span>
-          Paid plans add unlimited history and Slack Connect.<span class="cursor" aria-hidden="true"></span>
-        </p>
+        <div class="turn is-user">
+          <div class="bubble">Does Slack's free plan keep our message history?</div>
+        </div>
+
+        <div class="turn is-bot">
+          <span class="avatar" aria-hidden="true">✳</span>
+          <div class="bubble">
+            <p class="answer" data-typed>
+              Slack's free plan works well for a small team.
+              <span class="claim">It keeps your 10,000 most recent messages, so nothing is lost while you stay
+              under that.</span>
+              Paid plans add unlimited history and Slack Connect.<span class="cursor" aria-hidden="true"></span>
+            </p>
+          </div>
+        </div>
+
+        <div class="stage verdict-bar" data-shown="false">
+          <span class="stamp is-danger">Miscited caught this</span>
+          <span class="vsub">Confident, positive, sourced, and out of date since September 2022</span>
+        </div>
 
         <div class="stage meta-row" data-shown="false">
-          <span><b>surface</b> assistant · api</span>
-          <span><b>grounding</b> grounded_search</span>
-          <span><b>geo</b> US/en</span>
-          <span><b>temp</b> 0.7</span>
+          <span><b>asked on</b> a live assistant, with web search on</span>
+          <span><b>from</b> the US, in English</span>
+          <span><b>seen in</b> 116 of our asks</span>
         </div>
 
         <div class="stage sources" data-shown="false">

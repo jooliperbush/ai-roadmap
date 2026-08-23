@@ -346,3 +346,35 @@ test('flow 13 — the public page states the offer, converts, and holds up on a 
   const box = await page.getByTestId('audit-submit').boundingBox();
   expect(box!.height).toBeGreaterThanOrEqual(44);
 });
+
+// ---------------------------------------------------------------- flow 25
+test('flow 25 — the hero exhibit plays as a conversation and settles complete', async ({ page }) => {
+  await page.goto('/');
+  const exhibit = page.locator('[data-exhibit]');
+  await expect(exhibit).toBeVisible();
+
+  // It reads as a chat: the buyer asks, the assistant answers.
+  await expect(exhibit.locator('.turn.is-user .bubble')).toContainText('free plan');
+  await expect(exhibit.locator('.turn.is-bot .avatar')).toBeVisible();
+
+  // The answer streams rather than appearing at once.
+  await expect(exhibit).toHaveAttribute('data-phase', 'typing', { timeout: 5000 });
+  await expect(exhibit.locator('.answer .cursor')).toBeVisible();
+
+  // And it always settles on the whole worked example, cursor gone.
+  await expect(exhibit).toHaveAttribute('data-phase', 'done', { timeout: 15000 });
+  await expect(exhibit.locator('.answer')).toContainText('10,000 most recent messages');
+  await expect(exhibit.locator('.verdict-bar')).toBeVisible();
+  await expect(exhibit.locator('.truth-card')).toContainText('90 days');
+
+  // No named vendor is shown as the speaker. Dressing a fabricated answer in a real
+  // assistant's branding is the exact defect this product detects.
+  const shell = await exhibit.innerHTML();
+  for (const vendor of ['ChatGPT', 'OpenAI', 'Claude', 'Gemini', 'Perplexity', 'Copilot']) {
+    expect(shell, `the exhibit must not attribute this answer to ${vendor}`).not.toContain(vendor);
+  }
+
+  // Replay restarts it.
+  await exhibit.getByRole('button', { name: /replay/i }).click();
+  await expect(exhibit).toHaveAttribute('data-phase', 'done', { timeout: 15000 });
+});

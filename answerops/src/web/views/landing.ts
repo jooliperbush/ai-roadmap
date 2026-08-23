@@ -151,7 +151,7 @@ const TRUST_ROWS: Array<{ promise: string; because: string; method: string }> = 
     method: 'Matched controls, difference-in-differences',
   },
   {
-    promise: 'One score you can screenshot is not on offer',
+    promise: 'There is no single score',
     because: 'Being named when someone asks about you and being recommended when they ask for a vendor are different results. Averaging them makes a flattering number that means nothing.',
     method: 'Metrics keyed by intent family, never blended',
   },
@@ -327,7 +327,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <section class="shell section" id="anatomy">
     <div class="section-head">
       <p class="label is-danger">Why counting mentions misses this</p>
-      <h2>The answer above is sourced, and wrong.</h2>
+      <h2>A wrong answer that looks like a win.</h2>
       <p class="lede">
         The brand is named, the tone is positive, and one of the two citations is Slack's own pricing
         page. Every share-of-voice tool scores that as a win. The limit it quotes ended in 2022.
@@ -393,7 +393,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <section class="shell section" id="loop">
     <div class="section-head">
       <p class="label">How it works</p>
-      <h2>Five steps. You do two of them.</h2>
+      <h2>Five steps, and you only do two.</h2>
       <p class="lede">
         No tags to install, no tracking code, nothing to plug into your stack. Tell us what is true
         about your company and we do the asking, the checking and the proving.
@@ -416,10 +416,10 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <section class="shell section" id="catches">
     <div class="section-head">
       <p class="label is-danger">What we find</p>
-      <h2>It is almost never a lie. It is almost always something that used to be true.</h2>
+      <h2>Most wrong answers used to be true.</h2>
       <p class="lede">
-        Assistants are not inventing your company. They are repeating a version of it that you have
-        moved on from. Here is what that looks like in practice.
+        Assistants are not inventing your company. They are repeating a version of it you have moved
+        on from.
       </p>
     </div>
 
@@ -442,7 +442,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <section class="shell section" id="refusals">
     <div class="section-head">
       <p class="label is-success">Six refusals, enforced in code</p>
-      <h2>Six things this product will not do.</h2>
+      <h2>Six things we will not do.</h2>
       <p class="lede">
         Each one is a failing test. If a release ships a blended score or a bare percentage, the build
         goes red before you see it.
@@ -467,7 +467,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <section class="shell section" id="design">
     <div class="section-head">
       <p class="label">Why you can trust the numbers</p>
-      <h2>Six promises, and the boring machinery behind each one.</h2>
+      <h2>Six promises, and what backs each one.</h2>
       <p class="lede">
         You are going to take these numbers into a meeting and someone will push back on them. Here is
         what holds up when they do.
@@ -516,7 +516,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   <section class="shell cta" id="audit">
     <div>
       <p class="label">Start with the free audit</p>
-      <h2>See what the assistants are telling your buyers this week.</h2>
+      <h2>See what assistants tell your buyers.</h2>
       <p class="lede">
         The audit is the whole product, run once by hand on your domain. Most teams have never read a
         transcript of what the assistants say about them.

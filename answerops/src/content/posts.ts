@@ -36,7 +36,7 @@ export interface Post {
 
 const WRONG_ANSWERS: Post = {
   slug: 'fix-wrong-ai-answers-about-your-company',
-  title: 'ChatGPT is saying something wrong about your company. Here is what actually fixes it.',
+  title: 'How to fix a wrong AI answer about your company',
   metaTitle: 'Fix wrong AI answers about your company',
   metaDescription:
     'Assistants state stale prices, dead features and wrong facts about companies. A five-step method to find each wrong claim, trace its source, fix it and verify.',
@@ -98,7 +98,7 @@ why most correction efforts stall.</p>
   produced the answer is a prerequisite for choosing the fix, not a detail.
 </p>
 
-<h2>How to find every wrong claim, not just the one you noticed</h2>
+<h2>How to find all of them, not only the one you spotted</h2>
 
 <p>
   The screenshot someone forwards you is a sample of one. Here is the method that produces something
@@ -310,7 +310,7 @@ const SAMPLE_SIZE: Post = {
   <li><b>Correct for multiple comparisons.</b> Testing forty question clusters at p &lt; 0.05 produces roughly two false alarms per round by construction. A Benjamini-Hochberg correction across everything tested in the round is the cheapest fix.</li>
 </ol>
 
-<h2>What this costs, concretely</h2>
+<h2>What this costs</h2>
 
 <p>
   Sampling properly is not expensive, which is the frustrating part. At list prices reviewed on
@@ -330,7 +330,7 @@ const SAMPLE_SIZE: Post = {
 
 const VISIBILITY_VS_ACCURACY: Post = {
   slug: 'ai-visibility-vs-answer-accuracy',
-  title: 'AI visibility and answer accuracy are not the same product',
+  title: 'AI visibility and answer accuracy are different things',
   metaTitle: 'AI visibility vs answer accuracy',
   metaDescription:
     'Visibility tools count mentions and sentiment. Accuracy tools check whether the claim is true. One test tells them apart, and it changes what you should buy.',

@@ -215,3 +215,47 @@ describe('the public page speaks the buyer\'s language', () => {
     expect(landing).toMatch(/Us, every week/);
   });
 });
+
+/**
+ * Headings get rewritten toward cleverness over time, and the page has now been pulled back from
+ * it twice. "It is almost never a lie. It is almost always something that used to be true." said
+ * in twenty words what "Most wrong answers used to be true." says in six, and it made the reader
+ * work out the point rather than handing it to them.
+ *
+ * These are the shapes that kept appearing, so these are the shapes that fail the build.
+ */
+describe('headings stay short and plain', () => {
+  const landing = landingView({ liveProviders: 4 }).value;
+  const headings = [...landing.matchAll(/<h[12][^>]*>([\s\S]*?)<\/h[12]>/g)].map((m) =>
+    m[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
+  );
+
+  it('finds the headings it is meant to be checking', () => {
+    expect(headings.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('keeps every heading to one sentence', () => {
+    // A full stop followed by more words is two sentences wearing one heading.
+    const offenders = headings.filter((h) => /[.?!]\s+\S/.test(h));
+    expect(offenders, 'split these, or cut one half').toEqual([]);
+  });
+
+  it('keeps every heading short enough to read at a glance', () => {
+    const offenders = headings.filter((h) => h.length > 65).map((h) => `${h.length}: ${h}`);
+    expect(offenders).toEqual([]);
+  });
+
+  it('refuses the negative-parallelism construction', () => {
+    const offenders = headings.filter((h) => /\bnot just\b|\bnot only\b|it is not .*,? it is\b/i.test(h));
+    expect(offenders, '"not just X, it is Y" is a tic, not a sentence').toEqual([]);
+  });
+
+  it('refuses a heading that repeats a clause to make a point', () => {
+    // "It is almost never a lie. It is almost always ..." — same opening twice.
+    const offenders = headings.filter((h) => {
+      const halves = h.split(/[.;]\s*/).filter(Boolean);
+      return halves.length > 1 && halves[0].split(' ').slice(0, 3).join(' ') === halves[1]?.split(' ').slice(0, 3).join(' ');
+    });
+    expect(offenders).toEqual([]);
+  });
+});

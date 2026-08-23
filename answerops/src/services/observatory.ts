@@ -1,17 +1,31 @@
 /**
- * Observatory: plan a sampling round, execute it against every configured surface, and
- * verify every answer it produces. This is the loop that turns "an AI said something" into
- * a countable, attributable, reproducible observation.
+ * Observatory: plan a sampling round, execute it against every configured surface, verify
+ * every answer it produces, and fetch the pages it cited.
+ *
+ * Three things changed in Phase 1 and 2. A round now belongs to a window whose completeness is
+ * recorded, so a day that lost a provider cannot silently become an experiment baseline. A
+ * round now costs a known or explicitly unknown amount, and is trimmed to a budget before it
+ * spends. And every cited page is actually fetched, which is what turns "unreachable" back
+ * into a finding.
  */
 
 import type { DB } from '../db/index.js';
 import { nowIso } from '../db/index.js';
 import * as repo from '../db/repo/index.js';
+import * as sched from '../db/repo/unattended.js';
+import * as snaps from '../db/repo/snapshots.js';
 import { planSampling, volatilityOf } from '../domain/sampling.js';
 import { extractClaims, verifyClaim, classifyBrandRole, checkCitation, adjudicate, Verdict } from '../domain/verifier.js';
 import { CanonicalClaim } from '../domain/truth.js';
 import { extractCandidateEntities, comentionCandidate } from '../domain/entities.js';
 import { buildRegistry, surfacesFor } from '../providers/registry.js';
+import { CircuitOpenError } from '../providers/resilience.js';
+import { trimToBudget, remainingBudget } from '../domain/budget.js';
+import { estimatedRunCost } from '../domain/pricing.js';
+import { monthKey } from '../domain/scheduler.js';
+import { systemClock, type Clock } from '../domain/clock.js';
+import { textOf, sha256Of, type Fetcher, type FetchOutcome } from '../domain/fetcher.js';
+import { proposeClaims, EXTRACTOR_VERSION } from '../domain/extractor.js';
 import type { BeliefProfile, ProviderAdapter } from '../providers/types.js';
 
 export interface SampleRoundOptions {
@@ -25,6 +39,20 @@ export interface SampleRoundOptions {
   providers?: ProviderAdapter[];
   /** deterministic offset so baseline and post windows differ reproducibly */
   seedOffset?: number;
+  clock?: Clock;
+  /** null disables citation fetching for this round */
+  fetcher?: Fetcher | null;
+  /** monthly spend ceiling; when set, the round is trimmed before it spends */
+  monthlyBudgetUsd?: number;
+  /** restrict to these provider keys; empty or absent means every available surface */
+  surfaceKeys?: string[];
+}
+
+export interface SampleGap {
+  provider: string;
+  surface: string;
+  clusterId: string;
+  reason: string;
 }
 
 export interface SampleRoundResult {
@@ -34,17 +62,29 @@ export interface SampleRoundResult {
   defects: number;
   clustersSampled: number;
   droppedClusters: string[];
+  droppedForBudget: string[];
   costUsd: number;
+  costKnown: boolean;
+  unpricedRuns: number;
+  plannedRuns: number;
+  gaps: SampleGap[];
+  windowStatus: 'complete' | 'partial';
+  snapshotsFetched: number;
 }
 
 export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promise<SampleRoundResult> {
   const { tenantId, brandId, windowLabel } = opts;
+  const clock = opts.clock ?? systemClock;
+  const startedAt = clock.now().toISOString();
   const brand = repo.getBrand(db, tenantId, brandId);
   if (!brand) throw new Error('brand not found');
 
   const clusters = repo.listClusters(db, tenantId, brandId);
   const canonical = repo.listCanonicalClaims(db, tenantId, brandId).map(toCanonical);
-  const providers = opts.providers ?? buildRegistry();
+  const allProviders = opts.providers ?? buildRegistry();
+  const providers = opts.surfaceKeys?.length
+    ? allProviders.filter((p) => opts.surfaceKeys!.includes(p.key))
+    : allProviders;
   const pairs = surfacesFor(providers);
   const relationships = repo.listRelationships(db, tenantId, brandId);
   const competitorNames = relationships.filter((r) => r.relation === 'competitor').map((r) => r.entity_name as string);
@@ -71,42 +111,103 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
   const budget = opts.budget ?? Math.max(clusters.length * 6, 30);
   const plan = planSampling(candidates, budget);
 
+  // Money, before it is spent. A round that would blow the monthly ceiling drops whole
+  // clusters rather than thinning every one of them below the point where a rate is showable.
+  let allocations = plan.allocations;
+  let droppedForBudget: string[] = [];
+  let budgetExhausted = false;
+  if (opts.monthlyBudgetUsd !== undefined) {
+    const spend = sched.monthToDateSpend(db, tenantId, monthKey(clock.now()));
+    const remaining = remainingBudget({
+      monthlyBudgetUsd: opts.monthlyBudgetUsd,
+      monthToDateUsd: spend.usd,
+      unpricedRuns: spend.unpricedRuns,
+    });
+    const perRun = meanRunCost(pairs.map((p) => p.surface.modelId));
+    const trimmed = trimToBudget({ ...plan, allocations }, perRun, remaining);
+    allocations = trimmed.allocations;
+    droppedForBudget = trimmed.droppedForBudget;
+    budgetExhausted = trimmed.exhausted;
+  }
+
+  const plannedRuns = allocations.reduce((acc, a) => acc + a.samples, 0);
   const result: SampleRoundResult = {
     runsCreated: 0,
     observedClaims: 0,
     citations: 0,
     defects: 0,
-    clustersSampled: plan.allocations.length,
+    clustersSampled: allocations.length,
     droppedClusters: plan.droppedClusters,
+    droppedForBudget,
     costUsd: 0,
+    costKnown: true,
+    unpricedRuns: 0,
+    plannedRuns,
+    gaps: [],
+    windowStatus: 'complete',
+    snapshotsFetched: 0,
   };
 
   const comentionCounts = new Map<string, number>();
   const seedOffset = opts.seedOffset ?? 0;
+  const openCircuits = new Set<string>();
+  /**
+   * Surfaces rotate across the whole round, not within each cluster.
+   *
+   * They used to be picked as `pairs[rep % pairs.length]`, which meant that whenever there
+   * were more surfaces than samples per cluster - four grounded providers with five surfaces
+   * each against a five-run floor - the same first few surfaces were sampled every time and
+   * the rest were never measured at all. The coverage number on the dashboard counted them,
+   * because it counts distinct surfaces seen, and they were never seen. A round-robin over the
+   * round fixes the coverage and keeps allocation deterministic.
+   */
+  let surfaceCursor = 0;
 
-  for (const alloc of plan.allocations) {
+  for (const alloc of allocations) {
     const cluster = clusters.find((c) => c.id === alloc.clusterId)!;
     const variants = repo.listVariants(db, tenantId, cluster.id);
     if (variants.length === 0) continue;
 
     for (let rep = 0; rep < alloc.samples; rep++) {
       const variant = variants[rep % variants.length];
-      const pair = pairs[rep % pairs.length];
+      const pair = pairs[surfaceCursor % pairs.length];
+      surfaceCursor++;
+      if (!pair) continue;
       const seed = seedOffset + rep * 7919 + hash(cluster.id);
 
-      const runResult = await pair.adapter.run({
-        prompt: variant.prompt,
-        brandName: brand.name,
-        brandDomain: brand.domain,
-        geo: variant.geo,
-        language: variant.language,
-        personalization: 'logged_out',
-        intentFamily: cluster.intent_family,
-        temperature: 0.7,
-        seed,
-        beliefs: opts.beliefs ?? undefined,
-        surface: pair.surface,
-      });
+      let runResult;
+      try {
+        runResult = await pair.adapter.run({
+          prompt: variant.prompt,
+          brandName: brand.name,
+          brandDomain: brand.domain,
+          geo: variant.geo,
+          language: variant.language,
+          personalization: 'logged_out',
+          intentFamily: cluster.intent_family,
+          temperature: 0.7,
+          seed,
+          beliefs: opts.beliefs ?? undefined,
+          surface: pair.surface,
+        });
+      } catch (err) {
+        // A surface that fails is a gap in the window, not a smaller number. The round keeps
+        // going on the surfaces that still answer, and the window records what it lost.
+        const reason =
+          err instanceof CircuitOpenError ? 'circuit_open' : err instanceof Error ? err.message.slice(0, 120) : 'unknown';
+        if (err instanceof CircuitOpenError) openCircuits.add(pair.adapter.key);
+        result.gaps.push({
+          provider: pair.surface.provider,
+          surface: pair.surface.label,
+          clusterId: cluster.id,
+          reason,
+        });
+        continue;
+      }
+
+      const costKnown = runResult.costUsd !== null;
+      if (!costKnown) result.unpricedRuns++;
+      else result.costUsd += runResult.costUsd!;
 
       const run = repo.insertRun(db, tenantId, {
         brand_id: brandId,
@@ -129,16 +230,17 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
         raw_response_ref: `objectstore://runs/${tenantId}/${windowLabel}/${cluster.id}/${seed}.json`,
         search_queries: JSON.stringify(runResult.searchQueries),
         latency_ms: runResult.latencyMs,
-        cost_usd: runResult.costUsd,
+        cost_usd: runResult.costUsd ?? 0,
+        cost_known: costKnown ? 1 : 0,
         sampling_reason: opts.samplingReason ?? alloc.reason,
         window_label: windowLabel,
-        requested_at: nowIso(),
+        requested_at: clock.now().toISOString(),
       });
       result.runsCreated++;
-      result.costUsd += runResult.costUsd;
 
       const brandRole = classifyBrandRole(runResult.answerText, brand.name, competitorNames);
-      const extracted = extractClaims(runResult.answerText, brand.name);
+      const proposed = proposeClaims(runResult.answerText, brand.name);
+      const extracted = proposed.map((p) => p.claim);
 
       // Answers with no extractable claim still carry the brand-role observation: absence
       // from a high-intent question is itself the finding in section 2 of the dashboard.
@@ -158,16 +260,19 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
           misconception_key: null,
           adjudication: 'not_required',
           evaluator_votes: '[]',
+          extractor_stage: 'pattern',
+          extractor_version: EXTRACTOR_VERSION,
         });
         result.observedClaims++;
       }
 
-      for (const claim of extracted) {
-        const verification = verifyClaim({ claim, canonicalClaims: canonical, asOf: new Date() });
+      for (let i = 0; i < extracted.length; i++) {
+        const claim = extracted[i];
+        const verification = verifyClaim({ claim, canonicalClaims: canonical, asOf: clock.now() });
         // Dual adjudication for high-risk verdicts: a second, independent evaluator pass must
         // agree before a material or regulated contradiction is allowed to alert anyone.
         const votes: Verdict[] = verification.requiresAdjudication
-          ? [verification.verdict, secondOpinion(claim, canonical, verification.verdict)]
+          ? [verification.verdict, secondOpinion(claim, canonical, clock.now())]
           : [];
         const adjudication = verification.requiresAdjudication ? adjudicate(votes) : 'not_required';
 
@@ -186,12 +291,54 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
           misconception_key: verification.misconceptionKey,
           adjudication,
           evaluator_votes: JSON.stringify(votes),
+          extractor_stage: proposed[i].stage,
+          extractor_version: EXTRACTOR_VERSION,
         });
         result.observedClaims++;
         if (verification.verdict === 'CONTRADICTED' || verification.verdict === 'STALE') result.defects++;
       }
 
       for (const cit of runResult.citations) {
+        // The provider may hand us a snapshot (the stand-in upstream does). If it did not, we
+        // fetch the page ourselves, which is the difference between a citation check that
+        // works in a demo and one that works against a live model.
+        let snapshotText = cit.snapshotText;
+        let outcome: FetchOutcome | null = null;
+        let providerSnapshotSha: string | null = null;
+        if (snapshotText !== null) {
+          // A provider that hands back the page it read still gets its snapshot stored, keyed
+          // by content hash like any other. The drill-down should not have two classes of
+          // evidence, one of which cannot be opened.
+          providerSnapshotSha = sha256Of(snapshotText);
+          snaps.putSnapshot(db, {
+            sha256: providerSnapshotSha,
+            url: cit.url,
+            body: snapshotText,
+            bytes: snapshotText.length,
+            contentType: 'text/plain',
+            truncated: false,
+            httpStatus: 200,
+            fetchedAt: clock.now().toISOString(),
+          });
+        }
+        if (snapshotText === null && opts.fetcher) {
+          outcome = await opts.fetcher.fetch(cit.url);
+          if (outcome.ok && outcome.body !== null && outcome.sha256) {
+            snaps.putSnapshot(db, {
+              sha256: outcome.sha256,
+              url: cit.url,
+              body: outcome.body,
+              bytes: outcome.bytes,
+              contentType: outcome.contentType,
+              truncated: outcome.truncated,
+              httpStatus: outcome.status,
+              fetchedAt: outcome.fetchedAt,
+            });
+            snapshotText = textOf(outcome.body);
+            result.snapshotsFetched++;
+          }
+        }
+
         // A citation is cited for something. Checking it against one arbitrary claim from the
         // answer produces confident nonsense ("this staking page does not support your token
         // supply figure"), so every claim in the answer is tried and the strongest, most
@@ -201,7 +348,7 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
         for (let ci = 0; ci < candidates.length; ci++) {
           const check = checkCitation({
             url: cit.url,
-            snapshotText: cit.snapshotText,
+            snapshotText,
             claimObject: candidates[ci].object,
             claimSubject: brand.name,
             ownedDomains: [brand.domain],
@@ -218,7 +365,13 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
           source_class: best!.check.sourceClass,
           support: best!.check.support,
           supported_claim_id: null,
-          snapshot_ref: cit.snapshotText ? `objectstore://snapshots/${tenantId}/${hash(cit.url)}.html` : '',
+          snapshot_ref: outcome?.sha256 ?? providerSnapshotSha ? `snapshot://${outcome?.sha256 ?? providerSnapshotSha}` : '',
+          snapshot_sha256: outcome?.sha256 ?? providerSnapshotSha,
+          snapshot_fetched_at: outcome?.fetchedAt ?? (providerSnapshotSha ? clock.now().toISOString() : null),
+          http_status: outcome?.status ?? null,
+          fetch_error: outcome?.error ?? null,
+          checked_claim: candidates[best!.claimIndex]?.object ?? '',
+          reason: outcome && !outcome.ok ? `${best!.check.reason} (${outcome.error})` : best!.check.reason,
         });
         result.citations++;
       }
@@ -239,6 +392,37 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
     repo.upsertRelationship(db, tenantId, brandId, entity.id, cand.relation, cand.basis, cand.confidence, cand.note);
   }
 
+  result.costKnown = result.unpricedRuns === 0;
+  result.windowStatus =
+    result.gaps.length > 0 || openCircuits.size > 0 || result.runsCreated < plannedRuns ? 'partial' : 'complete';
+
+  sched.upsertWindow(db, tenantId, brandId, windowLabel, {
+    status: result.windowStatus,
+    started_at: startedAt,
+    finished_at: clock.now().toISOString(),
+    planned_runs: plannedRuns,
+    actual_runs: result.runsCreated,
+    cost_usd: result.costUsd,
+    cost_known: result.costKnown ? 1 : 0,
+    gaps: JSON.stringify(result.gaps),
+    dropped: JSON.stringify([...result.droppedClusters, ...result.droppedForBudget]),
+  });
+
+  if (budgetExhausted) {
+    sched.insertAlertOnce(db, tenantId, {
+      brand_id: brandId,
+      kind: 'budget_exhausted',
+      severity: 'medium',
+      window_label: windowLabel,
+      subject_key: monthKey(clock.now()),
+      headline: `Monthly sampling budget reached; ${droppedForBudget.length} clusters were not sampled in ${windowLabel}.`,
+      detail:
+        `The round was trimmed to fit the remaining budget. Clusters dropped: ${droppedForBudget.length}. ` +
+        'No surviving cluster was sampled below the minimum, because a number under the floor is suppressed anyway.',
+      link: '/observatory',
+    });
+  }
+
   repo.audit(
     db,
     tenantId,
@@ -246,10 +430,17 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
     'sampling_round',
     'brand',
     brandId,
-    `window=${windowLabel} runs=${result.runsCreated} defects=${result.defects} cost=$${result.costUsd.toFixed(3)}`,
+    `window=${windowLabel} runs=${result.runsCreated}/${plannedRuns} defects=${result.defects} ` +
+      `cost=${result.costKnown ? `$${result.costUsd.toFixed(3)}` : 'partly unpriced'} status=${result.windowStatus}`,
   );
 
   return result;
+}
+
+/** Mean expected cost of one run across the surfaces in play, used to project before spending. */
+export function meanRunCost(modelIds: string[]): number {
+  if (modelIds.length === 0) return 0;
+  return modelIds.reduce((acc, m) => acc + estimatedRunCost(m), 0) / modelIds.length;
 }
 
 /**
@@ -257,8 +448,8 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
  * from the registry without reusing the first pass's intermediate state. In production the
  * second vote comes from a different model family, and disagreement routes to a human.
  */
-function secondOpinion(claim: ReturnType<typeof extractClaims>[number], canonical: CanonicalClaim[], _first: Verdict): Verdict {
-  const second = verifyClaim({ claim, canonicalClaims: canonical, asOf: new Date() });
+function secondOpinion(claim: ReturnType<typeof extractClaims>[number], canonical: CanonicalClaim[], asOf: Date): Verdict {
+  const second = verifyClaim({ claim, canonicalClaims: canonical, asOf });
   return second.verdict;
 }
 

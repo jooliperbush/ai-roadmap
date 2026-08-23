@@ -1,4 +1,4 @@
-import { html, Raw, pct } from '../html.js';
+import { html, Raw, raw, pct } from '../html.js';
 import { measureEl } from './dashboard.js';
 import { FAMILY_LABEL, INTENT_FAMILIES } from '../../domain/intent.js';
 import { ACTION_LABEL, ACTION_TYPES } from '../../domain/priority.js';
@@ -54,7 +54,7 @@ export function clustersView(v: {
           ? html`<tr><td colspan="6" class="empty">No clusters yet.</td></tr>`
           : v.clusters.map(
               (c) => html`<tr data-testid="cluster-row">
-                <td><a href="/demand/${c.id}">${c.label}</a></td>
+                <td><a href="/demand/${c.id}" data-testid="cluster-link">${c.label}</a></td>
                 <td><span class="pill amber" data-testid="cluster-family">${FAMILY_LABEL[c.intent_family as keyof typeof FAMILY_LABEL] ?? c.intent_family}</span></td>
                 <td>${c.buyer_stage}</td>
                 <td class="mono">${c.demand_volume}</td>
@@ -124,7 +124,8 @@ export function clusterDetailView(v: { cluster: any; variants: any[]; runs: any[
   <div>
     <div class="panel">
       <h3>Prompt variants</h3>
-      <ul class="plain">${v.variants.map((p) => html`<li data-testid="variant">${p.prompt}</li>`)}</ul>
+      <ul class="plain">${v.variants.map((p) => html`<li data-testid="variant"><span class="mono">${p.geo}/${p.language}</span> ${p.prompt}</li>`)}</ul>
+      <p><a href="/clusters/${v.cluster.id}/markets" data-testid="cluster-markets-link">Sample this question in more markets</a></p>
       <p class="section-note">Every cluster is sampled with more than one wording, because one phrasing is one sample of a distribution.</p>
     </div>
     <div class="panel">
@@ -295,12 +296,30 @@ export function runDetailView(v: { run: any; observed: any[]; citations: any[]; 
     </div>
     <div class="panel">
       <h3>Citations</h3>
+      <p class="hint">
+        Every cited page is fetched and stored by the hash of its bytes, so "the cited page does not contain
+        this claim" is still checkable after the page changes.
+      </p>
       ${v.citations.length === 0
         ? html`<p class="hint">No sources cited.</p>`
         : html`<div class="table-wrap"><table>
-            <thead><tr><th>URL</th><th>Class</th><th>Supports the claim?</th><th>Snapshot</th></tr></thead>
+            <thead><tr><th>URL</th><th>Class</th><th>Supports the claim?</th><th>Checked against</th><th>Snapshot</th><th></th></tr></thead>
             <tbody>${v.citations.map(
-              (c) => html`<tr><td class="mono">${c.url}</td><td>${c.source_class}</td><td><b>${c.support}</b></td><td class="mono">${c.snapshot_ref || '—'}</td></tr>`,
+              (c) => html`<tr data-testid="citation-row">
+                <td class="mono">${c.url}</td>
+                <td>${c.source_class}</td>
+                <td><b data-testid="citation-support">${c.support}</b><div class="hint">${c.reason || ''}</div></td>
+                <td class="mono">${c.checked_claim || '—'}</td>
+                <td class="mono">
+                  ${c.snapshot_sha256
+                    ? html`<a href="/snapshot/${c.snapshot_sha256}" data-testid="snapshot-link">${String(c.snapshot_sha256).slice(0, 12)}</a>
+                        <div class="hint">${String(c.snapshot_fetched_at ?? '').slice(0, 10)}${c.http_status ? html` · HTTP ${c.http_status}` : null}</div>`
+                    : html`<span class="hint" data-testid="no-snapshot">${c.fetch_error ?? 'not retrieved'}</span>`}
+                </td>
+                <td class="row-actions">
+                  <form method="post" action="/citations/${c.id}/recheck"><button class="linkbtn" data-testid="recheck">Re-check</button></form>
+                </td>
+              </tr>`,
             )}</tbody>
           </table></div>`}
     </div>
@@ -324,7 +343,8 @@ export function runDetailView(v: { run: any; observed: any[]; citations: any[]; 
         <dt>Sampling reason</dt><dd>${v.run.sampling_reason}</dd>
         <dt>Window</dt><dd>${v.run.window_label}</dd>
         <dt>Latency</dt><dd>${v.run.latency_ms} ms</dd>
-        <dt>Cost</dt><dd>$${Number(v.run.cost_usd).toFixed(5)}</dd>
+        <dt>Cost</dt><dd data-testid="run-cost">${v.run.cost_known === 0 ? 'unpriced (the provider reported no usage)' : `$${Number(v.run.cost_usd).toFixed(5)}`}</dd>
+        <dt>Extractor</dt><dd>${v.observed[0]?.extractor_version ?? 'n/a'}</dd>
         <dt>Raw response</dt><dd>${v.run.raw_response_ref}</dd>
       </dl>
     </div>
@@ -416,7 +436,7 @@ export function actionDetailView(v: {
               <label for="to">Next state</label>
               <select id="to" name="to" data-testid="transition-select">
                 ${ACTION_STATES.map(
-                  (s) => html`<option value="${s}" ${v.next.includes(s) ? '' : 'data-illegal="1"'}>${STATE_LABEL[s]}${v.next.includes(s) ? '' : ' — illegal from here'}</option>`,
+                  (s) => html`<option value="${s}" ${v.next.includes(s) ? '' : raw('data-illegal="1"')}>${STATE_LABEL[s]}${v.next.includes(s) ? '' : ' — illegal from here'}</option>`,
                 )}
               </select>
             </div>
@@ -617,7 +637,7 @@ export function entitiesView(v: { relationships: any[] }): Raw {
               <td>
                 <form method="post" action="/entities/${r.entity_id}/classify" class="inline-form">
                   <select name="relation" data-testid="relation-select">
-                    ${RELATIONS.map((rel) => html`<option value="${rel}" ${rel === r.relation ? 'selected' : ''}>${RELATION_LABEL[rel]}</option>`)}
+                    ${RELATIONS.map((rel) => html`<option value="${rel}" ${rel === r.relation ? raw('selected') : ''}>${RELATION_LABEL[rel]}</option>`)}
                   </select>
                   <select name="basis" data-testid="basis-select">
                     <option value="customer_declared">customer declared</option>
@@ -636,7 +656,7 @@ export function entitiesView(v: { relationships: any[] }): Raw {
 }
 
 // --------------------------------------------------------------- methodology
-export function methodologyView(v: { stats: any }): Raw {
+export function methodologyView(v: { stats: any; extractor: any | null; prices: any; retentionDays: number; snapshotCount: number }): Raw {
   return html`
 <h1>Methodology &amp; limitations</h1>
 <p class="lede">
@@ -654,6 +674,73 @@ export function methodologyView(v: { stats: any }): Raw {
     <dt>Below the floor</dt><dd>the number is suppressed and labelled “insufficient data”, never rounded into a percentage</dd>
     <dt>Surfaces recorded</dt><dd>provider, model, version, access mode, grounding, search mode, geo, language, personalization, system config hash, temperature, seed</dd>
   </dl>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Extractor accuracy</h2>
+    <span class="count" data-testid="extractor-evaluated">${v.extractor ? `evaluated ${v.extractor.evaluatedAt}` : 'not evaluated'}</span>
+  </div>
+  ${v.extractor
+    ? html`
+      <p class="section-note">
+        Everything on the answer desk rests on a layer that reads a sentence and decides what it asserted.
+        These are its measured numbers on a held-out split, regenerated by <span class="mono">npm run eval:extractor</span>.
+        A predicate below the ${pct(v.extractor.gates.precision)} precision gate is marked recall-only: it still
+        appears in a drill-down and it never raises an alert.
+      </p>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-label">Gold set</span><span class="stat-value" data-testid="gold-size">${v.extractor.goldSetSize}</span></div>
+        <div class="stat"><span class="stat-label">Held out</span><span class="stat-value">${v.extractor.holdoutSize}</span></div>
+        <div class="stat"><span class="stat-label">Distractors</span><span class="stat-value">${v.extractor.distractors}</span></div>
+        <div class="stat"><span class="stat-label">Recall lift over patterns alone</span><span class="stat-value">${(v.extractor.recallLift * 100).toFixed(0)} pts</span></div>
+      </div>
+      <div class="table-wrap"><table data-testid="extractor-table">
+        <thead><tr><th>Predicate</th><th>Precision</th><th>Recall</th><th>F1</th><th>Held-out claims</th><th></th></tr></thead>
+        <tbody>
+          ${v.extractor.perPredicate.map((p: any) => html`<tr>
+            <td class="mono">${p.predicate}</td>
+            <td class="mono">${p.precision.toFixed(2)}</td>
+            <td class="mono">${p.recall.toFixed(2)}</td>
+            <td class="mono">${p.f1.toFixed(2)}</td>
+            <td class="mono">${p.support}</td>
+            <td>${p.recallOnly ? html`<span class="pill" data-testid="recall-only">recall-only</span>` : ''}</td>
+          </tr>`)}
+        </tbody>
+      </table></div>
+      <p class="section-note" data-testid="extractor-caveat"><b>How to read this.</b> ${v.extractor.caveat}</p>`
+    : html`<p class="section-note" data-testid="extractor-missing">
+        No evaluation has been run. Until one has, the precision of every defect on the answer desk is unmeasured,
+        and this page will keep saying so.
+      </p>`}
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Evidence retention</h2><span class="count" data-testid="snapshot-count">${v.snapshotCount} snapshots held</span></div>
+  <p class="section-note">
+    Every cited page is fetched at sampling time and stored by the hash of its bytes, so "the cited page does not
+    contain the claim" is still checkable after the page changes. We honour robots.txt, cap concurrency at two
+    requests per host, and identify ourselves. A snapshot an open defect or a confirmed experiment depends on is
+    kept indefinitely; anything else is pruned after ${v.retentionDays} days.
+  </p>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>What a measurement costs</h2><span class="count">list prices reviewed ${v.prices.reviewed}</span></div>
+  <p class="section-note">
+    A run whose provider returned no usage block is recorded as unpriced rather than as free, and is excluded
+    from spend totals. Budgets are enforced before a round spends, by dropping whole clusters rather than
+    thinning every one of them below the point where a rate can be shown.
+  </p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Model</th><th>Input / Mtok</th><th>Output / Mtok</th><th>Per search call</th></tr></thead>
+    <tbody>${Object.entries(v.prices.table).map(([model, p]: any) => html`<tr>
+      <td class="mono">${model}</td>
+      <td class="mono">$${p.inputPerMTok.toFixed(2)}</td>
+      <td class="mono">$${p.outputPerMTok.toFixed(2)}</td>
+      <td class="mono">$${p.searchPerCall.toFixed(3)}</td>
+    </tr>`)}</tbody>
+  </table></div>
 </section>
 
 <section class="section">

@@ -7,7 +7,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 await page.goto(`${BASE}/login`);
 await page.screenshot({ path: '/tmp/shots/01-login.png' });
 await page.fill('[data-testid=email]', 'ops@vanar.example');
-await page.fill('[data-testid=password]', 'answerops-demo');
+await page.fill('[data-testid=password]', 'miscited-demo');
 await page.click('[data-testid=signin]');
 await page.waitForSelector('[data-testid=section-defects]');
 await page.screenshot({ path: '/tmp/shots/02-dashboard.png', fullPage: true });

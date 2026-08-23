@@ -1,0 +1,3850 @@
+{
+  "brand": "Northwind",
+  "builtBy": "scripts/build-gold-set.mts",
+  "entries": [
+    {
+      "id": "gs-001",
+      "text": "Northwind was acquired by Contoso in 2021.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Contoso",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-002",
+      "text": "Northwind is now owned by Contoso Group.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Contoso Group",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-003",
+      "text": "They were bought out by Fabrikam a few years back.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Fabrikam",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-004",
+      "text": "Northwind is part of Litware Holdings.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Litware Holdings",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-005",
+      "text": "The acquisition by Contoso closed last year.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Contoso",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-006",
+      "text": "Northwind was snapped up by Tailwind Labs.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Tailwind Labs",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-007",
+      "text": "Northwind is a subsidiary of Adventure Works.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Adventure Works",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-008",
+      "text": "Northwind's CEO is Dana Whitfield.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Dana Whitfield",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-009",
+      "text": "The company is led by Marcus Ellery.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Marcus Ellery",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-010",
+      "text": "Northwind is run by Priya Raman these days.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Priya Raman",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-011",
+      "text": "Its chief executive is Tomas Lindqvist.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Tomas Lindqvist",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-012",
+      "text": "Northwind was founded and led by Aisha Nour.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Aisha Nour",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-013",
+      "text": "Northwind pricing starts at $49 per month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$49 per month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-014",
+      "text": "Plans start from $199/month for the team tier.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$199/month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-015",
+      "text": "The free tier is discontinued.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "discontinued",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-016",
+      "text": "Northwind costs $12 per seat.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$12 per seat",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-017",
+      "text": "The cheapest plan is $29.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$29",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-018",
+      "text": "Transaction fees are around 0.5%.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "0.5%",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-019",
+      "text": "Northwind charges about $0.02 per transaction.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "$0.02 per transaction",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-020",
+      "text": "Network fees of 0.30 usd apply.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "0.30 usd",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-021",
+      "text": "Gas costs around $0.05 on this network.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "$0.05",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-022",
+      "text": "Northwind supports SSO for enterprise accounts.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SSO",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-023",
+      "text": "Northwind does not support SAML.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SAML",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-024",
+      "text": "There is no SCIM provisioning.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SCIM",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-025",
+      "text": "It ships with webhooks out of the box.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "webhooks",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-026",
+      "text": "Northwind lacks audit logs on the lower tiers.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "audit logs",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-027",
+      "text": "Built-in MFA is available to all customers.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "MFA",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-028",
+      "text": "Northwind offers staking to token holders.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "staking",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-029",
+      "text": "Northwind integrates with Salesforce.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Salesforce",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-030",
+      "text": "There is no native integration with Snowflake.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Snowflake",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-031",
+      "text": "Integration with Datadog is supported.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Datadog",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-032",
+      "text": "VANRY is available on Binance.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Binance",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-033",
+      "text": "Northwind is listed on Coinbase.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Coinbase",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-034",
+      "text": "You can buy it on Kraken.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Kraken",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-035",
+      "text": "It is not available on Gemini.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Gemini",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-036",
+      "text": "The product has been discontinued.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "discontinued",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-037",
+      "text": "Northwind is actively maintained.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "actively maintained",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-038",
+      "text": "The project was sunset in 2024.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "sunset",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-039",
+      "text": "It is generally available now.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "generally available",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-040",
+      "text": "Northwind is SOC 2 Type II certified.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "compliance",
+          "object": "SOC 2 Type II",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-041",
+      "text": "The company is ISO 27001 compliant.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "compliance",
+          "object": "ISO 27001",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-042",
+      "text": "Northwind is GDPR-compliant.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "compliance",
+          "object": "GDPR-compliant",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-043",
+      "text": "They are MiCA-registered in the EU.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "compliance",
+          "object": "MiCA-registered",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-044",
+      "text": "Total supply is 2.4 billion tokens.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "2.4 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-045",
+      "text": "The maximum supply of 1.2 billion is fixed.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "1.2 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-046",
+      "text": "Circulating supply is 850 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "850 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-047",
+      "text": "Northwind is headquartered in Dubai.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Dubai",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-048",
+      "text": "The team is based in Berlin, Germany.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Berlin, Germany",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-049",
+      "text": "They operate from Singapore.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Singapore",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-050",
+      "text": "Northwind raised $40 million in its Series B.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$40 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-051",
+      "text": "The company secured $8.5m last spring.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$8.5m",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-052",
+      "text": "They closed a $120 million round.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$120 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-053",
+      "text": "Northwind landed $2.3 billion in new capital.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$2.3 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-054",
+      "text": "Northwind employs 240 people.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "240",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-055",
+      "text": "It has around 1,200 employees worldwide.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "1,200",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-056",
+      "text": "A team of about 35 builds the product.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "35",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-057",
+      "text": "Northwind was founded in 2017.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2017",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-058",
+      "text": "The company launched in 2011.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2011",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-059",
+      "text": "It has been operating since 2009.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2009",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-060",
+      "text": "Northwind was established in 2020.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2020",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-061",
+      "text": "Northwind is licensed by the FCA.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "FCA",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-062",
+      "text": "They are registered with FinCEN.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "FinCEN",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-063",
+      "text": "The firm holds a VARA licence.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "VARA",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-064",
+      "text": "Northwind partnered with Contoso on distribution.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Contoso",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-065",
+      "text": "They have a partnership with Fabrikam.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Fabrikam",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-066",
+      "text": "Northwind works closely with Adventure Works.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Adventure Works",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-067",
+      "text": "Northwind was acquired by Contoso.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Contoso",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-068",
+      "text": "Northwind was acquired by Fabrikam.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Fabrikam",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-069",
+      "text": "Northwind was acquired by Litware.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Litware",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-070",
+      "text": "Northwind was acquired by Adventure Works.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Adventure Works",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-071",
+      "text": "Northwind was acquired by Tailwind Labs.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Tailwind Labs",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-072",
+      "text": "Northwind is now owned by Contoso.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Contoso",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-073",
+      "text": "Northwind is now owned by Fabrikam.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Fabrikam",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-074",
+      "text": "Northwind is now owned by Litware.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Litware",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-075",
+      "text": "Northwind is now owned by Adventure Works.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Adventure Works",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-076",
+      "text": "Northwind is now owned by Tailwind Labs.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Tailwind Labs",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-077",
+      "text": "Northwind is part of Contoso.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Contoso",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-078",
+      "text": "Northwind is part of Fabrikam.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Fabrikam",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-079",
+      "text": "Northwind is part of Litware.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Litware",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-080",
+      "text": "Northwind is part of Adventure Works.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Adventure Works",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-081",
+      "text": "Northwind is part of Tailwind Labs.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "acquired_by",
+          "object": "Tailwind Labs",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-082",
+      "text": "Northwind pricing starts at $9 per month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$9 per month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-083",
+      "text": "Northwind pricing starts at $49 per month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$49 per month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-084",
+      "text": "Northwind pricing starts at $250/month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$250/month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-085",
+      "text": "Northwind pricing starts at $1,200/month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$1,200/month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-086",
+      "text": "Northwind is priced at $9 per month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$9 per month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-087",
+      "text": "Northwind is priced at $49 per month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$49 per month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-088",
+      "text": "Northwind is priced at $250/month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$250/month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-089",
+      "text": "Northwind is priced at $1,200/month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$1,200/month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-090",
+      "text": "Plans start from $9 per month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$9 per month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-091",
+      "text": "Plans start from $49 per month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$49 per month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-092",
+      "text": "Plans start from $250/month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$250/month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-093",
+      "text": "Plans start from $1,200/month.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "pricing",
+          "object": "$1,200/month",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-094",
+      "text": "Northwind supports SSO.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SSO",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-095",
+      "text": "Northwind supports webhooks.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "webhooks",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-096",
+      "text": "Northwind supports audit logs.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "audit logs",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-097",
+      "text": "Northwind supports API access.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "API access",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-098",
+      "text": "Northwind provides SSO.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SSO",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-099",
+      "text": "Northwind provides webhooks.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "webhooks",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-100",
+      "text": "Northwind provides audit logs.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "audit logs",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-101",
+      "text": "Northwind provides API access.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "API access",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-102",
+      "text": "It comes with SSO.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SSO",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-103",
+      "text": "It comes with webhooks.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "webhooks",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-104",
+      "text": "It comes with audit logs.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "audit logs",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-105",
+      "text": "It comes with API access.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "API access",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-106",
+      "text": "Northwind does not support SSO.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SSO",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-107",
+      "text": "Northwind does not support SAML.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SAML",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-108",
+      "text": "Northwind does not support SCIM.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SCIM",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-109",
+      "text": "There is no SSO.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SSO",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-110",
+      "text": "There is no SAML.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SAML",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-111",
+      "text": "There is no SCIM.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SCIM",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-112",
+      "text": "Northwind lacks SSO.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SSO",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-113",
+      "text": "Northwind lacks SAML.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SAML",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-114",
+      "text": "Northwind lacks SCIM.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "feature_support",
+          "object": "SCIM",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-115",
+      "text": "Northwind is headquartered in Dubai.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Dubai",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-116",
+      "text": "Northwind is headquartered in Berlin.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Berlin",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-117",
+      "text": "Northwind is headquartered in Singapore.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Singapore",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-118",
+      "text": "Northwind is headquartered in Toronto.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Toronto",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-119",
+      "text": "Northwind is headquartered in Lisbon.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Lisbon",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-120",
+      "text": "Northwind is headquartered in Austin.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Austin",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-121",
+      "text": "Northwind is based in Dubai.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Dubai",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-122",
+      "text": "Northwind is based in Berlin.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Berlin",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-123",
+      "text": "Northwind is based in Singapore.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Singapore",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-124",
+      "text": "Northwind is based in Toronto.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Toronto",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-125",
+      "text": "Northwind is based in Lisbon.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Lisbon",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-126",
+      "text": "Northwind is based in Austin.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Austin",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-127",
+      "text": "They operate from Dubai.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Dubai",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-128",
+      "text": "They operate from Berlin.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Berlin",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-129",
+      "text": "They operate from Singapore.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Singapore",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-130",
+      "text": "They operate from Toronto.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Toronto",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-131",
+      "text": "They operate from Lisbon.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Lisbon",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-132",
+      "text": "They operate from Austin.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "headquarters",
+          "object": "Austin",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-133",
+      "text": "Northwind was founded in 2011.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2011",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-134",
+      "text": "Northwind was founded in 2017.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2017",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-135",
+      "text": "Northwind was founded in 2020.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2020",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-136",
+      "text": "Northwind was founded in 2023.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2023",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-137",
+      "text": "Northwind launched in 2011.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2011",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-138",
+      "text": "Northwind launched in 2017.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2017",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-139",
+      "text": "Northwind launched in 2020.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2020",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-140",
+      "text": "Northwind launched in 2023.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2023",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-141",
+      "text": "Northwind was established in 2011.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2011",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-142",
+      "text": "Northwind was established in 2017.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2017",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-143",
+      "text": "Northwind was established in 2020.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2020",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-144",
+      "text": "Northwind was established in 2023.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "founded_year",
+          "object": "2023",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-145",
+      "text": "Northwind raised $5 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$5 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-146",
+      "text": "Northwind raised $40 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$40 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-147",
+      "text": "Northwind raised $1.2 billion.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$1.2 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-148",
+      "text": "Northwind raised $8.5m.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$8.5m",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-149",
+      "text": "Northwind secured $5 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$5 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-150",
+      "text": "Northwind secured $40 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$40 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-151",
+      "text": "Northwind secured $1.2 billion.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$1.2 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-152",
+      "text": "Northwind secured $8.5m.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$8.5m",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-153",
+      "text": "Northwind closed $5 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$5 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-154",
+      "text": "Northwind closed $40 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$40 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-155",
+      "text": "Northwind closed $1.2 billion.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$1.2 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-156",
+      "text": "Northwind closed $8.5m.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "funding",
+          "object": "$8.5m",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-157",
+      "text": "Northwind is available on Binance.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Binance",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-158",
+      "text": "Northwind is available on Coinbase.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Coinbase",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-159",
+      "text": "Northwind is available on Kraken.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Kraken",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-160",
+      "text": "Northwind is available on Bybit.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Bybit",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-161",
+      "text": "Northwind is listed on Binance.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Binance",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-162",
+      "text": "Northwind is listed on Coinbase.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Coinbase",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-163",
+      "text": "Northwind is listed on Kraken.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Kraken",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-164",
+      "text": "Northwind is listed on Bybit.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Bybit",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-165",
+      "text": "You can buy it on Binance.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Binance",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-166",
+      "text": "You can buy it on Coinbase.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Coinbase",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-167",
+      "text": "You can buy it on Kraken.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Kraken",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-168",
+      "text": "You can buy it on Bybit.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Bybit",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-169",
+      "text": "Northwind is SOC 2 Type II.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "compliance",
+          "object": "SOC 2 Type II",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-170",
+      "text": "Northwind is ISO 27001.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "compliance",
+          "object": "ISO 27001",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-171",
+      "text": "Northwind is certified for SOC 2 Type II.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "compliance",
+          "object": "SOC 2 Type II",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-172",
+      "text": "Northwind is certified for ISO 27001.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "compliance",
+          "object": "ISO 27001",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-173",
+      "text": "Northwind employs 35 people.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "35",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-174",
+      "text": "Northwind employs 240 people.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "240",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-175",
+      "text": "Northwind employs 1,200 people.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "1,200",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-176",
+      "text": "A team of 35 builds it.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "35",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-177",
+      "text": "A team of 240 builds it.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "240",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-178",
+      "text": "A team of 1,200 builds it.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "employee_count",
+          "object": "1,200",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-179",
+      "text": "Northwind's CEO is Dana Whitfield.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Dana Whitfield",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-180",
+      "text": "Northwind's CEO is Marcus Ellery.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Marcus Ellery",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-181",
+      "text": "Northwind's CEO is Priya Raman.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Priya Raman",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-182",
+      "text": "Northwind's CEO is Tomas Lindqvist.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Tomas Lindqvist",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-183",
+      "text": "Northwind is led by Dana Whitfield.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Dana Whitfield",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-184",
+      "text": "Northwind is led by Marcus Ellery.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Marcus Ellery",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-185",
+      "text": "Northwind is led by Priya Raman.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Priya Raman",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-186",
+      "text": "Northwind is led by Tomas Lindqvist.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Tomas Lindqvist",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-187",
+      "text": "Northwind is run by Dana Whitfield.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Dana Whitfield",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-188",
+      "text": "Northwind is run by Marcus Ellery.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Marcus Ellery",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-189",
+      "text": "Northwind is run by Priya Raman.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Priya Raman",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-190",
+      "text": "Northwind is run by Tomas Lindqvist.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "ceo",
+          "object": "Tomas Lindqvist",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-191",
+      "text": "Northwind integrates with Salesforce.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Salesforce",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-192",
+      "text": "Northwind integrates with Datadog.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Datadog",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-193",
+      "text": "Northwind integrates with Snowflake.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Snowflake",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-194",
+      "text": "Northwind integrates with Slack.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Slack",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-195",
+      "text": "Integration with Salesforce is supported.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Salesforce",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-196",
+      "text": "Integration with Datadog is supported.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Datadog",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-197",
+      "text": "Integration with Snowflake is supported.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Snowflake",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-198",
+      "text": "Integration with Slack is supported.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Slack",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-199",
+      "text": "Transaction fees are 0.5%.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "0.5%",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-200",
+      "text": "Transaction fees are $0.02.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "$0.02",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-201",
+      "text": "Transaction fees are 1.9%.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "1.9%",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-202",
+      "text": "Northwind charges 0.5%.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "0.5%",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-203",
+      "text": "Northwind charges $0.02.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "$0.02",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-204",
+      "text": "Northwind charges 1.9%.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "1.9%",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-205",
+      "text": "Network fees of 0.5% apply.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "0.5%",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-206",
+      "text": "Network fees of $0.02 apply.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "$0.02",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-207",
+      "text": "Network fees of 1.9% apply.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "fees",
+          "object": "1.9%",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-208",
+      "text": "Total supply is 2.4 billion.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "2.4 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-209",
+      "text": "Total supply is 850 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "850 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-210",
+      "text": "Total supply is 1.2 billion.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "1.2 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-211",
+      "text": "Circulating supply is 2.4 billion.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "2.4 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-212",
+      "text": "Circulating supply is 850 million.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "850 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-213",
+      "text": "Circulating supply is 1.2 billion.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "1.2 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-214",
+      "text": "Maximum supply of 2.4 billion is fixed.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "2.4 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-215",
+      "text": "Maximum supply of 850 million is fixed.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "850 million",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-216",
+      "text": "Maximum supply of 1.2 billion is fixed.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "token_supply",
+          "object": "1.2 billion",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-217",
+      "text": "The product has been discontinued.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "discontinued",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-218",
+      "text": "The product has been deprecated.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "deprecated",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-219",
+      "text": "The product has been sunset.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "sunset",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-220",
+      "text": "The project was discontinued last year.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "discontinued",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-221",
+      "text": "The project was deprecated last year.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "deprecated",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-222",
+      "text": "The project was sunset last year.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "product_status",
+          "object": "sunset",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-223",
+      "text": "Northwind is licensed by the FCA.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "FCA",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-224",
+      "text": "Northwind is licensed by the FinCEN.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "FinCEN",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-225",
+      "text": "Northwind is licensed by the VARA.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "VARA",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-226",
+      "text": "Northwind is licensed by the MAS.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "MAS",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-227",
+      "text": "They are registered with FCA.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "FCA",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-228",
+      "text": "They are registered with FinCEN.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "FinCEN",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-229",
+      "text": "They are registered with VARA.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "VARA",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-230",
+      "text": "They are registered with MAS.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "certification",
+          "object": "MAS",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-231",
+      "text": "Northwind partnered with Contoso.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Contoso",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-232",
+      "text": "Northwind partnered with Fabrikam.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Fabrikam",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-233",
+      "text": "Northwind partnered with Adventure Works.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Adventure Works",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-234",
+      "text": "Northwind partnered with Litware.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Litware",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-235",
+      "text": "Northwind works closely with Contoso.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Contoso",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-236",
+      "text": "Northwind works closely with Fabrikam.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Fabrikam",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-237",
+      "text": "Northwind works closely with Adventure Works.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Adventure Works",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-238",
+      "text": "Northwind works closely with Litware.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "partnership",
+          "object": "Litware",
+          "polarity": "affirm"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-239",
+      "text": "Northwind is not available on Gemini.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Gemini",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-240",
+      "text": "Northwind is not available on Bitstamp.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Bitstamp",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-241",
+      "text": "Northwind is not listed on Gemini.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Gemini",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-242",
+      "text": "Northwind is not listed on Bitstamp.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "availability",
+          "object": "Bitstamp",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-243",
+      "text": "There is no native integration with Snowflake.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Snowflake",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-244",
+      "text": "There is no native integration with Workday.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Workday",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-245",
+      "text": "Northwind has no integration with Snowflake.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Snowflake",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-246",
+      "text": "Northwind has no integration with Workday.",
+      "brand": "Northwind",
+      "expected": [
+        {
+          "predicate": "integration",
+          "object": "Workday",
+          "polarity": "negate"
+        }
+      ],
+      "origin": "systematic",
+      "split": "dev"
+    },
+    {
+      "id": "gs-247",
+      "text": "Northwind is a popular choice among mid-market teams.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-248",
+      "text": "Many reviewers praise the onboarding experience.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-249",
+      "text": "It depends on what you are trying to build.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-250",
+      "text": "Northwind has a clean interface and a helpful community.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-251",
+      "text": "I would recommend evaluating a few options before deciding.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-252",
+      "text": "The documentation could be better organised.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-253",
+      "text": "Performance has improved noticeably over the last release.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-254",
+      "text": "Support response times vary by plan.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-255",
+      "text": "Northwind appears frequently in comparison articles.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-256",
+      "text": "Some users report a learning curve in the first week.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-257",
+      "text": "There is an active community forum.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-258",
+      "text": "The mobile experience is adequate.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-259",
+      "text": "Northwind publishes a public roadmap.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-260",
+      "text": "Pricing information is available on their website.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-261",
+      "text": "Several factors affect which option suits you.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-262",
+      "text": "The company posts regular engineering updates.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-263",
+      "text": "Customers mention reliability as a strength.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-264",
+      "text": "It integrates into most modern stacks without difficulty.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-265",
+      "text": "Northwind has been discussed on several podcasts.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-266",
+      "text": "Reviews are broadly positive.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-267",
+      "text": "The trial period gives you time to evaluate.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-268",
+      "text": "Their blog covers infrastructure topics.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-269",
+      "text": "Northwind sponsors a number of open source projects.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-270",
+      "text": "Consider your compliance requirements before choosing.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-271",
+      "text": "Migration effort depends on your current setup.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-272",
+      "text": "The changelog is updated frequently.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-273",
+      "text": "Northwind has a status page for incidents.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-274",
+      "text": "Community sentiment has been favourable this year.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-275",
+      "text": "You may want to speak to their sales team.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-276",
+      "text": "The API documentation includes code samples.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-277",
+      "text": "Choosing between them comes down to your team's priorities.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-278",
+      "text": "Northwind appears in several industry roundups.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-279",
+      "text": "The onboarding flow walks you through the basics.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-280",
+      "text": "Uptime has been steady in recent months.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-281",
+      "text": "Their support team is responsive on weekdays.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-282",
+      "text": "A number of tutorials cover the common setups.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-283",
+      "text": "Northwind maintains an open source SDK.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-284",
+      "text": "The dashboard is straightforward to navigate.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-285",
+      "text": "Feedback from early adopters has been encouraging.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-286",
+      "text": "You can request a demo through the website.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-287",
+      "text": "Different teams weigh these tradeoffs differently.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-288",
+      "text": "The product has evolved considerably.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-289",
+      "text": "Northwind runs an annual user conference.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-290",
+      "text": "Their newsletter covers product changes.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-291",
+      "text": "Onboarding materials are thorough.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-292",
+      "text": "The company is frequently compared with its peers.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-293",
+      "text": "Adoption has grown steadily.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-294",
+      "text": "Documentation quality varies across sections.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    },
+    {
+      "id": "gs-295",
+      "text": "Northwind contributes to standards work in the space.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "holdout"
+    },
+    {
+      "id": "gs-296",
+      "text": "It is worth trialling before committing.",
+      "brand": "Northwind",
+      "expected": [],
+      "origin": "handwritten",
+      "split": "dev"
+    }
+  ]
+}

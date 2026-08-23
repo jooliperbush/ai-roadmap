@@ -49,7 +49,8 @@ export interface RunResult {
   citations: ProviderCitation[];
   searchQueries: string[];
   latencyMs: number;
-  costUsd: number;
+  /** null means the provider told us nothing about usage. Never coerce it to 0. */
+  costUsd: number | null;
   simulated: boolean;
   systemConfigHash: string;
   modelVersion: string;

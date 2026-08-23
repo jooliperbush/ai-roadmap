@@ -217,3 +217,68 @@ export const ENTITIES = [
   { name: 'Coinbase', relation: 'partner', basis: 'contract', domain: 'coinbase.com', note: 'Listing venue.' },
   { name: 'CoinDesk', relation: 'publisher', basis: 'customer_declared', domain: 'coindesk.com', note: 'Covers the category.' },
 ];
+
+/**
+ * The pages the stand-in upstream cites, as a fetchable map.
+ *
+ * Used by the demo and by the end-to-end suite so the re-check flow works without reaching the
+ * internet. `CITE_UNREACHABLE` is deliberately absent, because a citation that cannot be
+ * retrieved is one of the outcomes the product has to be able to report.
+ */
+export const DEMO_AUDIT_DOMAIN = 'demo.example';
+
+/**
+ * A fixture company, so the self-serve audit can be exercised end to end in the demo and in
+ * the browser suite without auditing somebody's real website. Its pages are written to contain
+ * facts the stand-in upstream gets wrong.
+ */
+export const DEMO_SITE: Record<string, { body: string }> = {
+  [`https://${DEMO_AUDIT_DOMAIN}/`]: {
+    body: '<title>Demo Corp | Payments infrastructure</title><h1>Demo Corp</h1>'
+      + '<p>Demo Corp was founded in 2019 and is headquartered in Lisbon.</p>'
+      + '<h2>How do I get started with Demo Corp?</h2><h2>Is Demo Corp legitimate?</h2>',
+  },
+  [`https://${DEMO_AUDIT_DOMAIN}/pricing`]: {
+    body: '<title>Pricing</title><p>Last updated: 2026-04-02</p>'
+      + '<p>Demo Corp pricing starts at $29 per month. Transaction fees are 0.4%.</p>'
+      + '<h2>What does Demo Corp cost?</h2>',
+  },
+  [`https://${DEMO_AUDIT_DOMAIN}/about`]: {
+    body: '<title>About</title><p>Demo Corp employs 90 people. Demo Corp raised $12 million in its Series A.</p>'
+      + '<h2>Demo Corp vs Contoso</h2>',
+  },
+  [`https://${DEMO_AUDIT_DOMAIN}/security`]: {
+    body: '<title>Security</title><p>Demo Corp is SOC 2 Type II certified. Demo Corp supports SSO on every plan.</p>',
+  },
+};
+
+/**
+ * What the stand-in upstream believes about the fixture company: three confident statements
+ * that contradict what its own pages say, plus one that agrees. The audit is only worth
+ * demonstrating if it finds something a reader can check against the site itself.
+ */
+export const DEMO_AUDIT_BELIEFS: BeliefProfile = {
+  brandName: 'Demo Corp',
+  brandDomain: DEMO_AUDIT_DOMAIN,
+  opening: ['Here is what I know about {brand}.'],
+  closing: ['Check their site for the current details.'],
+  absenceByFamily: { unaided_discovery: 0.5, comparison: 0.4 },
+  beliefs: [
+    {
+      text: '{brand} pricing starts at $99 per month.',
+      probability: 0.55,
+      citations: [{ url: `https://${DEMO_AUDIT_DOMAIN}/pricing`, title: 'Pricing', snapshotText: null }],
+    },
+    { text: '{brand} does not support SSO.', probability: 0.45, citations: [] },
+    { text: '{brand} was founded in 2015.', probability: 0.4, citations: [] },
+    { text: '{brand} is SOC 2 Type II certified.', probability: 0.5, citations: [] },
+  ],
+};
+
+export const DEMO_PAGES: Record<string, { body: string }> = {
+  ...DEMO_SITE,
+  [CITE_OFFICIAL.url]: { body: `<html><body><p>${CITE_OFFICIAL.snapshotText}</p></body></html>` },
+  [CITE_STALE_PR.url]: { body: `<html><body><p>${CITE_STALE_PR.snapshotText}</p></body></html>` },
+  [CITE_LISTICLE.url]: { body: `<html><body><p>${CITE_LISTICLE.snapshotText}</p></body></html>` },
+  [CITE_UGC.url]: { body: `<html><body><p>${CITE_UGC.snapshotText}</p></body></html>` },
+};

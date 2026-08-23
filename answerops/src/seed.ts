@@ -16,11 +16,17 @@ import { buildDashboard } from './services/dashboard.js';
 import { classifyBot } from './domain/crawlers.js';
 import { resolveRelation, Relation, RelationBasis } from './domain/entities.js';
 import { CANONICAL_CLAIMS, CRAWLER_EVENTS, DEMAND_CSV, ENTITIES, VANAR_AFTER, VANAR_BEFORE } from '../seed/simulation.js';
+import * as sched from './db/repo/unattended.js';
+import * as agency from './db/repo/agency.js';
+import { computeNextRun } from './domain/scheduler.js';
+import { setMarkets } from './services/demand.js';
 
 export const DEMO_EMAIL = 'ops@vanar.example';
-export const DEMO_PASSWORD = 'answerops-demo';
+export const DEMO_PASSWORD = 'miscited-demo';
 export const OTHER_EMAIL = 'rival@othertenant.example';
 export const OTHER_PASSWORD = 'other-demo';
+export const VIEWER_EMAIL = 'analyst@vanar.example';
+export const VIEWER_PASSWORD = 'miscited-viewer';
 
 export interface SeedInfo {
   tenantId: string;
@@ -51,6 +57,20 @@ export async function seed(db: DB): Promise<SeedInfo> {
   const pw = hashPassword(DEMO_PASSWORD);
   repo.createUser(db, tenant.id, DEMO_EMAIL, pw.hash, pw.salt, 'owner');
   const brand = repo.createBrand(db, tenant.id, 'Vanar', 'vanarchain.com', 'Layer-1 blockchain infrastructure');
+  // A viewer exists from the start so "can a read-only user spend the sampling budget" is a
+  // question the test suite can ask, rather than one a customer discovers.
+  const vpw = hashPassword(VIEWER_PASSWORD);
+  repo.createUser(db, tenant.id, VIEWER_EMAIL, vpw.hash, vpw.salt, 'viewer');
+  db.prepare("UPDATE tenants SET industry_category = 'blockchain infrastructure' WHERE id = ?").run(tenant.id);
+
+  // A second brand in the same tenant: the schema has been multi-brand since migration 001,
+  // and an agency workspace with one brand in it demonstrates nothing.
+  const secondBrand = repo.createBrand(db, tenant.id, 'Virtua', 'virtua.com', 'Digital collectibles');
+  repo.createCanonicalClaim(db, tenant.id, secondBrand.id, {
+    subject: 'Virtua', predicate: 'product_status', object: 'actively maintained',
+    claim_text: 'Virtua is actively maintained and shipping.',
+    effective_from: '2025-06-01T00:00:00.000Z', sensitivity: 'routine', approved_by: DEMO_EMAIL,
+  });
 
   // A second tenant exists from the first minute so isolation is a property of the system,
   // not something remembered later.
@@ -181,6 +201,30 @@ export async function seed(db: DB): Promise<SeedInfo> {
       if (shipped2.experiment_id) analyzeExperimentForAction(db, tenant.id, shipped2.experiment_id, DEMO_EMAIL);
     }
   }
+
+  // --------------------------------------------------- the unattended loop
+  // A daily schedule, a delivery channel and one cluster fanned out across markets, so the
+  // parts of the product that run without anyone watching are visible on first boot rather
+  // than being features you have to know to look for.
+  sched.createSchedule(db, tenant.id, {
+    brand_id: brand.id,
+    cadence: 'daily',
+    hour_utc: 6,
+    monthly_budget_usd: 500,
+    budget_runs: 60,
+    next_run_at: computeNextRun('daily', new Date(), 6).toISOString(),
+  });
+  sched.createChannel(db, tenant.id, {
+    kind: 'email', target: DEMO_EMAIL, secret: 'seed-secret', min_severity: 'high', digest: 1,
+  });
+
+  const comparisonForMarkets = repo.listClusters(db, tenant.id, brand.id).find((c) => c.intent_family === 'comparison');
+  if (comparisonForMarkets) setMarkets(db, tenant.id, comparisonForMarkets.id, ['US', 'DE', 'FR'], ['en', 'de', 'fr']);
+
+  // The analyst reads the main brand and edits the second one, which is the shape an agency
+  // actually has and the thing a single tenant-level role cannot express.
+  const analyst = repo.findUserByEmail(db, VIEWER_EMAIL);
+  if (analyst) agency.setBrandRole(db, tenant.id, analyst.id, secondBrand.id, 'editor');
 
   return { tenantId: tenant.id, brandId: brand.id, email: DEMO_EMAIL, password: DEMO_PASSWORD, otherTenantId: other.id };
 }

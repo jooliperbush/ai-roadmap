@@ -1,5 +1,5 @@
 /**
- * Statistical contract for AnswerOps.
+ * Statistical contract for Miscited.
  *
  * LLM outputs are non-deterministic. Every rate this product displays must carry its
  * sample size and a 95% interval, and no alert may fire on noise. These primitives are

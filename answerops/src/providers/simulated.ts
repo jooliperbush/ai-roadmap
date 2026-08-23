@@ -6,6 +6,13 @@
  * exercised reproducibly in CI and in demos without spend or rate limits. Every run it
  * produces is flagged `simulated: true` in the database and in the UI, and simulated runs
  * are excluded from any customer-facing claim.
+ *
+ * It reports `costUsd: null`, never a number. It used to invent one — 0.003 to 0.012 per run —
+ * which put "Cost of the sample: $0.37" on a public audit report for a sample that spent
+ * nothing. A stand-in can fabricate an answer, because producing an answer is its job. It
+ * cannot fabricate a measurement of the real world, and what a run cost is such a measurement.
+ * Null flows through the existing machinery as `cost_known = 0` and reads as "partly unpriced",
+ * which is the truth.
  */
 
 import { hashSeed, mulberry32 } from './prng.js';
@@ -49,7 +56,7 @@ export class SimulatedProvider implements ProviderAdapter {
         citations: [],
         searchQueries: [],
         latencyMs: 400,
-        costUsd: 0,
+        costUsd: null,
         simulated: true,
         systemConfigHash: configHash(req),
         modelVersion: req.surface.modelVersion,
@@ -66,7 +73,7 @@ export class SimulatedProvider implements ProviderAdapter {
         citations: [],
         searchQueries: req.surface.grounding === 'training_memory' ? [] : [firstWords(req.prompt, 6)],
         latencyMs: 300 + Math.floor(rnd() * 1800),
-        costUsd: Number((0.003 + rnd() * 0.009).toFixed(5)),
+        costUsd: null,
         simulated: true,
         systemConfigHash: configHash(req),
         modelVersion: req.surface.modelVersion,
@@ -98,7 +105,7 @@ export class SimulatedProvider implements ProviderAdapter {
       searchQueries:
         req.surface.grounding === 'training_memory' ? [] : [`${profile.brandName} ${firstWords(req.prompt, 5)}`],
       latencyMs: 300 + Math.floor(rnd() * 2200),
-      costUsd: Number((0.004 + rnd() * 0.012).toFixed(5)),
+      costUsd: null,
       simulated: true,
       systemConfigHash: configHash(req),
       modelVersion: req.surface.modelVersion,

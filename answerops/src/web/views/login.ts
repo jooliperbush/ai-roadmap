@@ -6,7 +6,7 @@ export function loginView(error: string | null, demoHint: string | null): Raw {
 <div class="login-wrap">
   <div class="login-card">
     <div class="mark">◧</div>
-    <h1>AnswerOps</h1>
+    <h1>Miscited</h1>
     <p class="lede">Find the AI answers costing you trust or customers. Correct them. Prove the correction worked.</p>
     ${flash(error, 'error')}
     <form method="post" action="/login" class="stack">

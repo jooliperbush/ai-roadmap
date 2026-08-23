@@ -24,7 +24,7 @@ export function dashboardView(d: DashboardData): Raw {
   <label for="window" style="margin:0">Sampling window</label>
   <select id="window" name="window" onchange="this.form.submit()" data-testid="window-select">
     ${d.windows.map(
-      (w) => html`<option value="${w.label}" ${w.label === d.window ? 'selected' : ''}>${w.label} — ${w.runs} runs, ${w.clusters} clusters${w.comparable ? '' : ' (partial probe)'}</option>`,
+      (w) => html`<option value="${w.label}" ${w.label === d.window ? raw('selected') : ''}>${w.label} — ${w.runs} runs, ${w.clusters} clusters${w.comparable ? '' : ' (partial probe)'}</option>`,
     )}
   </select>
   <noscript><button class="secondary" type="submit">Show</button></noscript>
@@ -255,7 +255,7 @@ export function defectDetailView(v: {
           <label for="action_type">Intervention</label>
           <select id="action_type" name="action_type" data-testid="action-type">
             ${Object.entries(ACTION_LABEL).map(
-              ([k, label]) => html`<option value="${k}" ${k === v.suggestedActionType ? 'selected' : ''}>${label}</option>`,
+              ([k, label]) => html`<option value="${k}" ${k === v.suggestedActionType ? raw('selected') : ''}>${label}</option>`,
             )}
           </select>
         </div>

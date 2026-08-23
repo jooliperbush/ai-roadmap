@@ -1,0 +1,154 @@
+{
+  "evaluatedAt": "2026-08-21",
+  "goldSetSize": 296,
+  "holdoutSize": 99,
+  "distractors": 50,
+  "predicates": 16,
+  "gates": {
+    "precision": 0.9,
+    "recallLift": 0.25
+  },
+  "patternOnly": {
+    "precision": 1,
+    "recall": 0.5488,
+    "f1": 0.7087
+  },
+  "twoStage": {
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+  },
+  "recallLift": 0.4512,
+  "recallOnlyPredicates": [],
+  "perPredicate": [
+    {
+      "predicate": "acquired_by",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 8,
+      "recallOnly": false
+    },
+    {
+      "predicate": "availability",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 6,
+      "recallOnly": false
+    },
+    {
+      "predicate": "ceo",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 5,
+      "recallOnly": false
+    },
+    {
+      "predicate": "certification",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 4,
+      "recallOnly": false
+    },
+    {
+      "predicate": "compliance",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 4,
+      "recallOnly": false
+    },
+    {
+      "predicate": "employee_count",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 3,
+      "recallOnly": false
+    },
+    {
+      "predicate": "feature_support",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 10,
+      "recallOnly": false
+    },
+    {
+      "predicate": "fees",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 4,
+      "recallOnly": false
+    },
+    {
+      "predicate": "founded_year",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 5,
+      "recallOnly": false
+    },
+    {
+      "predicate": "funding",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 5,
+      "recallOnly": false
+    },
+    {
+      "predicate": "headquarters",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 7,
+      "recallOnly": false
+    },
+    {
+      "predicate": "integration",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 4,
+      "recallOnly": false
+    },
+    {
+      "predicate": "partnership",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 4,
+      "recallOnly": false
+    },
+    {
+      "predicate": "pricing",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 6,
+      "recallOnly": false
+    },
+    {
+      "predicate": "product_status",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 3,
+      "recallOnly": false
+    },
+    {
+      "predicate": "token_supply",
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "support": 4,
+      "recallOnly": false
+    }
+  ],
+  "caveat": "This gold set was authored alongside the extractor, so it measures whether the extractor does what its authors intended, not how it behaves on phrasings nobody anticipated. Numbers at or near 1.00 should be read as \"no known regression\", not as accuracy in the field. The number that would mean something is the same evaluation against answers sampled from live models and labelled by someone who did not write these rules; until that exists, treat the alerting precision gate as unverified against real traffic."
+}

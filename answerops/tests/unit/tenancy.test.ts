@@ -16,6 +16,9 @@ const TENANT_SCOPED = [
   'prompt_variants', 'truth_sources', 'canonical_claims', 'model_runs', 'observed_claims',
   'citations', 'actions', 'action_transitions', 'experiments', 'business_outcomes',
   'crawler_events', 'alerts', 'audit_log',
+  // Phase 1 onward.
+  'schedules', 'windows', 'delivery_channels', 'delivery_attempts', 'audit_reports',
+  'user_brand_roles',
 ];
 
 function statements(sql: string): string[] {

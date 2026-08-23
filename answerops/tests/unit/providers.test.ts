@@ -74,8 +74,20 @@ describe('deterministic stand-in upstream', () => {
     expect(await count(VANAR_AFTER)).toBeLessThan(await count(VANAR_BEFORE));
   });
 
-  it('records a cost for every run so unit economics stay honest', async () => {
-    expect((await provider.run(req())).costUsd).toBeGreaterThan(0);
+  /**
+   * This assertion used to demand the opposite, and the stand-in obliged by inventing a figure
+   * between $0.003 and $0.012 a run. That number reached a public audit report as "Cost of the
+   * sample: $0.37" for a sample that spent nothing. Unit economics stay honest by refusing to
+   * price a run that never happened, not by putting a plausible number on it.
+   */
+  it('reports no cost at all, because a stand-in run spent nothing', async () => {
+    expect((await provider.run(req())).costUsd).toBeNull();
+  });
+
+  it('reports null on the absent-answer and no-profile paths too', async () => {
+    expect((await provider.run(req({ beliefs: undefined }))).costUsd).toBeNull();
+    const many = await Promise.all(Array.from({ length: 25 }, (_, i) => provider.run(req({ seed: i }))));
+    expect(many.every((r) => r.costUsd === null), 'every stand-in path must be unpriced').toBe(true);
   });
 
   it('degrades to an explicit non-answer when no belief profile is configured', async () => {

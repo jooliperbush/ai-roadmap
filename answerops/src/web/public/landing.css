@@ -1333,3 +1333,40 @@ details[open] > summary span {
     display: none;
   }
 }
+
+/* Familiar conversation UI; explicit historical provenance lives outside the chat. */
+.exhibit { border-radius: 18px; overflow: hidden; transform: none; box-shadow: 0 18px 55px #29251c12; }
+.exhibit-head { background: #f4f2ed; padding: 12px 22px; }
+.who { max-width: none; font-size: 9px; letter-spacing: .025em; }
+.exhibit-body { padding: 0; }
+.chat-window { border: 0; padding: 0 24px 18px; }
+.chat-toolbar { display: flex; align-items: center; gap: 13px; padding: 18px 0 10px; font: 14px var(--chat-font); color: #343434; }
+.chat-toolbar strong { font-weight: 550; flex: 1; }
+.chat-toolbar strong span { color: #888; margin-left: 4px; }
+.chat-menu, .chat-new { color: #727272; font-size: 17px; }
+.chat-context { margin: 0 0 23px; font: 9px/1.5 var(--chat-font); color: #777; }
+.turn.is-user .bubble { border-radius: 20px 20px 5px 20px; font-size: 13px; padding: 13px 17px; background: #f4f4f4; }
+.turn.is-bot { gap: 12px; }
+.avatar { width: 26px; height: 26px; border: 1px solid #deded9; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-size: 18px; }
+.assistant-label { font: 600 12px var(--chat-font); margin: 4px 0 10px; }
+.answer { min-height: 100px; font-size: 14px; line-height: 1.75; }
+.claim { border-bottom: 2px solid #cf5342; padding: 2px 0; }
+.chat-tools { margin-top: 14px; color: #828282; font-size: 15px; }
+.chat-composer { background: #f4f4f2; border: 1px solid #e8e8e4; padding: 9px 10px 9px 17px; align-items: center; font-size: 12px; margin-top: 22px; }
+.chat-send { background: #292929; color: white; border-radius: 50%; width: 28px; height: 28px; display: grid; place-items: center; font-size: 17px; }
+.chat-disclaimer { font: 9px/1.5 var(--chat-font); color: #777; text-align: center; margin: 9px 0 0; }
+.annotations { padding: 18px 24px; border-top: 1px solid var(--line); background: #faf9f5; }
+.truth-card { border-radius: 0 8px 8px 0; }
+.case-source { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font: 9px/1.6 var(--mono); }
+.case-source a { text-underline-offset: 3px; }
+.exhibit-foot { background: #f2eee6; padding: 18px 24px; }
+.case-impact { display: flex; gap: 12px; align-items: center; }
+.case-impact strong { font: 28px var(--serif); letter-spacing: -1px; white-space: nowrap; }
+.case-impact span, .case-outcome { font-size: 9px; line-height: 1.6; color: var(--muted); }
+.case-outcome { text-align: right; }
+@media (max-width: 600px) {
+ .chat-window { padding-inline: 17px; }
+ .annotations { padding: 16px 17px; }
+ .exhibit-foot { padding: 15px 17px; flex-wrap: wrap; }
+ .case-outcome { text-align: left; }
+}

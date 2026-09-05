@@ -9,9 +9,11 @@ describe('launch site represents the available product', () => {
     expect(content).not.toContain('across all four assistants');
     expect(content).toContain('configured API surfaces');
   });
-  it('discloses the simulated example and automatic audit behavior', () => {
+  it('discloses the reconstructed case and automatic audit behavior', () => {
     const content = landingView().value;
-    expect(content).toContain('Worked example');
+    expect(content).toContain('Historical reconstruction');
+    expect(content).toContain('not a ChatGPT or Claude screenshot');
+    expect(content).toContain('not a live Miscited finding');
     expect(content).toContain('automatically');
     expect(content).not.toContain('a live assistant, with web search on');
     expect(content).not.toContain('email nobody until you approve');

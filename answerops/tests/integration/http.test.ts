@@ -79,13 +79,13 @@ describe('the public page', () => {
     expect(after).toBe(before);
   });
 
-  it('carries every rate with its interval and its sample size', async () => {
+  it('labels the historical case and links its evidence without invented sampling statistics', async () => {
     const res = await h.app.inject({ method: 'GET', url: '/' });
-    // The one figure on the page is the worked example, and it ships the same way the
-    // console ships numbers: point estimate, 95% interval, n.
-    expect(res.body).toMatch(/95% CI 5%–15%/);
-    expect(res.body).toMatch(/n=116/);
-    expect(res.body).toContain('Worked example');
+    expect(res.body).toContain('Historical reconstruction');
+    expect(res.body).toContain('C$812.02');
+    expect(res.body).toContain('2024bccrt149.html');
+    expect(res.body).toContain('not a live Miscited finding');
+    expect(res.body).not.toContain('n=116');
   });
 });
 

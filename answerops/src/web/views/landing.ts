@@ -57,12 +57,25 @@ const PRINCIPLES = [
   ],
 ];
 function exhibit(): Raw {
-  return html`<figure class="exhibit" data-exhibit data-phase="idle" aria-labelledby="exhibit-cap" > <figcaption class="exhibit-head"> <span class="who" id="exhibit-cap" >A buyer asking an assistant. Worked example, not a measurement of Slack.</span ><button class="replay" type="button" data-replay aria-label="Replay the exhibit" > Replay </button> </figcaption> <div class="exhibit-body"> <div class="chat-window"> <div class="turn is-user"> <div class="bubble"> Does Slack's free plan keep our message history? </div> </div> <div class="turn is-bot"> <span class="avatar" aria-hidden="true">✳</span> <div class="bubble"> <p class="answer" data-typed> Slack's free plan works well for a small team. <span class="claim" >It keeps your 10,000 most recent messages, so nothing is lost while you stay under that.</span > Paid plans add unlimited history and Slack Connect.<span class="cursor" aria-hidden="true" ></span> </p> </div> </div> <div class="chat-composer" aria-hidden="true"> Ask anything <span>↑</span> </div> </div> <div class="annotations"> <div class="stage verdict-bar"> <span class="stamp is-danger">Miscited caught this</span ><span class="vsub" >Confident, positive, sourced, and out of date since September 2022</span > </div> <div class="stage meta-row"> <span><b>asked on</b> a simulated surface, for illustration</span ><span><b>from</b> the US, in English</span ><span><b>seen in</b> 116 illustrative runs</span> </div> <div class="stage sources"> <table> <caption> Sources the answer cited </caption> <tbody> ${[
-    ['top10teamchat.example.com/best-slack-alternatives', 'does not support it'],
-    ['slack.com/pricing', 'contradicts the old limit'],
-  ].map(
-    ([url, verdict]) => html`<tr> <td>${url}</td> <td>${verdict}</td> </tr>`,
-  )} </tbody> </table> </div> <div class="stage truth-card"> <div class="t-head"> Your approved fact says otherwise <span class="stamp is-danger">Contradicted</span> </div> <p> The Slack free plan keeps 90 days of message history. The 10,000-message limit ended on 1 September 2022. </p> <p class="t-dates"> Illustrative dated fact · free plan: 90 days of accessible history </p> </div> </div> </div> <div class="exhibit-foot"> <span class="measure is-danger" ><span class="val">9%</span> <span class="ci">95% CI 5%–15%</span> <span class="n">n=116</span></span ><span class="stamp is-danger">Critical</span> </div> </figure>`;
+  return html`<figure class="exhibit" data-exhibit data-phase="idle" aria-labelledby="exhibit-cap">
+    <figcaption class="exhibit-head"><span class="who" id="exhibit-cap">REAL CASE · AIR CANADA<br>Historical reconstruction · November 2022</span><button class="replay" type="button" data-replay aria-label="Replay the exhibit">Replay ↻</button></figcaption>
+    <div class="exhibit-body">
+      <div class="chat-window">
+        <div class="chat-toolbar"><span class="chat-menu" aria-hidden="true">☰</span><strong>Travel assistant <span aria-hidden="true">⌄</span></strong><span class="chat-new" aria-hidden="true">↗</span></div>
+        <p class="chat-context">Air Canada website chatbot · paraphrased exchange</p>
+        <div class="turn is-user"><div class="bubble">I need to fly for a funeral. Can I book now and claim the bereavement discount after travelling?</div></div>
+        <div class="turn is-bot"><span class="avatar" aria-hidden="true">✳</span><div class="bubble"><p class="assistant-label">Assistant</p><p class="answer" data-typed><span class="claim">You can apply for a reduced bereavement fare after you have travelled.</span> Submit your request within 90 days of your ticket being issued.<span class="cursor" aria-hidden="true"></span></p><div class="chat-tools" aria-hidden="true">▢ &nbsp; ♧ &nbsp; ↻ &nbsp; ···</div></div></div>
+        <div class="chat-composer" aria-hidden="true"><span>Ask a follow-up</span><span class="chat-send">↑</span></div>
+        <p class="chat-disclaimer">Recreated interface · paraphrased historical exchange.</p>
+      </div>
+      <div class="annotations">
+        <div class="stage verdict-bar"><span class="stamp is-danger">The policy conflict</span><span class="vsub">A reassuring answer. A costly decision.</span></div>
+        <div class="stage truth-card"><div class="t-head">The policy at the time <span class="stamp is-danger">Contradicted</span></div><p>Air Canada’s linked policy did not allow bereavement requests after travel. The customer relied on the chatbot, bought tickets, and was later refused the discount.</p><p class="t-dates">Historical policy described in the 14 February 2024 decision.</p></div>
+        <div class="stage case-source"><a href="https://www.dww.com/articles/bc-tribunal-finds-air-canada-liable-for-inaccurate-advice-given-by-website-chatbot" target="_blank" rel="noopener noreferrer">Read the case summary ↗</a><a href="https://www.canlii.org/en/bc/bccrt/doc/2024/2024bccrt149/2024bccrt149.html" target="_blank" rel="noopener noreferrer">2024 BCCRT 149 ↗</a></div>
+      </div>
+    </div>
+    <div class="exhibit-foot"><span class="case-impact"><strong>C$812.02</strong><span>Ordered payment<br>Damages, interest &amp; tribunal fees</span></span><span class="case-outcome">One wrong answer.<br>A real customer consequence.</span></div>
+  </figure>`;
 }
 function auditForm(rehearsal: boolean): Raw {
   return html`<form class="audit-form" data-audit-form novalidate data-testid="audit-form" > <h3>${rehearsal ? 'Run a demo audit' : 'Request an answer audit'}</h3> <p class="note"> Two fields. An evidence-linked report. No payment details. </p> ${
@@ -110,7 +123,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
           <p class="hero-note">${count === 0 ? 'No signup for the example. Live audits are not connected yet; the audit below is a labelled demo.' : 'No payment details. Every finding comes with its context.'}</p>
           <div class="hero-rule"><span>01 / FIND</span><span>02 / CORRECT</span><span>03 / RECHECK</span></div>
         </div>
-        <div class="hero-evidence" id="example"><div class="evidence-kicker"><span>THE ANSWER LOOKS RIGHT.</span><span>LOOK CLOSER. ↙</span></div>${exhibit()}<p class="example-note">Illustrative data, not a customer result. <a href="https://slack.com/help/articles/27204752526611-Feature-limitations-on-the-free-version-of-Slack">Read Slack’s current free-plan limits ↗</a></p></div>
+        <div class="hero-evidence" id="example"><div class="evidence-kicker"><span>THE ANSWER LOOKS RIGHT.</span><span>LOOK CLOSER. ↙</span></div>${exhibit()}<p class="example-note">Documented historical incident, not a live Miscited finding and not a ChatGPT or Claude screenshot. This was an airline-owned chatbot; Miscited currently checks external AI answers about your company.</p></div>
       </section>
       <div class="surface-strip"><div class="shell surface-inner"><p class="label">Built for multiple model providers</p><div class="provider-names"><span>OpenAI</span><span>Anthropic</span><span>Google</span><span>Perplexity</span></div><p class="surface-note">Coverage depends on configured API surfaces. API results can differ from consumer apps.</p></div></div>
       <section id="catches" class="shell section"><div class="section-heading"><p class="label">01 / The blind spot</p><h2>A mention can still get you wrong.</h2><p>Being named is one question. Being described accurately is another. Start with the facts your buyers use to decide.</p></div><div class="error-grid">${ERRORS.map(([tag, title, body]) => html`<article class="error-card"><span class="label">${tag}</span><div class="error-symbol" aria-hidden="true">≠</div><h3>${title}</h3><p>${body}</p></article>`)}</div></section>

@@ -6,7 +6,12 @@
   },
   "tests/integration/http.test.ts": {
     "referenceSha256": "9cf04a67f38892457b899fffe5b30584080a880c082c95272a9df9829cb4122d",
-    "sha256": "d443bb0df6f5cb8bc2a677c6752a29e413d5ff6b5b919b40bbae35e1c2c52199",
-    "reason": "2026-09-05 traffic-first launch: when live providers are absent, the primary CTA now offers the no-signup worked example. Only the marketing copy expectation changes; live-provider behavior has dedicated coverage."
+    "sha256": "93ac945447be01d97cbac5926acc014f889b827f0f7123d8ed3197ee2f4ccd0c",
+    "reason": "2026-09-05 traffic-first launch: when live providers are absent, the primary CTA now offers the no-signup worked example. Only the marketing copy expectation changes; live-provider behavior has dedicated coverage. User requested a consequential recognizable-brand example: replace the synthetic homepage rate assertion with explicit historical provenance, source and consequence checks. Console statistics contracts remain unchanged."
+  },
+  "tests/e2e/flows.spec.ts": {
+    "referenceSha256": "74dcd21ac036ad8370cbac35c631c9277e75d1e9c0e465562f07317760cfa5b7",
+    "sha256": "ca228bbd0b158fb9c6797a2cd96514f72b9083b8cc5392c336be8384c59afe8f",
+    "reason": "User requested a real consequential brand error and familiar chat layout: five content assertions now check the historical Air Canada case instead of synthetic Slack statistics. Existing replay, animation, typography, accessibility and conversion assertions are preserved."
   }
 }

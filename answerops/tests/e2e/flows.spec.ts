@@ -317,8 +317,8 @@ test('flow 13 — the public page states the offer, converts, and holds up on a 
   // The claim, the proof standard, and the way in are all above the fold.
   await expect(page.locator('h1')).toContainText('Quality control for what AI says');
   await expect(page.getByTestId('cta-hero')).toBeVisible();
-  await expect(page.locator('.exhibit .measure')).toContainText('95% CI 5%–15%');
-  await expect(page.locator('.exhibit .measure')).toContainText('n=116');
+  await expect(page.locator('.exhibit .case-impact')).toContainText('C$812.02');
+  await expect(page.locator('.exhibit .who')).toContainText('Historical reconstruction');
 
   // A bad request is caught in the form and never sent.
   await page.getByTestId('audit-submit').click();
@@ -354,7 +354,7 @@ test('flow 25 — the hero exhibit plays as a conversation and settles complete'
   await expect(exhibit).toBeVisible();
 
   // It reads as a chat: the buyer asks, the assistant answers.
-  await expect(exhibit.locator('.turn.is-user .bubble')).toContainText('free plan');
+  await expect(exhibit.locator('.turn.is-user .bubble')).toContainText('bereavement discount');
   await expect(exhibit.locator('.turn.is-bot .avatar')).toBeVisible();
 
   // The answer streams rather than appearing at once.
@@ -363,9 +363,9 @@ test('flow 25 — the hero exhibit plays as a conversation and settles complete'
 
   // And it always settles on the whole worked example, cursor gone.
   await expect(exhibit).toHaveAttribute('data-phase', 'done', { timeout: 15000 });
-  await expect(exhibit.locator('.answer')).toContainText('10,000 most recent messages');
+  await expect(exhibit.locator('.answer')).toContainText('after you have travelled');
   await expect(exhibit.locator('.verdict-bar')).toBeVisible();
-  await expect(exhibit.locator('.truth-card')).toContainText('90 days');
+  await expect(exhibit.locator('.truth-card')).toContainText('did not allow bereavement requests after travel');
 
   // The borrowed surface has to actually render. A mistyped custom property makes
   // `font-family: var(--chat-font)` invalid at computed-value time, so it silently

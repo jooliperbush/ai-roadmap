@@ -25,3 +25,7 @@ The existing authenticated Railway CLI was used; the separately connected Railwa
 ## Traffic-first update
 
 Application commit `2735aba` was subsequently deployed as `f6dfadf9-5aee-4d47-8c87-f8a73880ec38` (SUCCESS). Includes additive migration 010 for aggregate launch counts, referral attribution and demo-first activation. TypeScript checks, 1,038 application tests and 31 browser journeys passed before deployment. Live Chromium verification confirmed the new CTA navigates to the worked example, no JavaScript errors, and HTTP 200 health. Do Not Track was enabled during verification to avoid adding optional analytics events. No live audit, paid traffic or external announcement was initiated.
+
+## OpenAI configuration check
+
+User added `OPENAI_API_KEY` in Railway. Deployment `dda25c06-f6c3-49a8-bc00-d8b3410b83a1` reached SUCCESS. Homepage and health returned HTTP 200. The existing adapter was tested with one small grounded request; OpenAI returned HTTP 429. A minimal diagnostic request identified `insufficient_quota` / `credit_balance_exhausted`: no API credits remaining. No successful live answer or end-to-end live audit is claimed. No credentials were printed or saved in the repository. The key remains configured for use after the user funds the provider account. Homepage CTA currently reflects key presence, not verified provider quota.

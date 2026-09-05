@@ -69,8 +69,10 @@ function exhibit(): Raw {
         <p class="chat-disclaimer">Recreated interface · paraphrased historical exchange.</p>
       </div>
       <div class="annotations">
-        <div class="stage verdict-bar"><span class="stamp is-danger">The policy conflict</span><span class="vsub">A reassuring answer. A costly decision.</span></div>
-        <div class="stage truth-card"><div class="t-head">The policy at the time <span class="stamp is-danger">Contradicted</span></div><p>Air Canada’s linked policy did not allow bereavement requests after travel. The customer relied on the chatbot, bought tickets, and was later refused the discount.</p><p class="t-dates">Historical policy described in the 14 February 2024 decision.</p></div>
+        <div class="stage verdict-bar"><h3 class="conflict-title">The chatbot said yes. The policy said no.</h3><p class="vsub">The same question had two incompatible answers.</p></div>
+        <div class="stage conflict-claim"><h3>What the chatbot said</h3><p>You could claim the discount <strong>after travelling.</strong></p></div>
+        <div class="stage truth-card"><div class="t-head">What the policy said</div><p>Air Canada’s linked policy <strong>did not allow bereavement requests after travel.</strong></p><p class="t-dates">Historical policy described in the 14 February 2024 decision.</p></div>
+        <p class="stage conflict-impact"><strong>Why it mattered</strong>The customer bought tickets relying on the chatbot’s advice, then was refused the discount.</p>
         <div class="stage case-source"><a href="https://www.dww.com/articles/bc-tribunal-finds-air-canada-liable-for-inaccurate-advice-given-by-website-chatbot" target="_blank" rel="noopener noreferrer">Read the case summary ↗</a><a href="https://www.canlii.org/en/bc/bccrt/doc/2024/2024bccrt149/2024bccrt149.html" target="_blank" rel="noopener noreferrer">2024 BCCRT 149 ↗</a></div>
       </div>
     </div>

@@ -92,7 +92,7 @@ main {
   margin-inline: auto;
 }
 .label {
-  font: 11px/1.5 var(--mono);
+  font: 14px/1.5 var(--mono);
   letter-spacing: 0.085em;
   text-transform: uppercase;
 }
@@ -116,7 +116,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  font-size: 11px;
+  font-size: 14px;
   padding: 8px 20px;
 }
 .announcement a {
@@ -167,7 +167,7 @@ main {
 .lp-nav-links {
   display: flex;
   gap: 28px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .lp-nav-links a,
 .signin {
@@ -178,7 +178,7 @@ main {
   color: var(--red);
 }
 .signin {
-  font-size: 12px;
+  font-size: 14px;
   border-bottom: 1px solid var(--ink);
   padding: 8px 0;
 }
@@ -187,7 +187,7 @@ main {
   grid-template-columns: 1fr 1fr;
   gap: 70px;
   padding-block: 64px 70px;
-  align-items: center;
+  align-items: start;
 }
 .hero-copy > .label {
   margin-bottom: 25px;
@@ -227,7 +227,7 @@ main {
   min-height: 49px;
   padding: 13px 22px;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   border: 1px solid transparent;
   transition:
@@ -249,7 +249,7 @@ main {
   transform: none;
 }
 .text-link {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 550;
   text-decoration: none;
   border-bottom: 1px solid var(--line);
@@ -261,7 +261,7 @@ main {
   color: var(--red);
 }
 .hero-note {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--muted);
   margin: 14px 0 34px;
 }
@@ -270,7 +270,7 @@ main {
   gap: 35px;
   border-top: 1px solid var(--line);
   padding-top: 17px;
-  font: 9px var(--mono);
+  font: 14px var(--mono);
   letter-spacing: 0.06em;
   color: var(--muted);
 }
@@ -281,7 +281,7 @@ main {
 .evidence-kicker {
   display: flex;
   justify-content: space-between;
-  font: 9px var(--mono);
+  font: 14px var(--mono);
   letter-spacing: 0.06em;
   margin-bottom: 13px;
   color: var(--muted);
@@ -290,7 +290,7 @@ main {
   color: var(--red);
 }
 .example-note {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--muted);
   line-height: 1.7;
   margin: 16px 8px 0;
@@ -313,11 +313,11 @@ main {
   background: #eeede4;
 }
 .who {
-  font: 9px/1.5 var(--mono);
+  font: 14px/1.5 var(--mono);
   max-width: 34ch;
 }
 .replay {
-  font: 10px var(--mono);
+  font: 14px var(--mono);
   border: 0;
   background: transparent;
   text-decoration: underline;
@@ -336,7 +336,7 @@ main {
 .turn {
   display: flex;
   gap: 12px;
-  font: 13px/1.65 var(--chat-font);
+  font: 14px/1.65 var(--chat-font);
 }
 .turn.is-user {
   justify-content: flex-end;
@@ -347,7 +347,7 @@ main {
   border-radius: 15px;
   padding: 10px 14px;
   max-width: 90%;
-  font-size: 12px;
+  font-size: 14px;
 }
 .turn.is-bot .bubble {
   background: transparent;
@@ -388,11 +388,11 @@ main {
   display: flex;
   justify-content: space-between;
   padding: 8px 12px;
-  font: 10px var(--chat-font);
+  font: 14px var(--chat-font);
   margin-top: 19px;
 }
 .annotations {
-  font-size: 11px;
+  font-size: 14px;
   padding-top: 16px;
 }
 .verdict-bar {
@@ -405,14 +405,14 @@ main {
   display: inline-block;
   border: 1px solid currentColor;
   padding: 3px 6px;
-  font: 9px/1.4 var(--mono);
+  font: 14px/1.4 var(--mono);
   white-space: nowrap;
 }
 .is-danger {
   color: var(--red);
 }
 .vsub {
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.4;
   color: var(--muted);
 }
@@ -420,7 +420,7 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 5px 12px;
-  font-size: 9px;
+  font-size: 14px;
   color: var(--muted);
   border-block: 1px solid var(--line);
   padding: 9px 0;
@@ -435,12 +435,12 @@ main {
 .sources table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 9px;
+  font-size: 14px;
   table-layout: fixed;
 }
 .sources caption {
   text-align: left;
-  font: 9px var(--mono);
+  font: 14px var(--mono);
   padding-bottom: 6px;
 }
 .sources td {
@@ -460,7 +460,7 @@ main {
   padding: 11px 12px;
 }
 .t-head {
-  font-size: 10px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -470,10 +470,10 @@ main {
 .truth-card p {
   margin-bottom: 7px;
   line-height: 1.55;
-  font-size: 11px;
+  font-size: 14px;
 }
 .truth-card .t-dates {
-  font: 8px/1.5 var(--mono);
+  font: 14px/1.5 var(--mono);
   color: #586355;
   margin-bottom: 0;
 }
@@ -495,7 +495,7 @@ main {
 }
 .measure .ci,
 .measure .n {
-  font: 9px var(--mono);
+  font: 14px var(--mono);
   color: var(--muted);
 }
 .stage {
@@ -532,7 +532,7 @@ main {
 }
 .surface-note {
   grid-column: 2;
-  font-size: 10px;
+  font-size: 14px;
   color: var(--muted);
   margin: 0;
 }
@@ -566,7 +566,7 @@ main {
   padding-left: 32px;
 }
 .error-card .label {
-  font-size: 9px;
+  font-size: 14px;
   color: var(--muted);
 }
 .error-symbol {
@@ -612,7 +612,7 @@ main {
   border-bottom: 1px solid #c9cdbe;
 }
 .step-number {
-  font: 12px var(--mono);
+  font: 14px var(--mono);
   padding-top: 3px;
   color: var(--green);
 }
@@ -621,13 +621,13 @@ main {
   margin-bottom: 8px;
 }
 .step p {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   margin-bottom: 10px;
 }
 .step-owner {
   grid-column: 2;
-  font: 9px/1.4 var(--mono);
+  font: 14px/1.4 var(--mono);
   color: var(--green);
 }
 .team-grid {
@@ -681,7 +681,7 @@ main {
   padding-top: 22px;
 }
 .principle-number {
-  font: 10px var(--mono);
+  font: 14px var(--mono);
   color: #c5d2ad;
   display: block;
   margin-bottom: 25px;
@@ -690,14 +690,14 @@ main {
   font-size: 20px;
 }
 .principles p {
-  font-size: 13px;
+  font-size: 14px;
   color: #d2d8cd;
 }
 .evidence-links {
   display: flex;
   gap: 35px;
   padding-top: 20px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .refusals {
   border-top: 1px solid #7e8c7b;
@@ -706,12 +706,12 @@ main {
 }
 .refusals p {
   color: #d2d8cd;
-  font-size: 13px;
+  font-size: 14px;
   max-width: 90ch;
   padding-top: 12px;
 }
 .refusals summary {
-  font-size: 12px;
+  font-size: 14px;
 }
 .plan-grid {
   display: grid;
@@ -748,7 +748,7 @@ main {
   margin: 12px 0 24px;
 }
 .price span {
-  font: 10px var(--mono);
+  font: 14px var(--mono);
   color: var(--muted);
 }
 .plan .btn,
@@ -756,7 +756,7 @@ main {
   margin-top: auto;
 }
 .plan .plan-note {
-  font-size: 11px;
+  font-size: 14px;
   border-top: 1px solid var(--line);
   padding-top: 20px;
 }
@@ -799,7 +799,7 @@ details[open] > summary span {
   transform: rotate(45deg);
 }
 .faq-list details p {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.8;
   color: var(--muted);
   padding-right: 35px;
@@ -830,7 +830,7 @@ details[open] > summary span {
   list-style: none;
   padding: 0;
   margin: 26px 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .audit-copy li {
   padding: 11px 0;
@@ -842,7 +842,7 @@ details[open] > summary span {
   margin-right: 13px;
 }
 .coverage-note {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--muted);
   max-width: 48ch;
 }
@@ -856,14 +856,14 @@ details[open] > summary span {
   margin-bottom: 10px;
 }
 .audit-form > .note {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 .audit-form .rehearsal {
   padding: 12px;
   background: #f4ebde;
   border-left: 2px solid #a77942;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.65;
 }
 .rehearsal b {
@@ -875,7 +875,7 @@ details[open] > summary span {
 }
 .field label {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 7px;
 }
 .field input {
@@ -893,7 +893,7 @@ details[open] > summary span {
 }
 .err {
   display: block;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--red);
   margin-top: 4px;
 }
@@ -902,13 +902,13 @@ details[open] > summary span {
   justify-content: space-between;
 }
 .fineprint {
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--muted);
   margin: 17px 0 0;
 }
 .outcome {
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 14px;
   overflow-wrap: anywhere;
 }
@@ -944,7 +944,7 @@ details[open] > summary span {
   color: var(--red);
 }
 .footer-top p {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   color: var(--muted);
   margin: 0;
@@ -952,7 +952,7 @@ details[open] > summary span {
 .lp-footer nav {
   display: flex;
   gap: 28px;
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 30px;
 }
 .lp-footer nav a {
@@ -963,7 +963,7 @@ details[open] > summary span {
   justify-content: space-between;
   border-top: 1px solid var(--line);
   padding-top: 18px;
-  font: 9px var(--mono);
+  font: 14px var(--mono);
   color: var(--muted);
 }
 @keyframes blink {
@@ -1009,7 +1009,7 @@ details[open] > summary span {
     gap: 8px;
   }
   .evidence-kicker {
-    font-size: 8px;
+    font-size: 14px;
   }
 }
 @media (max-width: 800px) {
@@ -1017,7 +1017,7 @@ details[open] > summary span {
     width: calc(100% - 40px);
   }
   .announcement {
-    font-size: 10px;
+    font-size: 14px;
     gap: 8px;
   }
   .announcement a {
@@ -1033,7 +1033,7 @@ details[open] > summary span {
     order: 3;
     width: 100%;
     justify-content: space-between;
-    font-size: 11px;
+    font-size: 14px;
     border-top: 1px solid var(--line);
     padding-top: 12px;
     margin-top: 8px;
@@ -1070,7 +1070,7 @@ details[open] > summary span {
     gap: 12px;
   }
   .surface-note {
-    font-size: 9px;
+    font-size: 14px;
   }
   .section {
     padding-block: 65px;
@@ -1088,10 +1088,10 @@ details[open] > summary span {
     font-size: 18px;
   }
   .error-card p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .error-card .label {
-    font-size: 8px;
+    font-size: 14px;
   }
   .workflow {
     padding-block: 60px;
@@ -1115,7 +1115,7 @@ details[open] > summary span {
     font-size: 18px;
   }
   .principles p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .plan {
     padding: 28px;
@@ -1169,11 +1169,11 @@ details[open] > summary span {
     gap: 9px;
   }
   .hero-note {
-    font-size: 10px;
+    font-size: 14px;
     margin-top: 13px;
   }
   .hero .label {
-    font-size: 9px;
+    font-size: 14px;
   }
   .hero-evidence {
     padding-right: 6px;
@@ -1203,7 +1203,7 @@ details[open] > summary span {
   }
   .measure .ci,
   .measure .n {
-    font-size: 8px;
+    font-size: 14px;
   }
   .provider-names {
     font-size: 19px;
@@ -1212,7 +1212,7 @@ details[open] > summary span {
     gap: 7px 24px;
   }
   .surface-inner > .label {
-    font-size: 9px;
+    font-size: 14px;
   }
   .surface-note {
     max-width: 44ch;
@@ -1233,7 +1233,7 @@ details[open] > summary span {
   }
   .error-card .label {
     grid-column: 1;
-    font-size: 9px;
+    font-size: 14px;
     margin-bottom: 19px;
   }
   .error-symbol {
@@ -1249,7 +1249,7 @@ details[open] > summary span {
   }
   .error-card p {
     grid-column: 1;
-    font-size: 13px;
+    font-size: 14px;
     max-width: 30ch;
   }
   .team-grid,
@@ -1273,7 +1273,7 @@ details[open] > summary span {
     margin-bottom: 15px;
   }
   .principles p {
-    font-size: 13px;
+    font-size: 14px;
   }
   .evidence-section {
     padding-block: 60px;
@@ -1295,7 +1295,7 @@ details[open] > summary span {
     font-size: 38px;
   }
   summary {
-    font-size: 13px;
+    font-size: 14px;
   }
   .audit-copy h2 {
     font-size: 49px;
@@ -1307,16 +1307,16 @@ details[open] > summary span {
     font-size: 56px;
   }
   .footer-top p {
-    font-size: 11px;
+    font-size: 14px;
   }
   .lp-footer nav {
     gap: 22px;
   }
   .footer-bottom {
-    font-size: 8px;
+    font-size: 14px;
   }
   .section-heading > .label {
-    font-size: 10px;
+    font-size: 14px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1337,36 +1337,68 @@ details[open] > summary span {
 /* Familiar conversation UI; explicit historical provenance lives outside the chat. */
 .exhibit { border-radius: 18px; overflow: hidden; transform: none; box-shadow: 0 18px 55px #29251c12; }
 .exhibit-head { background: #f4f2ed; padding: 12px 22px; }
-.who { max-width: none; font-size: 9px; letter-spacing: .025em; }
+.who { max-width: none; font-size: 14px; letter-spacing: .025em; }
 .exhibit-body { padding: 0; }
 .chat-window { border: 0; padding: 0 24px 18px; }
 .chat-toolbar { display: flex; align-items: center; gap: 13px; padding: 18px 0 10px; font: 14px var(--chat-font); color: #343434; }
 .chat-toolbar strong { font-weight: 550; flex: 1; }
 .chat-toolbar strong span { color: #888; margin-left: 4px; }
 .chat-menu, .chat-new { color: #727272; font-size: 17px; }
-.chat-context { margin: 0 0 23px; font: 9px/1.5 var(--chat-font); color: #777; }
-.turn.is-user .bubble { border-radius: 20px 20px 5px 20px; font-size: 13px; padding: 13px 17px; background: #f4f4f4; }
+.chat-context { margin: 0 0 23px; font: 14px/1.5 var(--chat-font); color: #777; }
+.turn.is-user .bubble { border-radius: 20px 20px 5px 20px; font-size: 14px; padding: 13px 17px; background: #f4f4f4; }
 .turn.is-bot { gap: 12px; }
 .avatar { width: 26px; height: 26px; border: 1px solid #deded9; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-size: 18px; }
-.assistant-label { font: 600 12px var(--chat-font); margin: 4px 0 10px; }
+.assistant-label { font: 600 14px var(--chat-font); margin: 4px 0 10px; }
 .answer { min-height: 100px; font-size: 14px; line-height: 1.75; }
 .claim { border-bottom: 2px solid #cf5342; padding: 2px 0; }
 .chat-tools { margin-top: 14px; color: #828282; font-size: 15px; }
-.chat-composer { background: #f4f4f2; border: 1px solid #e8e8e4; padding: 9px 10px 9px 17px; align-items: center; font-size: 12px; margin-top: 22px; }
+.chat-composer { background: #f4f4f2; border: 1px solid #e8e8e4; padding: 9px 10px 9px 17px; align-items: center; font-size: 14px; margin-top: 22px; }
 .chat-send { background: #292929; color: white; border-radius: 50%; width: 28px; height: 28px; display: grid; place-items: center; font-size: 17px; }
-.chat-disclaimer { font: 9px/1.5 var(--chat-font); color: #777; text-align: center; margin: 9px 0 0; }
+.chat-disclaimer { font: 14px/1.5 var(--chat-font); color: #777; text-align: center; margin: 9px 0 0; }
 .annotations { padding: 18px 24px; border-top: 1px solid var(--line); background: #faf9f5; }
 .truth-card { border-radius: 0 8px 8px 0; }
-.case-source { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font: 9px/1.6 var(--mono); }
+.case-source { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font: 14px/1.6 var(--mono); }
 .case-source a { text-underline-offset: 3px; }
 .exhibit-foot { background: #f2eee6; padding: 18px 24px; }
 .case-impact { display: flex; gap: 12px; align-items: center; }
 .case-impact strong { font: 28px var(--serif); letter-spacing: -1px; white-space: nowrap; }
-.case-impact span, .case-outcome { font-size: 9px; line-height: 1.6; color: var(--muted); }
+.case-impact span, .case-outcome { font-size: 14px; line-height: 1.6; color: var(--muted); }
 .case-outcome { text-align: right; }
 @media (max-width: 600px) {
  .chat-window { padding-inline: 17px; }
  .annotations { padding: 16px 17px; }
  .exhibit-foot { padding: 15px 17px; flex-wrap: wrap; }
  .case-outcome { text-align: left; }
+}
+
+/* Readable labels and an explicit statement-versus-policy comparison. */
+.hero-description, .hero-note, .example-note, .note, .faq p,
+.truth-card p, .conflict-claim p, .conflict-impact, .answer,
+.turn.is-user .bubble { font-size: 16px; line-height: 1.65; }
+.exhibit-head { align-items: flex-start; gap: 12px; }
+.who { max-width: 34ch; font-family: var(--sans); }
+.replay { flex-shrink: 0; }
+.chat-context, .chat-disclaimer, .t-dates, .case-source,
+.case-impact span, .case-outcome { color: #50544b; line-height: 1.6; }
+.verdict-bar { display: block; margin-bottom: 18px; }
+.conflict-title { margin: 0 0 6px; font: 700 21px/1.3 var(--sans); color: #982b1d; }
+.vsub { font-size: 16px; color: var(--ink); }
+.conflict-claim, .truth-card { padding: 16px; margin: 0 0 12px; border-radius: 8px; }
+.conflict-claim { background: #f9e7e2; border-left: 4px solid #b63724; }
+.truth-card { border-left: 4px solid #32483b; }
+.conflict-claim h3, .truth-card .t-head { display: block; font: 700 16px/1.4 var(--sans); margin: 0 0 8px; }
+.conflict-claim p { margin-bottom: 0; }
+.truth-card .t-dates { font-size: 14px; }
+.conflict-impact { margin: 16px 0; }
+.conflict-impact strong { display: block; margin-bottom: 4px; }
+.case-impact { flex-wrap: wrap; }
+.exhibit-foot { align-items: flex-start; flex-wrap: wrap; }
+.case-outcome { text-align: left; }
+.stamp { white-space: normal; }
+.case-source { font-family: var(--sans); font-size: 14px; gap: 12px 20px; }
+.case-source a { padding-block: 6px; }
+@media (max-width: 600px) {
+ .exhibit-head { padding: 16px; }
+ .who { font-size: 14px; }
+ .case-impact strong { font-size: 32px; }
 }

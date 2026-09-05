@@ -29,3 +29,10 @@ The market/website work follows rebuild commit `91fdc71`. All original workflows
 **Verified:** `npm run typecheck` passed; `npm test` passed 1,034 tests in 44 files; `npm run test:e2e` passed all 29 browser journeys; `git diff --check` passed. Desktop and mobile rendering and the evidence launch card were visually inspected. The shared preview graphic resolves from the static route. No website deployment, repository rename, remote publication, Product Hunt submission, email delivery or social post has been performed. The current public repo is still packaged as AI Literacy Roadmap and has no detected license; resolve that before calling it open source. Historical methodology prices are now labelled as old planning examples. Paid terms and billing still require a founder decision before a commercial launch.
 
 Research and targets are dated 2026-09-05. Commercial assumptions have not been validated by customer interviews or live pilot payments.
+
+## Deployment update
+
+The site was subsequently deployed to [miscited.com](https://miscited.com) on 5 September 2026.
+See the [production deployment record](../deployments/2026-09-05-production.md) for verification,
+provider configuration and dependency-audit notes. The earlier launch preparation statements
+above describe the state before the user's separate deployment authorization.

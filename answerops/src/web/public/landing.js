@@ -1,5 +1,21 @@
 /** The complete document is usable before this progressive enhancement runs. */
 (() => {
+  const source = new URLSearchParams(location.search).get('utm_source') || 'public_site';
+  const eventSource = source.length <= 30 ? source : 'public_site';
+  const emit = (event) => {
+    if (navigator.doNotTrack === '1') return;
+    fetch('/launch-event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ source: eventSource, event }), keepalive: true }).catch(() => {});
+  };
+  emit('landing_view');
+  document.querySelector('[data-testid="cta-hero"]')?.addEventListener('click', () => emit('primary_cta'));
+  const example = document.querySelector('[data-exhibit]');
+  if (example && 'IntersectionObserver' in window) {
+    const seen = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) { emit('example_view'); seen.disconnect(); }
+    }, { threshold: 0.5 });
+    seen.observe(example);
+  }
+
   const exhibit = document.querySelector('[data-exhibit]');
   if (exhibit) {
     const answer = exhibit.querySelector('[data-typed]');
@@ -132,6 +148,7 @@
         body: JSON.stringify({
           email: email.value.trim(),
           domain: domain.value.trim(),
+          source: eventSource,
         }),
       });
       const result = await response.json();

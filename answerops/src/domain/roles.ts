@@ -53,7 +53,12 @@ export const ROUTE_ROLES: Record<string, Role> = {
 };
 
 /** Reachable without a session. Each is rate limited; none of them reads workspace data. */
-export const PUBLIC_ROUTES = new Set(['POST /login', 'POST /audit-request', 'POST /audit/:token/start']);
+export const PUBLIC_ROUTES = new Set([
+  'POST /login',
+  'POST /audit-request',
+  'POST /audit/:token/start',
+  'POST /launch-event',
+]);
 
 /** Routes exempt from CSRF because no session cookie exists yet when they are called. */
 export const CSRF_EXEMPT = PUBLIC_ROUTES;

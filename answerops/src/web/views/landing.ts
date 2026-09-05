@@ -65,7 +65,7 @@ function exhibit(): Raw {
   )} </tbody> </table> </div> <div class="stage truth-card"> <div class="t-head"> Your approved fact says otherwise <span class="stamp is-danger">Contradicted</span> </div> <p> The Slack free plan keeps 90 days of message history. The 10,000-message limit ended on 1 September 2022. </p> <p class="t-dates"> Illustrative dated fact · free plan: 90 days of accessible history </p> </div> </div> </div> <div class="exhibit-foot"> <span class="measure is-danger" ><span class="val">9%</span> <span class="ci">95% CI 5%–15%</span> <span class="n">n=116</span></span ><span class="stamp is-danger">Critical</span> </div> </figure>`;
 }
 function auditForm(rehearsal: boolean): Raw {
-  return html`<form class="audit-form" data-audit-form novalidate data-testid="audit-form" > <h3>Request an answer audit</h3> <p class="note"> Two fields. An evidence-linked report. No payment details. </p> ${
+  return html`<form class="audit-form" data-audit-form novalidate data-testid="audit-form" > <h3>${rehearsal ? 'Run a demo audit' : 'Request an answer audit'}</h3> <p class="note"> Two fields. An evidence-linked report. No payment details. </p> ${
     rehearsal
       ? html`<p class="note rehearsal" data-testid="rehearsal-notice"> <b>This deployment has no assistant API keys configured.</b> An audit requested now runs the full pipeline against a deterministic stand-in, not against ChatGPT, Claude, Gemini or Perplexity. The report will say so at the top, and none of its numbers describe what a real assistant tells your buyers. </p>`
       : null
@@ -87,7 +87,7 @@ function auditForm(rehearsal: boolean): Raw {
   ].map(
     (field) =>
       html`<div class="field"> <label for="audit-${field.id}">${field.label}</label ><input id="audit-${field.id}" name="${field.id}" type="${field.type}" autocomplete="${field.auto}" spellcheck="false" placeholder="${field.hint}" aria-describedby="err-audit-${field.id}" data-testid="audit-${field.id}"><span class="err" id="err-audit-${field.id}" data-err-for="audit-${field.id}" role="alert" ></span> </div>`,
-  )}<button type="submit" class="btn btn-primary" data-submit data-testid="audit-submit" > Request the audit <span aria-hidden="true">↗</span></button> <div class="outcome" data-outcome role="status" aria-live="polite"></div> <p class="fineprint"> Submitting starts the audit automatically. We store your email, domain and report to operate the audit. Site-derived facts are provisional until reviewed; the report link appears here. </p> </form>`;
+  )}<button type="submit" class="btn btn-primary" data-submit data-testid="audit-submit" >${rehearsal ? 'Run the demo audit' : 'Request the audit'} <span aria-hidden="true">↗</span></button> <div class="outcome" data-outcome role="status" aria-live="polite"></div> <p class="fineprint"> Submitting starts the audit automatically. We store your email, domain and report to operate the audit. Site-derived facts are provisional until reviewed; the report link appears here. </p> </form>`;
 }
 
 export function landingView(opts: { liveProviders?: number } = {}): Raw {
@@ -106,8 +106,8 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
           <h1>Quality control for what AI says about <em>your company.</em></h1>
           <p class="lede">Your product changed. The answer didn’t.</p>
           <p class="hero-description">Find outdated prices, retired plans and unsupported claims. Trace the evidence, correct the source, and test whether the next answer gets it right.</p>
-          <div class="hero-actions"><a class="btn btn-primary" href="#audit" data-testid="cta-hero">Get a free answer audit <span aria-hidden="true">↗</span></a><a class="text-link" href="#example">See a worked example <span aria-hidden="true">↓</span></a></div>
-          <p class="hero-note">No payment details. Every finding comes with its context.</p>
+          <div class="hero-actions"><a class="btn btn-primary" href="${count === 0 ? '#example' : '#audit'}" data-testid="cta-hero">${count === 0 ? 'Try the worked example' : 'Get a free answer audit'} <span aria-hidden="true">↗</span></a><a class="text-link" href="#example">See a worked example <span aria-hidden="true">↓</span></a></div>
+          <p class="hero-note">${count === 0 ? 'No signup for the example. Live audits are not connected yet; the audit below is a labelled demo.' : 'No payment details. Every finding comes with its context.'}</p>
           <div class="hero-rule"><span>01 / FIND</span><span>02 / CORRECT</span><span>03 / RECHECK</span></div>
         </div>
         <div class="hero-evidence" id="example"><div class="evidence-kicker"><span>THE ANSWER LOOKS RIGHT.</span><span>LOOK CLOSER. ↙</span></div>${exhibit()}<p class="example-note">Illustrative data, not a customer result. <a href="https://slack.com/help/articles/27204752526611-Feature-limitations-on-the-free-version-of-Slack">Read Slack’s current free-plan limits ↗</a></p></div>
@@ -121,6 +121,6 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
       <section class="shell faq-section" id="faq"><div><p class="label">A few fair questions</p><h2>Before you begin.</h2></div><div class="faq-list">${HOME_FAQ.map(({ q, a }) => html`<details><summary>${q}<span aria-hidden="true">+</span></summary><p>${a}</p></details>`)}</div></section>
       <section class="audit-section" id="audit"><div class="shell audit-grid"><div class="audit-copy"><p class="label">Your domain. The actual record.</p><h2>See what the answers say.</h2><p class="lede">A concrete place to start the conversation.</p><ul><li>A dated report you can inspect.</li><li>Extracted claims and the sources behind them.</li><li>Clear labels for simulated results and missing coverage.</li></ul><p class="coverage-note">${count >= 4 ? 'We sample your questions across all four assistants through their configured APIs.' : 'We sample your questions on the configured API surfaces.'} Results depend on the model, access mode, region and date.</p></div>${auditForm(count === 0)}</div></section>
     </main>
-    <footer class="shell lp-footer"><div class="footer-top"><a class="lp-brand" href="/">miscited<span class="footer-period">.</span></a><p>A better record.<br>A more accountable answer.</p></div><nav aria-label="Footer"><a href="/blog">Writing</a><a href="#design">Measurement</a><a href="https://github.com/jooliperbush/ai-roadmap">GitHub ↗</a><a href="/login">Sign in</a></nav><div class="footer-bottom"><span>Miscited / Answer accuracy</span><span>Measured, not controlled.</span></div></footer>
+    <footer class="shell lp-footer"><div class="footer-top"><a class="lp-brand" href="/">miscited<span class="footer-period">.</span></a><p>A better record.<br>A more accountable answer.</p></div><nav aria-label="Footer"><a href="/blog">Writing</a><a href="#design">Measurement</a><a href="https://github.com/jooliperbush/ai-roadmap">GitHub ↗</a><a href="/login">Sign in</a></nav><div class="footer-bottom"><span>Miscited / Answer accuracy</span><span>Measured, not controlled.</span></div><p class="hero-note">We count page views and example interactions by broad referral source without visitor IDs or cookies. Optional event counting respects Do Not Track.</p></footer>
   `;
 }

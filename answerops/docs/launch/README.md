@@ -2,6 +2,8 @@
 
 **Recommendation:** AI answer accuracy for B2B SaaS, with specialist agencies as an initial partner channel. Validate paid correction sprints before treating recurring monitoring as a proven business.
 
+**Current execution plan:** [Traffic-first launch](traffic-first-plan.md) replaces interview prerequisites with a self-serve launch and measured traffic experiments.
+
 ## Read in this order
 
 1. [Market analysis](market-analysis.md): competitive landscape, buyer fit, pricing hypotheses, revenue scenarios, risks and discovery gates.

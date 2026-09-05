@@ -23,6 +23,7 @@ export interface LimitPolicy {
 export const LIMIT_ON_FAILURE = new Set(['POST /login']);
 
 export const LIMITS: Record<string, LimitPolicy> = {
+  'POST /launch-event': { limit: 30, windowMs: 60_000 },
   'POST /login': { limit: 10, windowMs: 15 * 60_000 },
   'POST /audit-request': { limit: 5, windowMs: 60 * 60_000 },
   'POST /sampling/run': { limit: 20, windowMs: 60 * 60_000 },

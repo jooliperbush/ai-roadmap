@@ -3,5 +3,10 @@
     "referenceSha256": "811732b472d1d3030891c161de1893bce7c1c30d007de26bffadb9f79882145d",
     "sha256": "fb50dfacf8dc5c657857b8bc41d57dbda5be049456a41b12f8ca6c80640f4ba4",
     "reason": "2026-09-05 requested marketing website repositioning: remove unvalidated paid subscriptions from public structured data; retain the free audit. Only the price expectation changes."
+  },
+  "tests/integration/http.test.ts": {
+    "referenceSha256": "9cf04a67f38892457b899fffe5b30584080a880c082c95272a9df9829cb4122d",
+    "sha256": "d443bb0df6f5cb8bc2a677c6752a29e413d5ff6b5b919b40bbae35e1c2c52199",
+    "reason": "2026-09-05 traffic-first launch: when live providers are absent, the primary CTA now offers the no-signup worked example. Only the marketing copy expectation changes; live-provider behavior has dedicated coverage."
   }
 }

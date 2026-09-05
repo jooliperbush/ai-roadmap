@@ -8,6 +8,7 @@ import * as repo from '../../db/repo/index.js';
 import { liveProviderCount } from '../../providers/registry.js';
 import { createAuditReport, getAuditReportByToken, runAudit, startMonitoring } from '../../services/audit.js';
 import { buildDashboard } from '../../services/dashboard.js';
+import { countLaunchEvent, LAUNCH_EVENTS, trafficSource } from '../../services/traffic.js';
 import {
   blogPostingLd,
   breadcrumbLd,
@@ -116,7 +117,14 @@ export function publicRoutes(r: Runtime): void {
       dashboardView(buildDashboard(db, a.tenantId, c.brand.id, c.query.window ?? null)),
     );
   });
+  app.post('/launch-event', { bodyLimit: 512 }, async (req, reply) => {
+    const parsed = z.object({ source: z.string().max(30), event: z.enum(LAUNCH_EVENTS) }).strict().safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'Invalid launch event' });
+    countLaunchEvent(db, parsed.data.source, parsed.data.event, clock.now());
+    return reply.code(202).send({ ok: true });
+  });
   const auditRequest = z.object({
+    source: z.unknown().optional(),
     email: z.string().trim().email('Enter a work email we can send the audit to.'),
     domain: z
       .string()
@@ -136,7 +144,7 @@ export function publicRoutes(r: Runtime): void {
     const report = db.transaction(() => {
       db.prepare(
         'INSERT INTO audit_requests (id, email, domain, source, created_at) VALUES (?, ?, ?, ?, ?)',
-      ).run(requestId, parsed.data.email.toLowerCase(), domain, 'public_site', nowIso());
+      ).run(requestId, parsed.data.email.toLowerCase(), domain, trafficSource(parsed.data.source), nowIso());
       return createAuditReport(db, requestId, domain);
     })();
     if (r.fetcher)

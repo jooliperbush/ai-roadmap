@@ -21,3 +21,7 @@ No provider API keys appeared in the service variable configuration at deploymen
 The production dependency audit reports two high-severity affected packages: `@fastify/static` and `fast-uri`, encompassing multiple advisories. These pre-existing dependencies were not changed during this deployment; they need a separately tested dependency update. The deployment is healthy, but this is not a security-clearance claim. See `npm audit --omit=dev` for current details.
 
 The existing authenticated Railway CLI was used; the separately connected Railway app lacked access to this project. No repository push, rename or external announcement occurred. SSH backup was unavailable because no SSH identity was configured; no new backup is claimed.
+
+## Traffic-first update
+
+Application commit `2735aba` was subsequently deployed as `f6dfadf9-5aee-4d47-8c87-f8a73880ec38` (SUCCESS). Includes additive migration 010 for aggregate launch counts, referral attribution and demo-first activation. TypeScript checks, 1,038 application tests and 31 browser journeys passed before deployment. Live Chromium verification confirmed the new CTA navigates to the worked example, no JavaScript errors, and HTTP 200 health. Do Not Track was enabled during verification to avoid adding optional analytics events. No live audit, paid traffic or external announcement was initiated.

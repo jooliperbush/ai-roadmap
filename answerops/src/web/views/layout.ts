@@ -22,6 +22,7 @@ export interface HeadMeta {
 }
 const NAV: Array<[string, string, string]> = [
   ["dashboard", "/", "Answer desk"],
+  ["weekly", "/weekly", "Weekly briefing"],
   ["alerts", "/alerts", "Alerts"],
   ["clusters", "/clusters", "Demand"],
   ["truth", "/truth", "Truth registry"],

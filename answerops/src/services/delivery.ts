@@ -21,6 +21,7 @@ import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
 
 export interface DeliveryPayload {
+  idempotencyKey?: string;
   kind: 'alert' | 'digest';
   subject: string;
   text: string;
@@ -60,6 +61,7 @@ async function postJson(
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },
       body,
+      signal: AbortSignal.timeout(15000),
     });
     return response.ok ? { ok: true } : { ok: false, error: `${label} ${response.status}` };
   } catch (error) {
@@ -81,7 +83,10 @@ export class EmailTransport implements Transport {
       'https://api.resend.com/emails',
       JSON.stringify({ from: this.from, to: [payload.target], subject: payload.subject, text: payload.text }),
       'resend',
-      { authorization: `Bearer ${this.apiKey}` },
+      {
+        authorization: `Bearer ${this.apiKey}`,
+        ...(payload.idempotencyKey ? { 'Idempotency-Key': payload.idempotencyKey } : {}),
+      },
     );
   }
 }

@@ -4,6 +4,8 @@
 
 **Current execution plan:** [Traffic-first launch](traffic-first-plan.md) replaces interview prerequisites with a self-serve launch and measured traffic experiments.
 
+**Weekly workflow:** [Product behavior and email setup](weekly-briefing.md).
+
 ## Read in this order
 
 1. [Market analysis](market-analysis.md): competitive landscape, buyer fit, pricing hypotheses, revenue scenarios, risks and discovery gates.

@@ -13,5 +13,10 @@
     "referenceSha256": "74dcd21ac036ad8370cbac35c631c9277e75d1e9c0e465562f07317760cfa5b7",
     "sha256": "ca228bbd0b158fb9c6797a2cd96514f72b9083b8cc5392c336be8384c59afe8f",
     "reason": "User requested a real consequential brand error and familiar chat layout: five content assertions now check the historical Air Canada case instead of synthetic Slack statistics. Existing replay, animation, typography, accessibility and conversion assertions are preserved."
+  },
+  "tests/integration/audit.test.ts": {
+    "referenceSha256": "f0c0b545d318541483e2963c747c3269fe7548ad72958a1615df96307bc9d9c4",
+    "sha256": "33c06cfca39386a2b5c20b99a16cae49697ab740f6fea25abc8858cb7c237831",
+    "reason": "User approved Monday plan-check-report workflow. Newly converted audit accounts now receive a weekly briefing schedule instead of a daily schedule. Existing generic schedules remain unchanged."
   }
 }

@@ -25,6 +25,10 @@ export function allows(role: string, minimum: Role): boolean {
  * Routes reachable before a session exists are listed in PUBLIC_ROUTES instead.
  */
 export const ROUTE_ROLES: Record<string, Role> = {
+  'POST /weekly/messages/:id/retry': 'owner',
+  'POST /weekly/enable': 'owner',
+  'POST /weekly/:id/settings': 'owner',
+  'POST /weekly/:id/skip': 'owner',
   'POST /logout': 'viewer',
   'POST /demand/import': 'editor',
   'POST /truth': 'editor',

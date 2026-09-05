@@ -14,11 +14,12 @@
  * convert would do.
  */
 
+import { enableWeekly } from './weekly.js';
+import { liveProviders } from '../providers/live.js';
 import { randomBytes } from 'node:crypto';
 import type { DB } from '../db/index.js';
 import { id, nowIso, hashPassword } from '../db/index.js';
 import * as repo from '../db/repo/index.js';
-import * as sched from '../db/repo/unattended.js';
 import type { Row } from '../db/repo/index.js';
 import { statements } from '../db/repo/statements.js';
 import { crawlSite, proposeCanonicalClaims, autoDemand, thinPages, type CrawlResult } from './siteReader.js';
@@ -26,7 +27,6 @@ import { runSamplingRound } from './observatory.js';
 import { buildDashboard, type DashboardData } from './dashboard.js';
 import { BUYER_STAGE } from '../domain/intent.js';
 import { requiredSampleSize, MIN_SAMPLES } from '../domain/stats.js';
-import { computeNextRun } from '../domain/scheduler.js';
 import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
 import type { Fetcher } from '../domain/fetcher.js';
@@ -184,7 +184,11 @@ export async function runAudit(db: DB, reportId: string, opts: AuditOptions): Pr
       samplingReason: 'self_serve_audit',
       actor: 'audit',
       beliefs: opts.beliefs ?? null,
-      providers: opts.providers,
+      providers:
+        opts.providers ??
+        (liveProviders().some((p) => p.available())
+          ? liveProviders().filter((p) => p.available())
+          : undefined),
       clock,
       fetcher: opts.fetcher,
     });
@@ -320,6 +324,7 @@ export function inferCompetitors(crawl: CrawlResult): string[] {
 // ------------------------------------------------------------------- conversion
 
 export interface ConversionInput {
+  weeklyEmail?: boolean;
   token: string;
   email: string;
   password: string;
@@ -353,14 +358,9 @@ export function startMonitoring(
       tenantId,
     );
     const user = repo.createUser(db, tenantId, input.email, hash, salt, 'owner');
-    sched.createSchedule(db, tenantId, {
-      brand_id: brand.id,
-      cadence: 'daily',
-      hour_utc: 6,
-      monthly_budget_usd: 500,
-      budget_runs: 60,
-      next_run_at: computeNextRun('daily', clock.now(), 6).toISOString(),
-    });
+    const weekly = enableWeekly(db, tenantId, brand.id, clock);
+    if (input.weeklyEmail)
+      db.prepare('UPDATE schedules SET weekly_email=? WHERE id=?').run(input.email, weekly.id);
     if (report.request_id)
       db.prepare('UPDATE audit_requests SET tenant_id = ? WHERE id = ?').run(tenantId, report.request_id);
     repo.audit(

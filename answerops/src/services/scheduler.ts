@@ -10,6 +10,7 @@
  * claimable again, the window marked partial, and a row in the audit log naming the error.
  */
 
+import { processWeekly, deliverWeekly } from './weekly.js';
 import { randomBytes } from 'node:crypto';
 import type { DB } from '../db/index.js';
 import * as repo from '../db/repo/index.js';
@@ -91,10 +92,28 @@ export async function tick(db: DB, opts: SchedulerOptions = {}): Promise<TickRes
     errors: [],
   };
   for (const schedule of schedules) {
-    const expires = new Date(now.getTime() + (opts.leaseMs ?? LEASE_MS)).toISOString();
-    if (!sched.claimSchedule(db, schedule.tenant_id, schedule.id, owner, now.toISOString(), expires))
+    const claimAt = clock.now();
+    const expires = new Date(claimAt.getTime() + (opts.leaseMs ?? LEASE_MS)).toISOString();
+    if (!sched.claimSchedule(db, schedule.tenant_id, schedule.id, owner, claimAt.toISOString(), expires))
       continue;
     result.claimed++;
+    if (schedule.weekly_briefing === 1) {
+      try {
+        const state = await processWeekly(db, schedule, { ...opts, owner }, clock);
+        if (state === 'complete') result.ran++;
+        if (state === 'failed') result.failed++;
+      } catch (e) {
+        result.failed++;
+        result.errors.push(e instanceof Error ? e.message : 'Weekly job failed');
+        sched.releaseSchedule(db, schedule.tenant_id, schedule.id, {
+          next_run_at: new Date(+clock.now() + 3600000).toISOString(),
+          last_run_at: clock.now().toISOString(),
+          last_window_label: null,
+          last_error: 'Weekly job interrupted',
+        });
+      }
+      continue;
+    }
     const cadence = schedule.cadence as Cadence;
     const label = windowLabelFor(cadence, now);
     let error: string | null = null;
@@ -155,6 +174,7 @@ export async function tick(db: DB, opts: SchedulerOptions = {}): Promise<TickRes
       result.delivered += (await dispatchAlerts(db, tenantId, opts.transports, clock)).delivered;
     }
   }
+  if (opts.transports) await deliverWeekly(db, opts.transports, clock, opts.tenantId);
   return result;
 }
 
@@ -214,7 +234,7 @@ export async function runDigests(
     .prepare(
       `SELECT t.id AS tenantId,
     (SELECT b.id FROM brands b WHERE b.tenant_id = t.id ORDER BY b.created_at LIMIT 1) AS brandId
-    FROM tenants t WHERE brandId IS NOT NULL ORDER BY t.created_at`,
+    FROM tenants t WHERE brandId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM schedules s WHERE s.tenant_id=t.id AND s.weekly_briefing=1) ORDER BY t.created_at`,
     )
     .all() as Array<{ tenantId: string; brandId: string }>;
   let sent = 0;

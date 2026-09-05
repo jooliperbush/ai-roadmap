@@ -728,3 +728,10 @@ legend {
     background: white;
   }
 }
+
+/* Weekly briefing: readable settings and evidence. */
+.weekly-page label, .weekly-page textarea, .weekly-page button { font-size: 16px; line-height: 1.6; }
+.weekly-page form { margin-block: 12px; }
+.weekly-page li { margin-block: 8px; }
+.weekly-page summary { font-size: 16px; padding-block: 10px; }
+.weekly-page .panel { overflow-wrap: anywhere; }

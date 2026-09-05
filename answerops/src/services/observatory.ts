@@ -14,6 +14,14 @@ import type { Fetcher } from '../domain/fetcher.js';
 import type { BeliefProfile, ProviderAdapter } from '../providers/types.js';
 import { prepareEvidence, persistAnswer } from './answerEvidence.js';
 export interface SampleRoundOptions {
+  plannedQuestions?: Array<{
+    clusterId: string;
+    variantId: string;
+    prompt: string;
+    geo: string;
+    language: string;
+  }>;
+  liveOnly?: boolean;
   tenantId: string;
   brandId: string;
   windowLabel: string;
@@ -89,7 +97,18 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
     }),
     opts.budget ?? Math.max(clusters.length * 6, 30),
   );
-  let allocations = plan.allocations;
+  let allocations = opts.plannedQuestions
+    ? opts.plannedQuestions
+        .filter((q) => clusterById.has(q.clusterId))
+        .slice(0, Math.floor((opts.budget ?? 50) / 5))
+        .map((q) => ({
+          clusterId: q.clusterId,
+          samples: 5,
+          reason: 'floor' as const,
+          score: 1,
+          poweredFor: 1,
+        }))
+    : plan.allocations;
   let droppedForBudget: string[] = [];
   let exhausted = false;
   if (opts.monthlyBudgetUsd !== undefined) {
@@ -99,7 +118,11 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
       monthToDateUsd: spend.usd,
       unpricedRuns: spend.unpricedRuns,
     });
-    const trimmed = trimToBudget(plan, meanRunCost(pairs.map((p) => p.surface.modelId)), available);
+    const trimmed = trimToBudget(
+      { ...plan, allocations },
+      meanRunCost(pairs.map((p) => p.surface.modelId)),
+      available,
+    );
     allocations = trimmed.allocations;
     droppedForBudget = trimmed.droppedForBudget;
     exhausted = trimmed.exhausted;
@@ -127,7 +150,16 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
     const variants = repo.listVariants(db, tenantId, cluster.id);
     if (!variants.length) continue;
     for (let repetition = 0; repetition < allocation.samples; repetition++) {
-      const variant = variants[repetition % variants.length];
+      const frozen = opts.plannedQuestions?.find((q) => q.clusterId === cluster.id);
+      const variant = frozen
+        ? {
+            ...variants[0],
+            id: frozen.variantId,
+            prompt: frozen.prompt,
+            geo: frozen.geo,
+            language: frozen.language,
+          }
+        : variants[repetition % variants.length];
       const pair = pairs[cursor++ % pairs.length];
       if (!pair) continue;
       const seed = (opts.seedOffset ?? 0) + repetition * 7919 + hash(cluster.id);
@@ -157,6 +189,15 @@ export async function runSamplingRound(db: DB, opts: SampleRoundOptions): Promis
               : error instanceof Error
                 ? error.message.slice(0, 120)
                 : 'unknown',
+        });
+        continue;
+      }
+      if (opts.liveOnly && answer.simulated) {
+        result.gaps.push({
+          provider: pair.surface.provider,
+          surface: pair.surface.label,
+          clusterId: cluster.id,
+          reason: 'Simulated answer excluded from live monitoring',
         });
         continue;
       }

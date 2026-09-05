@@ -228,12 +228,13 @@ export function publicRoutes(r: Runtime): void {
       const result = startMonitoring(db, {
         token,
         email: parsed.data.email.toLowerCase(),
+        weeklyEmail: body.weekly_email === 'yes',
         password: parsed.data.password,
         clock,
       });
       credentials(reply, result.tenantId, result.userId);
       return reply.redirect(
-        '/?msg=' + encodeURIComponent('Monitoring started. The first scheduled round runs tomorrow morning.'),
+        '/weekly?msg=' + encodeURIComponent('Monitoring started. Review your weekly questions and Monday schedule below.'),
       );
     } catch (error) {
       return reply.redirect(

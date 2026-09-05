@@ -1,3 +1,5 @@
+import { weeklyView } from '../../web/views/weekly.js';
+import { enableWeekly, weeklyQuestions, weeklyJobs } from '../../services/weekly.js';
 import { randomBytes } from 'node:crypto';
 
 import { jsonParse } from '../../db/index.js';
@@ -25,6 +27,117 @@ import {
 import type { Runtime } from '../context.js';
 export function operationRoutes(r: Runtime): void {
   const { db, clock } = r;
+  r.get('/weekly', (c) => {
+    const schedule = sched.listSchedules(db, c.a.tenantId, c.brand.id).find((s) => s.weekly_briefing === 1);
+    return c.show(
+      'Weekly briefing',
+      'weekly',
+      weeklyView({
+        schedule,
+        questions: schedule ? weeklyQuestions(db, c.a.tenantId, schedule.id) : [],
+        jobs: weeklyJobs(db, c.a.tenantId, c.brand.id),
+        messages: db
+          .prepare(
+            'SELECT m.* FROM weekly_messages m JOIN weekly_jobs j ON j.id=m.job_id WHERE m.tenant_id=? AND j.brand_id=? ORDER BY m.next_attempt_at DESC LIMIT 20',
+          )
+          .all(c.a.tenantId, c.brand.id) as repo.Row[],
+        emailReady: !!process.env.RESEND_API_KEY && !!process.env.MISCITED_FROM,
+        email: c.a.email,
+      }),
+    );
+  });
+  r.post('/weekly/messages/:id/retry', (c) => {
+    const m = db
+      .prepare(
+        "SELECT m.id FROM weekly_messages m JOIN weekly_jobs j ON j.id=m.job_id JOIN schedules s ON s.id=j.schedule_id WHERE m.id=? AND m.tenant_id=? AND j.brand_id=? AND m.status='failed' AND s.weekly_email=m.target AND s.enabled=1 AND j.status!='skipped'",
+      )
+      .get(c.params.id, c.a.tenantId, c.brand.id);
+    if (!m) return c.missing('weekly');
+    db.prepare(
+      "UPDATE weekly_messages SET status='pending',attempts=0,next_attempt_at=?,error='' WHERE id=?",
+    ).run(clock.now().toISOString(), c.params.id);
+    return c.redirect('/weekly', 'Email queued for retry. Sampling will not run again.');
+  });
+  r.post('/weekly/enable', (c) => {
+    enableWeekly(db, c.a.tenantId, c.brand.id, clock);
+    return c.redirect('/weekly', 'Monday monitoring enabled. Review your questions.');
+  });
+  r.post('/weekly/:id/settings', (c) => {
+    const s = sched.getSchedule(db, c.a.tenantId, c.params.id);
+    if (!s || s.brand_id !== c.brand.id || !s.weekly_briefing) return c.missing('weekly');
+    const lines = String(c.body.questions ?? '')
+      .split(/\r?\n/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+    if (!lines.length || lines.length > 10 || lines.some((x) => x.length > 300))
+      return c.redirect('/weekly', 'Enter 1–10 questions, each at most 300 characters.', 'error');
+    db.transaction(() => {
+      const existing = weeklyQuestions(db, c.a.tenantId, s.id);
+      const questions = [...new Set(lines)].map((prompt) => {
+        const old = existing.find((q) => q.prompt === prompt);
+        if (old) return old;
+        const cluster = repo.createCluster(db, c.a.tenantId, c.brand.id, {
+          label: prompt,
+          intent_family: 'factual',
+          buyer_stage: 'consideration',
+          demand_volume: 1,
+          demand_weight: 1 / lines.length,
+          economic_value: 0.5,
+          volatility: 0.3,
+          demand_basis: 'estimated',
+        });
+        const variant = repo.createPromptVariant(db, c.a.tenantId, cluster.id, prompt);
+        return {
+          clusterId: cluster.id,
+          variantId: variant.id,
+          prompt,
+          geo: variant.geo,
+          language: variant.language,
+        };
+      });
+      const value = JSON.stringify(questions);
+      if (c.body.email_enabled !== 'yes')
+        db.prepare(
+          "UPDATE weekly_messages SET status='cancelled' WHERE tenant_id=? AND job_id IN (SELECT id FROM weekly_jobs WHERE schedule_id=?) AND status IN ('pending','failed')",
+        ).run(c.a.tenantId, s.id);
+      db.prepare('UPDATE schedules SET weekly_questions=?,weekly_email=? WHERE tenant_id=? AND id=?').run(
+        value,
+        c.body.email_enabled === 'yes' ? c.a.email : '',
+        c.a.tenantId,
+        s.id,
+      );
+      db.prepare(
+        "UPDATE weekly_jobs SET questions=? WHERE schedule_id=? AND tenant_id=? AND status='planned'",
+      ).run(value, s.id, c.a.tenantId);
+    })();
+    return c.redirect(
+      '/weekly',
+      'Questions saved. Pending plans use this updated list; active checks keep their original list.',
+    );
+  });
+  r.post('/weekly/:id/skip', (c) => {
+    const s = sched.getSchedule(db, c.a.tenantId, c.params.id);
+    if (!s || s.brand_id !== c.brand.id || !s.weekly_briefing) return c.missing('weekly');
+    if (db.prepare("SELECT 1 FROM weekly_jobs WHERE schedule_id=? AND status='running'").get(s.id))
+      return c.redirect(
+        '/weekly',
+        'This check is already running. Pause monitoring to prevent future checks.',
+        'error',
+      );
+    db.prepare(
+      "UPDATE weekly_jobs SET status='skipped',finished_at=? WHERE tenant_id=? AND schedule_id=? AND status='planned'",
+    ).run(clock.now().toISOString(), c.a.tenantId, s.id);
+    sched.updateScheduleNextRun(
+      db,
+      c.a.tenantId,
+      s.id,
+      computeNextRun('weekly', new Date(Math.max(+clock.now(), Date.parse(s.next_run_at))), 6).toISOString(),
+    );
+    return c.redirect(
+      '/weekly',
+      'Skipped the next pending check. Monitoring resumes on the following Monday.',
+    );
+  });
   r.get('/schedules', (c) => {
     const month = monthKey(clock.now());
     return c.show(

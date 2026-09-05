@@ -216,7 +216,8 @@ describe('conversion', () => {
     const out = startMonitoring(db, { token: done.token, email: 'a@b.example', password: 'a-long-password', clock });
     const schedules = sched.listSchedules(db, out.tenantId);
     expect(schedules).toHaveLength(1);
-    expect(schedules[0].cadence).toBe('daily');
+    expect(schedules[0].cadence).toBe('weekly');
+    expect(schedules[0].weekly_briefing).toBe(1);
   });
 
   it('records which request became which tenant, so conversion is measurable', async () => {

@@ -17,6 +17,12 @@ canonical truth + real buyer demand
 
 The full product and technical specification is in [SPEC.md](./SPEC.md).
 
+## Market and launch
+
+The [market and launch kit](docs/launch/README.md) contains current competitive research,
+positioning, the redesigned marketing site, a 90-day launch plan, draft posts and gallery artwork.
+Paid pilot pricing remains a validation hypothesis; launch activity has not been published.
+
 ## Rebuild
 
 The replacement implementation and its regression coverage are described in the

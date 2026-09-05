@@ -1,0 +1,7 @@
+{
+  "tests/integration/seo.test.ts": {
+    "referenceSha256": "811732b472d1d3030891c161de1893bce7c1c30d007de26bffadb9f79882145d",
+    "sha256": "fb50dfacf8dc5c657857b8bc41d57dbda5be049456a41b12f8ca6c80640f4ba4",
+    "reason": "2026-09-05 requested marketing website repositioning: remove unvalidated paid subscriptions from public structured data; retain the free audit. Only the price expectation changes."
+  }
+}

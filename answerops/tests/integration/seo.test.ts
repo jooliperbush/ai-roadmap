@@ -178,7 +178,7 @@ describe('structured data', () => {
     const org = blocks.find((b) => b['@type'] === 'Organization');
     const soft = blocks.find((b) => b['@type'] === 'SoftwareApplication');
     expect(org?.name).toBe('Miscited');
-    expect(soft?.offers?.map((o: any) => o.price).sort()).toEqual(['0', '2000', '750']);
+    expect(soft?.offers?.map((o: any) => o.price).sort()).toEqual(['0']); // 2026-09-05: public offer is a free audit; paid pilots are scoped individually.
   });
 
   it('never asserts a rating or a review, because there are none', async () => {

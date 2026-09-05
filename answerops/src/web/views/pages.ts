@@ -715,7 +715,7 @@ export function methodologyView(v: {
   const plans = [
     [
       "Answer Risk Audit",
-      "One-time manual audit, truth registry seeded, top defects evidenced",
+      "One-time automatic sample, provisional site facts, findings for human review",
       "free",
     ],
     [
@@ -734,13 +734,13 @@ export function methodologyView(v: {
       "$5,000+/mo",
     ],
   ];
-  const economics = html`<p class="section-note"> 50 clusters × 4 providers × 5 repetitions × 30 days = 30,000 answers a month. With current grounded-search tool pricing plus model tokens, robust daily coverage costs roughly $400–$1,000 a month in inference and evaluation alone. That is why statistically serious monitoring is not sold at $49 — a $49 product cannot afford to sample enough to know whether it is right. </p> ${table(
-    ["Plan", "Coverage", "Price"],
+  const economics = html`<p class="section-note"> Early access: the one-time audit is free; ongoing pilots are scoped individually before any paid engagement. The table below preserves historical planning examples for reference and is not a current price list. </p><p class="section-note"> A sample workload of 50 clusters × 4 providers × 5 repetitions × 30 days produces 30,000 answers a month. Actual cost depends on model tokens, search tools, retries and human review. Set a usage budget and measure realized costs before choosing a cadence. </p> ${table(
+    ["Historical plan", "Proposed coverage", "Historical price"],
     plans.map(
       ([name, coverage, price]) =>
         html`<tr> <td>${name}</td> <td>${coverage}</td> <td class="mono">${price}</td> </tr>`,
     ),
-  )} <p class="section-note"> Priced on monitored intent coverage and confidence, not on an arbitrary number of raw prompts. </p>`;
+  )} <p class="section-note"> Agree the live surfaces, sampling budget and review responsibilities for each pilot. </p>`;
   return html`${title(
     "Methodology & limitations",
     "Trust is the product. This page states how the numbers are produced, what they can support, and what we deliberately refuse to claim. If any of it stops being true, this page is the bug report.",

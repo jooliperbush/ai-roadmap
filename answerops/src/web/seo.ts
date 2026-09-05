@@ -1,34 +1,31 @@
-import { html, raw, type Raw, escapeHtml } from "./html.js";
-export const SITE_URL = "https://miscited.com";
-export const CANONICAL_HOST = "miscited.com";
-export const SITE_NAME = "Miscited";
-export const SITE_TAGLINE =
-  "Quality control for what AI says about your company";
-export const BRAND_MARK = "◧";
-export const BRAND_INK = "#16150f";
-export const BRAND_PAPER = "#f7f6f3";
-export const BRAND_CLAY = "#9c6f4a";
+import { html, raw, type Raw, escapeHtml } from './html.js';
+export const SITE_URL = 'https://miscited.com';
+export const CANONICAL_HOST = 'miscited.com';
+export const SITE_NAME = 'Miscited';
+export const SITE_TAGLINE = 'Quality control for what AI says about your company';
+export const BRAND_MARK = '◧';
+export const BRAND_INK = '#16150f';
+export const BRAND_PAPER = '#f7f6f3';
+export const BRAND_CLAY = '#9c6f4a';
 export function canonical(path: string): string {
-  return SITE_URL + (path === "/" ? "/" : path.replace(/\/+$/, ""));
+  return SITE_URL + (path === '/' ? '/' : path.replace(/\/+$/, ''));
 }
 export interface SitemapEntry {
   path: string;
-  changefreq: "daily" | "weekly" | "monthly" | "yearly";
+  changefreq: 'daily' | 'weekly' | 'monthly' | 'yearly';
   priority: string;
   lastmod?: string | null;
 }
-export function sitemapEntries(
-  posts: Array<{ slug: string; updated: string }>,
-): SitemapEntry[] {
+export function sitemapEntries(posts: Array<{ slug: string; updated: string }>): SitemapEntry[] {
   const index: SitemapEntry[] = [
-    { path: "/", changefreq: "weekly", priority: "1.0" },
-    { path: "/blog", changefreq: "weekly", priority: "0.8" },
+    { path: '/', changefreq: 'weekly', priority: '1.0' },
+    { path: '/blog', changefreq: 'weekly', priority: '0.8' },
   ];
   for (const post of posts)
     index.push({
       path: `/blog/${post.slug}`,
-      changefreq: "monthly",
-      priority: "0.7",
+      changefreq: 'monthly',
+      priority: '0.7',
       lastmod: post.updated,
     });
   return index;
@@ -48,39 +45,37 @@ export function renderSitemap(entries: SitemapEntry[]): string {
     >`.value;
 }
 export const AI_CRAWLERS = [
-  "GPTBot",
-  "OAI-SearchBot",
-  "ChatGPT-User",
-  "PerplexityBot",
-  "Perplexity-User",
-  "ClaudeBot",
-  "Claude-User",
-  "anthropic-ai",
-  "Google-Extended",
-  "Applebot-Extended",
-  "Bingbot",
-  "meta-externalagent",
+  'GPTBot',
+  'OAI-SearchBot',
+  'ChatGPT-User',
+  'PerplexityBot',
+  'Perplexity-User',
+  'ClaudeBot',
+  'Claude-User',
+  'anthropic-ai',
+  'Google-Extended',
+  'Applebot-Extended',
+  'Bingbot',
+  'meta-externalagent',
 ];
 export function renderRobots(): string {
   const groups = [
     [
-      "User-agent: *",
-      "Allow: /",
-      "Disallow: /audit/",
-      "Disallow: /api/",
-      "Disallow: /login",
-      "Disallow: /snapshot/",
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /audit/',
+      'Disallow: /api/',
+      'Disallow: /login',
+      'Disallow: /snapshot/',
     ],
-    ...AI_CRAWLERS.map((agent) => [`User-agent: ${agent}`, "Allow: /"]),
-    ["User-agent: CCBot", "Disallow: /"],
+    ...AI_CRAWLERS.map((agent) => [`User-agent: ${agent}`, 'Allow: /']),
+    ['User-agent: CCBot', 'Disallow: /'],
     [`Sitemap: ${SITE_URL}/sitemap.xml`],
   ];
-  return groups.map((lines) => lines.join("\n")).join("\n\n") + "\n";
+  return groups.map((lines) => lines.join('\n')).join('\n\n') + '\n';
 }
 // Public product brief, preserved as editorial copy.
-export function renderLlmsTxt(
-  posts: Array<{ slug: string; title: string; summary: string }>,
-): string {
+export function renderLlmsTxt(posts: Array<{ slug: string; title: string; summary: string }>): string {
   return `# ${SITE_NAME}
 
 > ${SITE_TAGLINE}. Miscited measures whether AI assistants state true things about a company,
@@ -123,12 +118,12 @@ Each refusal is enforced by a failing test in the codebase, not by editorial dis
 
 ## Pricing
 
-Free Answer Risk Audit, then $750/month (Monitor, 50 question clusters sampled weekly),
-$2,000/month (Operate, 100 clusters sampled daily), $5,000+/month (Enterprise, multi-brand).
+The one-time Answer Risk Audit is free. Ongoing monitoring and correction pilots are scoped
+individually during early access; usage, responsibilities and price are agreed before a paid engagement.
 
 ## Writing
 
-${posts.map((p) => `- [${p.title}](${canonical(`/blog/${p.slug}`)}): ${p.summary}`).join("\n")}
+${posts.map((p) => `- [${p.title}](${canonical(`/blog/${p.slug}`)}): ${p.summary}`).join('\n')}
 
 ## Contact
 
@@ -139,54 +134,38 @@ hello@miscited.com
 type Schema = Record<string, unknown>;
 function linkedData(type: string, properties: Schema): Raw {
   const serialized = JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": type,
+    '@context': 'https://schema.org',
+    '@type': type,
     ...properties,
-  }).replace(/</g, "\\u003c");
+  }).replace(/</g, '\\u003c');
   return raw(`<script type="application/ld+json">${serialized}</script>`);
 }
-const organizationRef = () => ({ "@id": `${SITE_URL}/#organization` });
+const organizationRef = () => ({ '@id': `${SITE_URL}/#organization` });
 export function organizationLd(): Raw {
-  return linkedData("Organization", {
-    "@id": `${SITE_URL}/#organization`,
+  return linkedData('Organization', {
+    '@id': `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: SITE_URL,
-    email: "hello@miscited.com",
+    email: 'hello@miscited.com',
     description:
-      "Miscited measures whether AI assistants state true things about a company, corrects the source pages those answers came from, and proves whether the answers changed.",
+      'Miscited measures whether AI assistants state true things about a company, corrects the source pages those answers came from, and tests whether the answers changed.',
   });
 }
 export function softwareLd(): Raw {
-  const offers = [
-    [
-      "Answer Risk Audit",
-      "0",
-      "One-time audit of what assistants say about your domain.",
-    ],
-    [
-      "Monitor",
-      "750",
-      "50 question clusters across four assistants, sampled weekly.",
-    ],
-    [
-      "Operate",
-      "2000",
-      "100 clusters sampled daily, plus the fact registry, action list and experiment ledger.",
-    ],
-  ];
-  return linkedData("SoftwareApplication", {
-    "@id": `${SITE_URL}/#software`,
+  const offers = [['Answer Risk Audit', '0', 'One-time audit of what assistants say about your domain.']];
+  return linkedData('SoftwareApplication', {
+    '@id': `${SITE_URL}/#software`,
     name: SITE_NAME,
-    applicationCategory: "BusinessApplication",
-    applicationSubCategory: "AI answer accuracy monitoring",
-    operatingSystem: "Web",
+    applicationCategory: 'BusinessApplication',
+    applicationSubCategory: 'AI answer accuracy monitoring',
+    operatingSystem: 'Web',
     url: SITE_URL,
     publisher: organizationRef(),
     offers: offers.map(([name, price, description]) => ({
-      "@type": "Offer",
+      '@type': 'Offer',
       name,
       price,
-      priceCurrency: "USD",
+      priceCurrency: 'USD',
       description,
     })),
   });
@@ -196,11 +175,11 @@ export interface FaqItem {
   a: string;
 }
 export function faqLd(items: FaqItem[]): Raw {
-  return linkedData("FAQPage", {
+  return linkedData('FAQPage', {
     mainEntity: items.map((item) => ({
-      "@type": "Question",
+      '@type': 'Question',
       name: item.q,
-      acceptedAnswer: { "@type": "Answer", text: item.a },
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
     })),
   });
 }
@@ -212,23 +191,21 @@ export function blogPostingLd(post: {
   updated: string;
 }): Raw {
   const url = canonical(`/blog/${post.slug}`);
-  return linkedData("BlogPosting", {
-    "@id": `${url}#post`,
+  return linkedData('BlogPosting', {
+    '@id': `${url}#post`,
     headline: post.title,
     description: post.summary,
     datePublished: post.published,
     dateModified: post.updated,
     mainEntityOfPage: url,
     publisher: organizationRef(),
-    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
   });
 }
-export function breadcrumbLd(
-  trail: Array<{ name: string; path: string }>,
-): Raw {
-  return linkedData("BreadcrumbList", {
+export function breadcrumbLd(trail: Array<{ name: string; path: string }>): Raw {
+  return linkedData('BreadcrumbList', {
     itemListElement: trail.map((item, index) => ({
-      "@type": "ListItem",
+      '@type': 'ListItem',
       position: index + 1,
       name: item.name,
       item: canonical(item.path),

@@ -48,3 +48,10 @@ Security improvements include target-brand authorization, tenant-scoped audit hi
 Live API providers, real notification delivery, production deployment and production-load performance were not exercised. Providers/transports were injected or simulated. The existing accuracy-index quarter remains a label over stored history rather than a date filter. Delivery marks an alert delivered if any channel succeeds; failed sibling channels are not retried on later dispatch. Detached evidence labels remain accepted for compatibility, while existing foreign references are rejected. These are documented follow-up product decisions, not verified improvements.
 
 The candidate remains isolated for review; the original checkout is preserved. No deployment, remote push or external message was performed.
+
+## Subsequent marketing work
+
+The following market/website task deliberately changes the public pricing offer. Its single
+legacy SEO assertion update is recorded in `tests/fixtures/approved-contract-changes.json`;
+the original manifest remains unchanged. The rebuild results above describe commit `91fdc71`.
+See [launch verification](launch/README.md) for the subsequent tests and deliverables.

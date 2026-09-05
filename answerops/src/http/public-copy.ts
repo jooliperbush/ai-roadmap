@@ -1,35 +1,30 @@
 export const PUBLIC_DESCRIPTION =
-  'Find the wrong answers AI assistants give about your company, correct the pages they came ' +
-  'from, and prove the answers changed. Every rate carries its n.';
+  'Find outdated prices and unsupported claims in AI answers about your company. Inspect the evidence, correct sources and test what changes with Miscited.';
 
-/**
- * The questions a buyer actually types, answered in the 40 to 60 words an answer engine will
- * lift. These are the same answers a salesperson would give; a FAQ written for extraction and
- * a FAQ written for a human diverge only when one of them is dishonest.
- */
+/** Shared by the visible homepage FAQ and its structured data. */
 export const HOME_FAQ = [
   {
     q: 'What does Miscited do?',
-    a: 'Miscited measures whether AI assistants state true things about your company. It checks every claim in an answer against a dated registry of your own facts, checks whether each citation actually supports the claim attached to it, helps you correct the source pages, then re-samples to test whether the answers changed.',
+    a: 'Miscited checks extracted claims in sampled AI answers against dated facts about your company. It keeps transcripts and citation evidence, helps you track a source correction, and supports follow-up experiments to test whether answers changed.',
   },
   {
-    q: 'How is Miscited different from AI visibility tools?',
-    a: 'Visibility tools count mentions, sentiment and share of voice. Miscited checks whether the claim is true. An answer that names you, sounds positive, cites your own pricing page and quotes a price you retired two years ago scores as a success for a visibility tool and as a defect here.',
+    q: 'How is this different from AI visibility?',
+    a: 'Visibility asks where your brand appears. Miscited focuses on whether factual claims about it are supported and current. Other platforms also offer optimization workflows; our focus is the connection between a dated fact, an answer, its evidence and a measured correction.',
   },
   {
-    q: 'Can you control what ChatGPT says about my company?',
-    a: 'No, and neither can anyone else outside a frontier lab. What is possible is to measure what the assistants say, correct the sources they read, and run a controlled test of whether the answers moved. Miscited refuses to claim otherwise, and a failing test enforces that in the codebase.',
+    q: 'Can you make an assistant change its answer?',
+    a: 'No. You can correct sources you control and measure subsequent answers, but external models may not change. Model updates, search results and sampling variation can also affect the result. An inconclusive experiment is a valid outcome.',
   },
   {
-    q: 'Which AI assistants does Miscited check?',
-    a: 'OpenAI, Anthropic, Google and Perplexity. Every run records the provider, model, model version, access mode, grounding mode, country, language and system configuration, because those change the answer and a result without them cannot be reproduced.',
+    q: 'Which AI assistants can I check?',
+    a: 'The project includes adapters for OpenAI, Anthropic, Google and Perplexity. Actual coverage depends on configured API keys and model availability. API responses may differ from consumer applications. When no provider keys are configured, the audit uses clearly labelled simulated results.',
   },
   {
-    q: 'How much does Miscited cost?',
-    a: 'The Answer Risk Audit is free and one-time. Monitor is $750 a month for 50 question clusters sampled weekly. Operate is $2,000 a month for 100 clusters sampled daily, with the fact registry, action list and experiment ledger. Enterprise starts at $5,000 a month for multiple brands.',
+    q: 'What happens when I submit my domain?',
+    a: 'The audit starts automatically and a report link appears on this page. It reads your public site and uses provisional site-derived facts for comparison. Those facts need human review; running an audit does not make them independently verified truth. Your email, domain and report are stored to operate the audit.',
   },
   {
-    q: 'How many prompts do you need to measure AI answers accurately?',
-    a: 'More than most tools use. A rate needs at least five runs per question cluster before Miscited will show it at all, and detecting a ten-point change at a 40% base rate takes roughly 388 runs per side at 80% power. Any percentage without its sample size cannot be checked.',
+    q: 'How much does it cost?',
+    a: 'The one-time Answer Risk Audit is free. Ongoing monitoring and correction pilots are scoped individually during early access. Agree the usage, responsibilities and price before a paid engagement; there is no subscription checkout on this page.',
   },
 ];

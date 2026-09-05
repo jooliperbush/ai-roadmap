@@ -13,6 +13,7 @@ import type { DB } from '../db/index.js';
 import * as repo from '../db/repo/index.js';
 import { id, nowIso } from '../db/index.js';
 import type { Row } from '../db/repo/index.js';
+import { statements } from '../db/repo/statements.js';
 import { ActionType } from '../domain/priority.js';
 
 export interface ShipContext {
@@ -41,145 +42,176 @@ export interface Connector {
 }
 
 export function prBody(ctx: ShipContext): string {
-  return [
-    `## What this corrects`,
-    '',
-    `An AI answer about ${ctx.brandName} stated:`,
-    '',
-    `> ${ctx.defectStatement}`,
-    '',
-    `The approved canonical fact is:`,
-    '',
-    `> ${ctx.canonicalClaim}`,
-    '',
-    `## Evidence`,
-    '',
-    ...ctx.evidenceIds.map((e) => `- \`${e}\``),
-    '',
-    ctx.experimentId
-      ? `## Measurement\n\nThis change is tracked as experiment \`${ctx.experimentId}\`. It moves to *shipped* when this PR merges, and to *crawled* when the relevant bot class fetches the page.`
-      : '## Measurement\n\nNo experiment is attached to this action yet.',
-    '',
-    '---',
-    'Opened by Miscited. Nothing here is published automatically; this is a pull request for a human to review.',
-  ].join('\n');
+  const intro = `## What this corrects\n\nAn AI answer about ${ctx.brandName} stated:\n\n> ${ctx.defectStatement}\n\nThe approved canonical fact is:\n\n> ${ctx.canonicalClaim}\n\n## Evidence\n`;
+  const evidence = ctx.evidenceIds.reduce((text, id) => `${text}\n- \`${id}\``, '');
+  const measurement = ctx.experimentId
+    ? `This change is tracked as experiment \`${ctx.experimentId}\`. It moves to *shipped* when this PR merges, and to *crawled* when the relevant bot class fetches the page.`
+    : 'No experiment is attached to this action yet.';
+  return (
+    intro +
+    evidence +
+    '\n\n## Measurement\n\n' +
+    measurement +
+    '\n\n---\nOpened by Miscited. Nothing here is published automatically; this is a pull request for a human to review.'
+  );
 }
 
 // ---------------------------------------------------------------------- GitHub
 
+class ConnectorHttp {
+  constructor(
+    private fetchImpl: typeof fetch,
+    private token: string,
+  ) {}
+  async request(url: string, operation: string, body?: unknown, tolerate?: number): Promise<Response> {
+    const response = await this.fetchImpl(url, {
+      ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
+      headers: {
+        authorization: `Bearer ${this.token}`,
+        accept: 'application/vnd.github+json',
+        'content-type': 'application/json',
+      },
+    });
+    if (!response.ok && response.status !== tolerate) throw new Error(`${operation} (${response.status})`);
+    return response;
+  }
+}
+
+function connectorFailure(error: unknown, fallback: string): ShipOutcome {
+  return { ok: false, error: error instanceof Error ? error.message.slice(0, 160) : fallback };
+}
+
 export class GithubConnector implements Connector {
   key = 'github';
-  handles: ActionType[] = ['update_owned_page', 'create_comparison_page', 'create_evidence_page', 'fix_fact_inconsistency', 'update_structured_data', 'open_github_pr'];
-
+  handles: ActionType[] = [
+    'update_owned_page',
+    'create_comparison_page',
+    'create_evidence_page',
+    'fix_fact_inconsistency',
+    'update_structured_data',
+    'open_github_pr',
+  ];
   constructor(private fetchImpl: typeof fetch = fetch) {}
-
   async ship(action: Row, ctx: ShipContext, cfg: Row): Promise<ShipOutcome> {
-    const [owner, repoName] = String(cfg.target).split('/');
-    if (!owner || !repoName) return { ok: false, error: 'connector target must be owner/repo' };
+    const [owner, name] = String(cfg.target).split('/');
+    if (!owner || !name) return { ok: false, error: 'connector target must be owner/repo' };
+    const api = `https://api.github.com/repos/${owner}/${name}`;
     const branch = `miscited/${action.id}`;
-    const api = `https://api.github.com/repos/${owner}/${repoName}`;
-    const headers = {
-      authorization: `Bearer ${cfg.token}`,
-      accept: 'application/vnd.github+json',
-      'content-type': 'application/json',
-    };
-
+    const http = new ConnectorHttp(this.fetchImpl, cfg.token);
     try {
-      const headRes = await this.fetchImpl(`${api}/git/ref/heads/main`, { headers });
-      if (!headRes.ok) return { ok: false, error: `could not read main (${headRes.status})` };
-      const head = (await headRes.json()) as any;
-      const sha = head?.object?.sha;
-      if (!sha) return { ok: false, error: 'main has no head sha' };
-
-      const branchRes = await this.fetchImpl(`${api}/git/refs`, {
-        method: 'POST', headers,
-        body: JSON.stringify({ ref: `refs/heads/${branch}`, sha }),
-      });
-      if (!branchRes.ok && branchRes.status !== 422) {
-        return { ok: false, error: `could not create branch (${branchRes.status})` };
-      }
-
-      const putRes = await this.fetchImpl(`${api}/contents/${encodeURIComponent(ctx.path)}`, {
-        method: 'PUT', headers,
+      const head = (await (
+        await http.request(`${api}/git/ref/heads/main`, 'could not read main')
+      ).json()) as any;
+      if (!head?.object?.sha) return { ok: false, error: 'main has no head sha' };
+      await http.request(
+        `${api}/git/refs`,
+        'could not create branch',
+        { ref: `refs/heads/${branch}`, sha: head.object.sha },
+        422,
+      );
+      const commit = await this.fetchImpl(`${api}/contents/${encodeURIComponent(ctx.path)}`, {
+        method: 'PUT',
+        headers: {
+          authorization: `Bearer ${cfg.token}`,
+          accept: 'application/vnd.github+json',
+          'content-type': 'application/json',
+        },
         body: JSON.stringify({
           message: `Correct ${ctx.path}: ${action.title}`,
           content: Buffer.from(ctx.body, 'utf8').toString('base64'),
           branch,
         }),
       });
-      if (!putRes.ok) return { ok: false, error: `could not commit (${putRes.status})` };
-
-      const prRes = await this.fetchImpl(`${api}/pulls`, {
-        method: 'POST', headers,
-        body: JSON.stringify({ title: action.title, head: branch, base: 'main', body: prBody(ctx) }),
-      });
-      if (!prRes.ok) return { ok: false, error: `could not open PR (${prRes.status})` };
-      const pr = (await prRes.json()) as any;
-      return { ok: true, externalRef: String(pr.number), url: pr.html_url };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message.slice(0, 160) : 'github call failed' };
+      if (!commit.ok) return { ok: false, error: `could not commit (${commit.status})` };
+      const pull = (await (
+        await http.request(`${api}/pulls`, 'could not open PR', {
+          title: action.title,
+          head: branch,
+          base: 'main',
+          body: prBody(ctx),
+        })
+      ).json()) as any;
+      return { ok: true, externalRef: String(pull.number), url: pull.html_url };
+    } catch (error) {
+      return connectorFailure(error, 'github call failed');
     }
   }
 }
 
-// -------------------------------------------------------------------- CMS drafts
+const CMS_ACTIONS: ActionType[] = [
+  'create_cms_draft',
+  'update_owned_page',
+  'create_evidence_page',
+  'create_comparison_page',
+];
+async function cmsDraft(
+  fetchImpl: typeof fetch,
+  kind: string,
+  url: string,
+  token: string,
+  body: unknown,
+): Promise<ShipOutcome> {
+  try {
+    const response = await fetchImpl(url, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) return { ok: false, error: `${kind} ${response.status}` };
+    const draft = (await response.json()) as any;
+    return {
+      ok: true,
+      externalRef: kind === 'wordpress' ? String(draft?.id ?? '') : (draft?.id ?? ''),
+      url: kind === 'wordpress' ? (draft?.link ?? '') : (draft?.previewUrl ?? ''),
+    };
+  } catch (error) {
+    return connectorFailure(error, `${kind} call failed`);
+  }
+}
 
 export class WebflowConnector implements Connector {
   key = 'webflow';
-  handles: ActionType[] = ['create_cms_draft', 'update_owned_page', 'create_evidence_page', 'create_comparison_page'];
+  handles = [...CMS_ACTIONS];
   constructor(private fetchImpl: typeof fetch = fetch) {}
-
-  async ship(action: Row, ctx: ShipContext, cfg: Row): Promise<ShipOutcome> {
-    try {
-      const res = await this.fetchImpl(`https://api.webflow.com/v2/collections/${cfg.target}/items`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${cfg.token}`, 'content-type': 'application/json' },
-        // isDraft, always. There is no code path in this file that publishes.
-        body: JSON.stringify({ isDraft: true, fieldData: { name: action.title, body: ctx.body } }),
-      });
-      if (!res.ok) return { ok: false, error: `webflow ${res.status}` };
-      const item = (await res.json()) as any;
-      return { ok: true, externalRef: item?.id ?? '', url: item?.previewUrl ?? '' };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message.slice(0, 160) : 'webflow call failed' };
-    }
+  ship(action: Row, ctx: ShipContext, cfg: Row): Promise<ShipOutcome> {
+    return cmsDraft(
+      this.fetchImpl,
+      this.key,
+      `https://api.webflow.com/v2/collections/${cfg.target}/items`,
+      cfg.token,
+      { isDraft: true, fieldData: { name: action.title, body: ctx.body } },
+    );
   }
 }
 
 export class WordpressConnector implements Connector {
   key = 'wordpress';
-  handles: ActionType[] = ['create_cms_draft', 'update_owned_page', 'create_evidence_page', 'create_comparison_page'];
+  handles = [...CMS_ACTIONS];
   constructor(private fetchImpl: typeof fetch = fetch) {}
-
-  async ship(action: Row, ctx: ShipContext, cfg: Row): Promise<ShipOutcome> {
-    try {
-      const res = await this.fetchImpl(`${String(cfg.target).replace(/\/$/, '')}/wp-json/wp/v2/posts`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${cfg.token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ title: action.title, content: ctx.body, status: 'draft' }),
-      });
-      if (!res.ok) return { ok: false, error: `wordpress ${res.status}` };
-      const post = (await res.json()) as any;
-      return { ok: true, externalRef: String(post?.id ?? ''), url: post?.link ?? '' };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message.slice(0, 160) : 'wordpress call failed' };
-    }
+  ship(action: Row, ctx: ShipContext, cfg: Row): Promise<ShipOutcome> {
+    return cmsDraft(
+      this.fetchImpl,
+      this.key,
+      `${String(cfg.target).replace(/\/$/, '')}/wp-json/wp/v2/posts`,
+      cfg.token,
+      { title: action.title, content: ctx.body, status: 'draft' },
+    );
   }
 }
 
 /** Records the call and never leaves the process. The default in tests and the demo. */
 export class RecordingConnector implements Connector {
-  key: string;
-  handles: ActionType[];
   calls: Array<{ action: Row; ctx: ShipContext }> = [];
-  constructor(key: string, handles: ActionType[], private failWith: string | null = null) {
-    this.key = key;
-    this.handles = handles;
-  }
+  constructor(
+    public key: string,
+    public handles: ActionType[],
+    private failWith: string | null = null,
+  ) {}
   async ship(action: Row, ctx: ShipContext): Promise<ShipOutcome> {
-    this.calls.push({ action, ctx });
-    if (this.failWith) return { ok: false, error: this.failWith };
-    return { ok: true, externalRef: `rec-${this.calls.length}`, url: `https://example.invalid/${action.id}` };
+    const count = this.calls.push({ action, ctx });
+    return this.failWith
+      ? { ok: false, error: this.failWith }
+      : { ok: true, externalRef: `rec-${count}`, url: `https://example.invalid/${action.id}` };
   }
 }
 
@@ -208,16 +240,23 @@ export interface JsonLdResult {
  * is against the required fields for the declared type — enough to fail loudly on a patch that
  * would not produce a rich result, not a full schema.org implementation.
  */
-export function buildJsonLd(type: SchemaType, fields: Record<string, unknown>, current: Record<string, unknown> | null): JsonLdResult {
-  const jsonLd = { '@context': 'https://schema.org', '@type': type, ...fields };
-  const missing = (REQUIRED_FIELDS[type] ?? []).filter((f) => fields[f] === undefined || fields[f] === '');
+export function buildJsonLd(
+  type: SchemaType,
+  fields: Record<string, unknown>,
+  current: Record<string, unknown> | null,
+): JsonLdResult {
+  const jsonLd: Record<string, unknown> = { '@context': 'https://schema.org', '@type': type, ...fields };
+  const previous = current ?? {};
+  const missing = (REQUIRED_FIELDS[type] ?? []).filter(
+    (field) => fields[field] === undefined || fields[field] === '',
+  );
   const diff: JsonLdResult['diff'] = [];
-  const cur = current ?? {};
-  for (const [k, v] of Object.entries(jsonLd)) {
-    if (!(k in cur)) diff.push({ side: 'added', field: k, to: v });
-    else if (JSON.stringify(cur[k]) !== JSON.stringify(v)) diff.push({ side: 'changed', field: k, from: cur[k], to: v });
+  for (const field of new Set([...Object.keys(jsonLd), ...Object.keys(previous)])) {
+    if (!(field in previous)) diff.push({ side: 'added', field, to: jsonLd[field] });
+    else if (!(field in jsonLd)) diff.push({ side: 'removed', field, from: previous[field] });
+    else if (JSON.stringify(previous[field]) !== JSON.stringify(jsonLd[field]))
+      diff.push({ side: 'changed', field, from: previous[field], to: jsonLd[field] });
   }
-  for (const k of Object.keys(cur)) if (!(k in jsonLd)) diff.push({ side: 'removed', field: k, from: cur[k] });
   return { valid: missing.length === 0, missing, jsonLd, diff };
 }
 
@@ -242,54 +281,67 @@ export function correctionPacket(input: {
   sources: Array<{ url: string; title: string }>;
   snapshots: Array<{ url: string; sha256: string; fetchedAt: string }>;
 }): CorrectionPacket {
-  const rows = input.sources.map((s) => `<li><a href="${esc(s.url)}">${esc(s.title || s.url)}</a></li>`).join('');
-  const snaps = input.snapshots
-    .map((s) => `<li><code>${esc(s.sha256.slice(0, 12))}</code> — ${esc(s.url)} captured ${esc(s.fetchedAt.slice(0, 10))}</li>`)
-    .join('');
+  const sources = input.sources.reduce(
+    (markup, source) =>
+      markup + `<li><a href="${esc(source.url)}">${esc(source.title || source.url)}</a></li>`,
+    '',
+  );
+  const captures = input.snapshots.reduce(
+    (markup, capture) =>
+      markup +
+      `<li><code>${esc(capture.sha256.slice(0, 12))}</code> — ${esc(capture.url)} captured ${esc(capture.fetchedAt.slice(0, 10))}</li>`,
+    '',
+  );
+  const sections = [
+    ['What the page states', `<blockquote>${esc(input.wrongStatement)}</blockquote>`],
+    ['The current fact', `<blockquote>${esc(input.canonicalClaim)}</blockquote>`],
+    ['Sources', `<ul>${sources}</ul>`],
+    ['Evidence retained', `<ul>${captures}</ul>`],
+  ];
+  const body = sections.map(([title, content]) => `  <h2>${title}</h2>\n  ${content}`).join('\n');
   return {
     publisher: input.publisher,
     subject: `Correction request: ${input.brandName}`,
-    html: `<article>
-  <h1>Correction request for ${esc(input.publisher)}</h1>
-  <p>Regarding <a href="${esc(input.publisherUrl)}">${esc(input.publisherUrl)}</a>.</p>
-  <h2>What the page states</h2>
-  <blockquote>${esc(input.wrongStatement)}</blockquote>
-  <h2>The current fact</h2>
-  <blockquote>${esc(input.canonicalClaim)}</blockquote>
-  <h2>Sources</h2>
-  <ul>${rows}</ul>
-  <h2>Evidence retained</h2>
-  <ul>${snaps}</ul>
-  <p>Prepared by Miscited on behalf of ${esc(input.brandName)}. This document was not sent automatically.</p>
-</article>`,
+    html: `<article>\n  <h1>Correction request for ${esc(input.publisher)}</h1>\n  <p>Regarding <a href="${esc(input.publisherUrl)}">${esc(input.publisherUrl)}</a>.</p>\n${body}\n  <p>Prepared by Miscited on behalf of ${esc(input.brandName)}. This document was not sent automatically.</p>\n</article>`,
   };
 }
 
-function esc(s: string): string {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function esc(value: string): string {
+  const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+  return String(value).replace(/[&<>"]/g, (character) => entities[character]);
 }
 
 // ------------------------------------------------------------------- repository
 
-export function createConnectorConfig(db: DB, tenantId: string, c: Row): Row {
-  const row = {
-    id: id('cnx'), tenant_id: tenantId, kind: c.kind, target: c.target,
-    token: c.token ?? '', enabled: c.enabled ?? 1, created_at: nowIso(),
+export function createConnectorConfig(db: DB, tenantId: string, config: Row): Row {
+  const record = {
+    id: id('cnx'),
+    tenant_id: tenantId,
+    kind: config.kind,
+    target: config.target,
+    token: config.token ?? '',
+    enabled: config.enabled ?? 1,
+    created_at: nowIso(),
   };
-  db.prepare(
-    'INSERT INTO connector_configs (id, tenant_id, kind, target, token, enabled, created_at) VALUES (@id, @tenant_id, @kind, @target, @token, @enabled, @created_at)',
-  ).run(row);
-  return row;
+  const columns = Object.keys(record);
+  statements(db)
+    .prepare(
+      `INSERT INTO connector_configs (${columns.join(', ')}) VALUES (${columns.map((column) => `@${column}`).join(', ')})`,
+    )
+    .run(record);
+  return record;
 }
 
 export function listConnectorConfigs(db: DB, tenantId: string): Row[] {
-  return db.prepare('SELECT * FROM connector_configs WHERE tenant_id = ? ORDER BY created_at').all(tenantId) as Row[];
+  return statements(db)
+    .prepare('SELECT * FROM connector_configs WHERE tenant_id = @tenantId ORDER BY created_at')
+    .all({ tenantId }) as Row[];
 }
 
 export function getConnectorConfig(db: DB, tenantId: string, kind: string): Row | undefined {
-  return db
-    .prepare('SELECT * FROM connector_configs WHERE tenant_id = ? AND kind = ? AND enabled = 1')
-    .get(tenantId, kind) as Row | undefined;
+  return statements(db)
+    .prepare('SELECT * FROM connector_configs WHERE tenant_id = @tenantId AND kind = @kind AND enabled = 1')
+    .get({ tenantId, kind }) as Row | undefined;
 }
 
 /**
@@ -307,23 +359,28 @@ export async function shipAction(
 ): Promise<ShipOutcome> {
   const action = repo.getAction(db, tenantId, actionId);
   if (!action) throw new Error('action not found');
-  const outcome = await connector.ship(action, ctx, cfg);
-  if (!outcome.ok) {
+  let outcome: ShipOutcome;
+  try {
+    outcome = await connector.ship(action, ctx, cfg);
+  } catch (error) {
+    outcome = connectorFailure(error, 'connector failed');
+  }
+  db.transaction(() => {
     repo.setActionConnector(db, tenantId, actionId, {
       connector: connector.key,
-      external_ref: null,
-      external_url: null,
-      last_error: outcome.error ?? 'connector failed',
+      external_ref: outcome.ok ? (outcome.externalRef ?? null) : null,
+      external_url: outcome.ok ? (outcome.url ?? null) : null,
+      last_error: outcome.ok ? null : (outcome.error ?? 'connector failed'),
     });
-    repo.audit(db, tenantId, 'system', 'connector_failed', 'action', actionId, `${connector.key}: ${outcome.error}`);
-    return outcome;
-  }
-  repo.setActionConnector(db, tenantId, actionId, {
-    connector: connector.key,
-    external_ref: outcome.externalRef ?? null,
-    external_url: outcome.url ?? null,
-    last_error: null,
-  });
-  repo.audit(db, tenantId, 'system', 'connector_opened', 'action', actionId, `${connector.key} ref=${outcome.externalRef}`);
+    repo.audit(
+      db,
+      tenantId,
+      'system',
+      outcome.ok ? 'connector_opened' : 'connector_failed',
+      'action',
+      actionId,
+      outcome.ok ? `${connector.key} ref=${outcome.externalRef}` : `${connector.key}: ${outcome.error}`,
+    );
+  })();
   return outcome;
 }

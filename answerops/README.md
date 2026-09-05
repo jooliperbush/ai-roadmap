@@ -17,6 +17,16 @@ canonical truth + real buyer demand
 
 The full product and technical specification is in [SPEC.md](./SPEC.md).
 
+## Rebuild
+
+The replacement implementation and its regression coverage are described in the
+[development plan](docs/superpowers/plans/2026-09-05-rebuild.md) and
+[verification report](docs/rebuild-verification.md). The report identifies retained
+specification assets, measured improvements and unverified production integrations.
+
+Run `npm run typecheck`, `npm test` and `npm run test:e2e` to verify the candidate.
+Browser tests create and clean up their own isolated temporary database.
+
 ---
 
 ## Why this instead of a visibility dashboard

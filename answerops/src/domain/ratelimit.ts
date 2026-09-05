@@ -38,29 +38,40 @@ export interface LimitResult {
 }
 
 export class RateLimiter {
-  private buckets = new Map<string, { count: number; resetAt: number }>();
-
+  private windows = new Map<string, { used: number; expires: number }>();
   constructor(private clock: Clock) {}
-
   check(routeKey: string, ip: string): LimitResult {
     const policy = LIMITS[routeKey];
     if (!policy) return { ok: true, remaining: Infinity, retryAfterSec: 0 };
-    const now = this.clock.now().getTime();
-    const key = `${routeKey}|${ip}`;
-    const bucket = this.buckets.get(key);
-    if (!bucket || bucket.resetAt <= now) {
-      this.buckets.set(key, { count: 1, resetAt: now + policy.windowMs });
-      return { ok: true, remaining: policy.limit - 1, retryAfterSec: 0 };
-    }
-    bucket.count++;
-    if (bucket.count > policy.limit) {
-      return { ok: false, remaining: 0, retryAfterSec: Math.ceil((bucket.resetAt - now) / 1000) };
-    }
-    return { ok: true, remaining: policy.limit - bucket.count, retryAfterSec: 0 };
+    const key = routeKey + '|' + ip,
+      now = +this.clock.now();
+    const previous = this.windows.get(key);
+    const window =
+      previous && previous.expires > now ? previous : { used: 0, expires: now + policy.windowMs };
+    window.used++;
+    this.windows.set(key, window);
+    const ok = window.used <= policy.limit;
+    return {
+      ok,
+      remaining: Math.max(0, policy.limit - window.used),
+      retryAfterSec: ok ? 0 : Math.ceil((window.expires - now) / 1000),
+    };
   }
-
-  /** Test seam: forget everything, so one test's attempts do not exhaust another's budget. */
+  /** Observe a lockout without consuming another attempt or extending its window. */
+  peek(routeKey: string, ip: string): LimitResult {
+    const policy = LIMITS[routeKey];
+    if (!policy) return { ok: true, remaining: Infinity, retryAfterSec: 0 };
+    const window = this.windows.get(routeKey + '|' + ip);
+    const now = +this.clock.now();
+    if (!window || window.expires <= now) return { ok: true, remaining: policy.limit, retryAfterSec: 0 };
+    const ok = window.used < policy.limit;
+    return {
+      ok,
+      remaining: Math.max(0, policy.limit - window.used),
+      retryAfterSec: ok ? 0 : Math.ceil((window.expires - now) / 1000),
+    };
+  }
   reset(): void {
-    this.buckets.clear();
+    this.windows.clear();
   }
 }

@@ -77,10 +77,10 @@ export function clamp01(x: number): number {
 }
 
 export interface PriorityInput {
-  demandWeight: number;        // 0..1 normalised cluster volume
+  demandWeight: number; // 0..1 normalised cluster volume
   intentFamily: IntentFamily;
-  economicValue: number;       // 0..1 customer supplied
-  defect: Measurement;         // observed defect rate for this cluster
+  economicValue: number; // 0..1 customer supplied
+  defect: Measurement; // observed defect rate for this cluster
   actionType: ActionType;
 }
 
@@ -92,10 +92,11 @@ export function computePriority(input: PriorityInput): PriorityResult {
   const demand = clamp01(input.demandWeight);
   const buyerIntent = INTENT_WEIGHT[input.intentFamily];
   const economicValue = clamp01(input.economicValue);
-  const defectProbability =
-    input.defect.n > 0 ? clamp01(wilson(input.defect.k, input.defect.n).low) : 0;
+  const defectProbability = input.defect.n > 0 ? clamp01(wilson(input.defect.k, input.defect.n).low) : 0;
   const fixability = FIXABILITY[input.actionType];
-  const confidence = input.defect.sufficient ? confidenceFactor(input.defect) : confidenceFactor(input.defect) * 0.5;
+  const confidence = input.defect.sufficient
+    ? confidenceFactor(input.defect)
+    : confidenceFactor(input.defect) * 0.5;
 
   const score = demand * buyerIntent * economicValue * defectProbability * fixability * confidence;
 
@@ -103,9 +104,20 @@ export function computePriority(input: PriorityInput): PriorityResult {
     `Priority = demand ${demand.toFixed(2)} x intent ${buyerIntent.toFixed(2)} x value ${economicValue.toFixed(2)} ` +
     `x defect(lower bound) ${defectProbability.toFixed(2)} x fixability ${fixability.toFixed(2)} ` +
     `x confidence ${confidence.toFixed(2)} = ${score.toFixed(4)}` +
-    (input.defect.n < MIN_SAMPLES ? ` — sample of ${input.defect.n} is below the ${MIN_SAMPLES}-run floor, so confidence is halved.` : '');
+    (input.defect.n < MIN_SAMPLES
+      ? ` — sample of ${input.defect.n} is below the ${MIN_SAMPLES}-run floor, so confidence is halved.`
+      : '');
 
-  return { demand, buyerIntent, economicValue, defectProbability, fixability, confidence, score, explanation };
+  return {
+    demand,
+    buyerIntent,
+    economicValue,
+    defectProbability,
+    fixability,
+    confidence,
+    score,
+    explanation,
+  };
 }
 
 /**
@@ -131,24 +143,30 @@ export function deriveExpectedRange(
   cohort: CohortObservation[],
   minCohort = 3,
 ): ExpectedRange | null {
-  const matching = cohort.filter((c) => c.actionType === actionType);
-  if (matching.length < minCohort) return null;
-  const deltas = matching.map((c) => c.postRate - c.baselineRate).sort((a, b) => a - b);
-  const low = quantile(deltas, 0.25);
-  const high = quantile(deltas, 0.75);
+  const changes: number[] = [];
+  for (const observation of cohort)
+    if (observation.actionType === actionType) changes.push(observation.postRate - observation.baselineRate);
+  if (changes.length < minCohort) return null;
+  changes.sort((a, b) => a - b);
   return {
-    low,
-    high,
-    basis: `Interquartile range of ${matching.length} previously confirmed "${actionType}" experiments in this workspace.`,
-    cohortSize: matching.length,
+    low: quantile(changes, 0.25),
+    high: quantile(changes, 0.75),
+    basis:
+      'Interquartile range of ' +
+      changes.length +
+      ' previously confirmed "' +
+      actionType +
+      '" experiments in this workspace.',
+    cohortSize: changes.length,
   };
 }
 
 export function quantile(sorted: number[], q: number): number {
-  if (sorted.length === 0) return 0;
-  const pos = (sorted.length - 1) * q;
-  const base = Math.floor(pos);
-  const rest = pos - base;
-  const next = sorted[base + 1];
-  return next !== undefined ? sorted[base] + rest * (next - sorted[base]) : sorted[base];
+  if (!sorted.length) return 0;
+  const location = q * (sorted.length - 1);
+  const lower = Math.floor(location);
+  const upper = sorted[lower + 1];
+  return upper === undefined
+    ? sorted[lower]
+    : (1 - (location - lower)) * sorted[lower] + (location - lower) * upper;
 }

@@ -14,7 +14,16 @@ import { proposeClaims } from '../domain/extractor.js';
 import { classifyIntent, type IntentFamily } from '../domain/intent.js';
 
 export const CANDIDATE_PATHS = [
-  '/', '/pricing', '/about', '/docs', '/security', '/changelog', '/blog', '/faq', '/product', '/legal',
+  '/',
+  '/pricing',
+  '/about',
+  '/docs',
+  '/security',
+  '/changelog',
+  '/blog',
+  '/faq',
+  '/product',
+  '/legal',
 ];
 
 export const MAX_PAGES = 12;
@@ -39,7 +48,10 @@ export const THIN_HTML_BYTES = 20_000;
 
 /** Pages whose markup was substantial but whose readable text was not. */
 export function thinPages(crawl: CrawlResult): SitePage[] {
-  return crawl.pages.filter((p) => p.bytes >= THIN_HTML_BYTES && p.text.length < THIN_TEXT_CHARS);
+  return crawl.pages.reduce<SitePage[]>((pages, page) => {
+    if (page.text.length < THIN_TEXT_CHARS && page.bytes >= THIN_HTML_BYTES) pages.push(page);
+    return pages;
+  }, []);
 }
 
 export interface SitePage {
@@ -66,81 +78,75 @@ export interface CrawlResult {
  * Twelve pages is not a crawl of the site; it is the part of a site where claims live.
  */
 export async function crawlSite(domain: string, fetcher: Fetcher): Promise<CrawlResult> {
-  const host = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
-  const base = `https://${host}`;
-  const pages: SitePage[] = [];
-  const failed: Array<{ url: string; error: string }> = [];
-  const seen = new Set<string>();
-
-  const visit = async (url: string): Promise<SitePage | null> => {
-    if (seen.has(url) || pages.length >= MAX_PAGES) return null;
-    seen.add(url);
-    const out = await fetcher.fetch(url);
-    if (!out.ok || out.body === null) {
-      failed.push({ url, error: out.error ?? 'unknown' });
-      return null;
-    }
-    const page = parsePage(url, host, out.body, out.status);
-    pages.push(page);
-    return page;
-  };
-
-  await visit(base + '/');
-  for (const path of CANDIDATE_PATHS.filter((p) => p !== '/')) {
-    if (pages.length >= MAX_PAGES) break;
-    await visit(base + path);
+  const host = domain
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .toLowerCase();
+  const result: CrawlResult = { domain: host, pages: [], failed: [], brandName: '' };
+  for (const path of new Set(CANDIDATE_PATHS)) {
+    if (result.pages.length >= MAX_PAGES) break;
+    const url = `https://${host}${path}`;
+    const response = await fetcher.fetch(url);
+    if (response.ok && response.body !== null)
+      result.pages.push(parsePage(url, host, response.body, response.status));
+    else result.failed.push({ url, error: response.error ?? 'unknown' });
   }
-
-  return { domain: host, pages, failed, brandName: inferBrandName(pages, host) };
+  result.brandName = inferBrandName(result.pages, host);
+  return result;
 }
 
 export function parsePage(url: string, host: string, html: string, status: number | null): SitePage {
-  const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '').trim();
-  const headings = [...html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi)]
-    .map((m) => textOf(m[1]))
-    .filter((h) => h.length > 2 && h.length < 160);
-  const updatedAt =
-    html.match(/(?:last updated|updated|effective)\s*(?:on)?[:\s]*((?:19|20)\d{2}-\d{2}-\d{2})/i)?.[1] ??
-    html.match(/<time[^>]*datetime="((?:19|20)\d{2}-\d{2}-\d{2})/i)?.[1] ??
-    null;
-  let path = '/';
+  let path: string;
   try {
     path = new URL(url).pathname;
   } catch {
-    /* keep '/' */
+    path = '/';
   }
-  return { url, path, title, text: textOf(html), headings, updatedAt, status, bytes: html.length };
+  const headings: string[] = [];
+  const tags = /<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi;
+  let tag: RegExpExecArray | null;
+  while ((tag = tags.exec(html))) {
+    const heading = textOf(tag[1]);
+    if (heading.length > 2 && heading.length < 160) headings.push(heading);
+  }
+  const datePatterns = [
+    /(?:last updated|updated|effective)\s*(?:on)?[:\s]*((?:19|20)\d{2}-\d{2}-\d{2})/i,
+    /<time[^>]*datetime="((?:19|20)\d{2}-\d{2}-\d{2})/i,
+  ];
+  const dates = datePatterns.map((pattern) => pattern.exec(html)?.[1]);
+  return {
+    url,
+    path,
+    status,
+    bytes: html.length,
+    text: textOf(html),
+    headings,
+    title: /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1].trim() ?? '',
+    updatedAt: dates.find(Boolean) ?? null,
+  };
 }
 
 /** Same-host links in a page's markup, in document order, deduplicated. */
 export function navLinks(html: string, base: string, host: string): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const m of html.matchAll(/<a[^>]+href="([^"#?]+)"/gi)) {
-    const href = m[1];
-    let url: string;
+  const found = new Set<string>();
+  for (const match of html.matchAll(/<a[^>]+href="([^"#?]+)"/gi)) {
     try {
-      url = new URL(href, base).toString();
+      const target = new URL(match[1], base);
+      if (['https:', 'http:'].includes(target.protocol) && target.hostname === host.toLowerCase())
+        found.add(target.href);
     } catch {
-      continue;
+      /* Invalid links are not crawl targets. */
     }
-    if (!url.startsWith(`https://${host}`) && !url.startsWith(`http://${host}`)) continue;
-    if (seen.has(url)) continue;
-    seen.add(url);
-    out.push(url);
   }
-  return out;
+  return [...found];
 }
 
 export function inferBrandName(pages: SitePage[], host: string): string {
-  const home = pages.find((p) => p.path === '/');
-  if (home?.title) {
-    // "Northwind — the fastest X" and "Northwind | Pricing" both begin with the name.
-    const head = home.title.split(/[|–—:]/)[0].trim();
-    if (head.length >= 2 && head.length <= 40) return head;
-  }
-  const label = host.split('.')[0];
-  return label.charAt(0).toUpperCase() + label.slice(1);
+  const homepage = pages.find((page) => page.path === '/');
+  const title = homepage?.title?.split(/[|–—:]/, 1)[0].trim();
+  if (title && title.length >= 2 && title.length <= 40) return title;
+  const [label] = host.split('.');
+  return label.replace(/^./, (first) => first.toUpperCase());
 }
 
 // -------------------------------------------------------------- claim candidates
@@ -165,28 +171,37 @@ const REGULATED = new Set(['compliance', 'certification']);
  * what you say about yourself, and both sides were read the same way.
  */
 export function proposeCanonicalClaims(crawl: CrawlResult): ClaimCandidate[] {
-  const byKey = new Map<string, ClaimCandidate>();
-  const order = (p: string) => CANDIDATE_PATHS.indexOf(p);
-  const pages = [...crawl.pages].sort((a, b) => (order(a.path) + 99) % 100 - ((order(b.path) + 99) % 100));
-
-  for (const page of pages) {
-    for (const proposed of proposeClaims(page.text, crawl.brandName)) {
-      const c = proposed.claim;
-      const key = `${c.predicate}|${c.object.toLowerCase()}`;
-      if (byKey.has(key)) continue;
-      byKey.set(key, {
+  const sourcePriority = (path: string) => {
+    const index = CANDIDATE_PATHS.indexOf(path);
+    return index < 0 ? 98 : index === 0 ? 99 : index - 1;
+  };
+  const pages = crawl.pages.slice().sort((a, b) => sourcePriority(a.path) - sourcePriority(b.path));
+  const candidates = pages.flatMap((page) =>
+    proposeClaims(page.text, crawl.brandName).map((proposal) => {
+      const claim = proposal.claim;
+      return {
         subject: crawl.brandName,
-        predicate: c.predicate,
-        object: c.object,
-        polarity: c.polarity,
-        claimText: tightenAround(c.statement, crawl.brandName, c.object),
+        predicate: claim.predicate,
+        object: claim.object,
+        polarity: claim.polarity,
+        claimText: tightenAround(claim.statement, crawl.brandName, claim.object),
         sourceUrl: page.url,
         effectiveFrom: page.updatedAt,
-        sensitivity: REGULATED.has(c.predicate) ? 'regulated' : MATERIAL.has(c.predicate) ? 'material' : 'routine',
-      });
-    }
-  }
-  return [...byKey.values()];
+        sensitivity: (REGULATED.has(claim.predicate)
+          ? 'regulated'
+          : MATERIAL.has(claim.predicate)
+            ? 'material'
+            : 'routine') as ClaimCandidate['sensitivity'],
+      };
+    }),
+  );
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = JSON.stringify([candidate.predicate, candidate.object.toLowerCase()]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /**
@@ -198,10 +213,12 @@ export function proposeCanonicalClaims(crawl: CrawlResult): ClaimCandidate[] {
  * fact reads as though we cannot tell a page from a sentence.
  */
 export function tightenAround(statement: string, subject: string, object: string): string {
-  const t = statement.trim().replace(/\s+/g, ' ');
-  const from = t.toLowerCase().lastIndexOf(subject.toLowerCase(), Math.max(0, t.toLowerCase().indexOf(object.toLowerCase())));
-  const sliced = from > 0 ? t.slice(from) : t;
-  return sliced.length <= 240 ? sliced : `${sliced.slice(0, 239)}...`;
+  const normalized = statement.trim().split(/\s+/).join(' ');
+  const lower = normalized.toLowerCase();
+  const objectAt = Math.max(0, lower.indexOf(object.toLowerCase()));
+  const subjectAt = lower.lastIndexOf(subject.toLowerCase(), objectAt);
+  const sentence = normalized.substring(Math.max(0, subjectAt));
+  return sentence.length > 240 ? sentence.substring(0, 239).concat('...') : sentence;
 }
 
 // --------------------------------------------------------------- estimated demand
@@ -235,35 +252,35 @@ export interface DemandCandidate {
  * templates already supply generic buyer questions.
  */
 export function isQuestionHeading(heading: string): boolean {
-  return /\?\s*$/.test(heading.trim());
+  return heading.trimEnd().endsWith('?');
 }
 
 export function autoDemand(crawl: CrawlResult, competitors: string[] = []): DemandCandidate[] {
-  const out: DemandCandidate[] = [];
   const brand = crawl.brandName;
-  const seen = new Set<string>();
-  const push = (question: string, source: string, estimatedVolume: number) => {
+  const candidates: Array<[string, string, number]> = [
+    ...crawl.pages.flatMap((page) =>
+      page.headings
+        .filter(isQuestionHeading)
+        .map((heading) => [heading.replace(/\?+$/, '').trim(), 'site_faq', 40] as [string, string, number]),
+    ),
+    ...competitors.slice(0, 6).flatMap(
+      (competitor) =>
+        [
+          [`${brand} vs ${competitor}`, 'competitor_pair', 60],
+          [`${competitor} alternative`, 'competitor_pair', 30],
+        ] as Array<[string, string, number]>,
+    ),
+    ...TEMPLATES.map(
+      (template) => [template.replace(/\{brand\}/g, brand), 'template', 20] as [string, string, number],
+    ),
+  ];
+  const unique = new Map<string, DemandCandidate>();
+  for (const [question, source, estimatedVolume] of candidates) {
     const key = question.toLowerCase().trim();
-    if (seen.has(key) || key.length < 8) return;
-    seen.add(key);
-    out.push({ question, family: classifyIntent(question, [brand]), source, estimatedVolume });
-  };
-
-  for (const page of crawl.pages) {
-    for (const h of page.headings) {
-      // A heading that is already a question is the closest thing to real demand on the site.
-      if (isQuestionHeading(h)) push(h.replace(/\?+$/, '').trim(), 'site_faq', 40);
-    }
+    if (key.length < 8 || unique.has(key)) continue;
+    unique.set(key, { question, source, estimatedVolume, family: classifyIntent(question, [brand]) });
   }
-
-  for (const c of competitors.slice(0, 6)) {
-    push(`${brand} vs ${c}`, 'competitor_pair', 60);
-    push(`${c} alternative`, 'competitor_pair', 30);
-  }
-
-  for (const t of TEMPLATES) push(t.replace(/\{brand\}/g, brand), 'template', 20);
-
-  return out;
+  return [...unique.values()];
 }
 
 /** One per intent family, so a report always covers the taxonomy rather than whatever the site happened to publish. */

@@ -26,7 +26,11 @@ export type AlertKind =
   | 'registry_gap';
 
 export const ALERT_KINDS: AlertKind[] = [
-  'defect_movement', 'critical_defect', 'budget_exhausted', 'citation_regressed', 'registry_gap',
+  'defect_movement',
+  'critical_defect',
+  'budget_exhausted',
+  'citation_regressed',
+  'registry_gap',
 ];
 
 export const SEVERITY_RANK: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
@@ -50,98 +54,80 @@ export function generateAlerts(
   data: DashboardData,
   clock: Clock = systemClock,
 ): GenerateResult {
-  const out: GenerateResult = { created: 0, duplicates: 0, kinds: {} };
-
-  const record = (row: ReturnType<typeof sched.insertAlertOnce>, kind: string) => {
-    if (row) {
-      out.created++;
-      out.kinds[kind] = (out.kinds[kind] ?? 0) + 1;
-    } else {
-      out.duplicates++;
-    }
-  };
-
-  for (const d of data.defects) {
-    const measured = formatMeasurement(d.measurement);
-    const surfaces = d.providers.length ? d.providers.join(', ') : 'the sampled surfaces';
-
-    // Movement: only what already passed the two-proportion test, the minimum effect and the
-    // Benjamini-Hochberg correction inside the dashboard. This adds no new statistics.
-    if (d.baselineComparison?.significant) {
-      record(
-        sched.insertAlertOnce(db, tenantId, {
-          brand_id: brandId,
-          kind: 'defect_movement',
-          severity: d.severity === 'critical' ? 'critical' : 'high',
-          window_label: windowLabel,
-          subject_key: d.misconceptionKey,
-          headline: `Answers about ${predicateLabel(predicateOf(d.misconceptionKey))} moved on ${surfaces}: now ${measured}.`,
-          detail:
-            `${d.headline} Compared with the previous window this changed by ` +
-            `${(d.baselineComparison.effect * 100).toFixed(0)} points ` +
-            `(p=${d.baselineComparison.pValue.toFixed(3)}, q=${d.baselineComparison.qValue?.toFixed(3) ?? 'n/a'}). ` +
-            `Example statement: "${d.exampleStatement}".`,
-          link: `/defect/${encodeURIComponent(d.misconceptionKey)}`,
-          p_value: d.baselineComparison.pValue,
-          effect: d.baselineComparison.effect,
-          q_value: d.baselineComparison.qValue,
-        }),
-        'defect_movement',
-      );
-    }
-
-    // A critical contradiction does not need to have moved to matter. It does need two
-    // evaluators to agree, which is the gate the spec set and the one that stops a single
-    // brittle extraction from paging a customer at 3am.
-    if (d.severity === 'critical' && d.adjudicated) {
-      record(
-        sched.insertAlertOnce(db, tenantId, {
-          brand_id: brandId,
-          kind: 'critical_defect',
-          severity: 'critical',
-          window_label: windowLabel,
-          subject_key: d.misconceptionKey,
-          headline: `Critical: ${surfaces} contradict your registry on ${predicateLabel(predicateOf(d.misconceptionKey))} in ${measured} of sampled answers.`,
-          detail:
-            `The registry records "${d.canonicalClaimText ?? 'an approved fact'}". ` +
-            `The answer states "${d.exampleStatement}". Two independent evaluators agreed on this verdict. ` +
-            `Measured across ${d.clusterLabels.join(', ') || 'the sampled clusters'}.`,
-          link: `/defect/${encodeURIComponent(d.misconceptionKey)}`,
-        }),
-        'critical_defect',
-      );
-    }
-  }
-
-  // Registry gaps are not defects; they are questions only the customer can answer, and they
-  // decay quietly unless someone is told.
-  if (data.registryGaps && data.registryGaps.length > 0) {
-    record(
-      sched.insertAlertOnce(db, tenantId, {
-        brand_id: brandId,
-        kind: 'registry_gap',
-        severity: 'medium',
-        window_label: windowLabel,
-        subject_key: 'registry',
-        headline:
-          `${data.registryGaps.length} ${data.registryGaps.length === 1 ? 'fact a model asserted has' : 'facts models asserted have'} ` +
-          `no approved canonical claim (n=${data.totalRuns} runs sampled).`,
+  const candidates: Array<Omit<Parameters<typeof sched.insertAlertOnce>[2], 'brand_id' | 'window_label'>> =
+    [];
+  for (const defect of data.defects) {
+    const measured = formatMeasurement(defect.measurement);
+    const surfaces = defect.providers.length ? defect.providers.join(', ') : 'the sampled surfaces';
+    const subject = predicateLabel(predicateOf(defect.misconceptionKey));
+    const base = {
+      subject_key: defect.misconceptionKey,
+      link: `/defect/${encodeURIComponent(defect.misconceptionKey)}`,
+    };
+    const comparison = defect.baselineComparison;
+    if (comparison?.significant)
+      candidates.push({
+        ...base,
+        kind: 'defect_movement',
+        severity: defect.severity === 'critical' ? 'critical' : 'high',
+        headline: `Answers about ${subject} moved on ${surfaces}: now ${measured}.`,
         detail:
-          'These are registry gaps, not defects: we cannot adjudicate them until someone approves a canonical fact. ' +
-          `Subjects: ${data.registryGaps.slice(0, 5).join('; ')}.`,
-        link: '/truth',
-      }),
-      'registry_gap',
-    );
+          `${defect.headline} Compared with the previous window this changed by ` +
+          `${(comparison.effect * 100).toFixed(0)} points ` +
+          `(p=${comparison.pValue.toFixed(3)}, q=${comparison.qValue?.toFixed(3) ?? 'n/a'}). ` +
+          `Example statement: "${defect.exampleStatement}".`,
+        p_value: comparison.pValue,
+        effect: comparison.effect,
+        q_value: comparison.qValue,
+      });
+    if (defect.severity === 'critical' && defect.adjudicated)
+      candidates.push({
+        ...base,
+        kind: 'critical_defect',
+        severity: 'critical',
+        headline: `Critical: ${surfaces} contradict your registry on ${subject} in ${measured} of sampled answers.`,
+        detail:
+          `The registry records "${defect.canonicalClaimText ?? 'an approved fact'}". ` +
+          `The answer states "${defect.exampleStatement}". Two independent evaluators agreed on this verdict. ` +
+          `Measured across ${defect.clusterLabels.join(', ') || 'the sampled clusters'}.`,
+      });
   }
-
-  return out;
+  const gaps = data.registryGaps ?? [];
+  if (gaps.length)
+    candidates.push({
+      kind: 'registry_gap',
+      severity: 'medium',
+      subject_key: 'registry',
+      link: '/truth',
+      headline:
+        `${gaps.length} ${gaps.length === 1 ? 'fact a model asserted has' : 'facts models asserted have'} ` +
+        `no approved canonical claim (n=${data.totalRuns} runs sampled).`,
+      detail:
+        'These are registry gaps, not defects: we cannot adjudicate them until someone approves a canonical fact. ' +
+        `Subjects: ${gaps.slice(0, 5).join('; ')}.`,
+    });
+  return db.transaction(() => {
+    const result: GenerateResult = { created: 0, duplicates: 0, kinds: {} };
+    for (const candidate of candidates) {
+      if (
+        sched.insertAlertOnce(db, tenantId, { ...candidate, brand_id: brandId, window_label: windowLabel })
+      ) {
+        result.created++;
+        result.kinds[candidate.kind] = (result.kinds[candidate.kind] ?? 0) + 1;
+      } else result.duplicates++;
+    }
+    return result;
+  })();
 }
 
 export function predicateOf(misconceptionKey: string): string {
-  return misconceptionKey.split('.')[1] ?? 'brand_presence';
+  const boundary = misconceptionKey.indexOf('.');
+  if (boundary < 0) return 'brand_presence';
+  const end = misconceptionKey.indexOf('.', boundary + 1);
+  return misconceptionKey.slice(boundary + 1, end < 0 ? undefined : end);
 }
 
 export function meetsSeverity(alertSeverity: string, minimum: string): boolean {
-  return (SEVERITY_RANK[alertSeverity] ?? 0) >= (SEVERITY_RANK[minimum] ?? 0);
+  const [severity, threshold] = [alertSeverity, minimum].map((value) => SEVERITY_RANK[value] ?? 0);
+  return severity >= threshold;
 }

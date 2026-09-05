@@ -17,7 +17,13 @@ import {
   measure,
   Measurement,
 } from './stats.js';
-import { parallelTrends, versionChangeExplanation, type PreWindow, type VersionGroup, type TrendCheck } from './sequential.js';
+import {
+  parallelTrends,
+  versionChangeExplanation,
+  type PreWindow,
+  type VersionGroup,
+  type TrendCheck,
+} from './sequential.js';
 
 export type ExperimentVerdict = 'pending' | 'confirmed' | 'rejected' | 'inconclusive';
 
@@ -61,107 +67,90 @@ const BASE_ALTERNATIVES = [
 ];
 
 export function analyzeExperiment(counts: ExperimentCounts, hasControl: boolean): ExperimentAnalysis {
-  const baseline = measure(counts.baselineK, counts.baselineN);
-  const post = measure(counts.postK, counts.postN);
-
-  const controlAvailable =
-    hasControl &&
-    counts.controlBaselineN != null &&
-    counts.controlPostN != null &&
-    counts.controlBaselineN > 0 &&
-    counts.controlPostN > 0;
-
-  const control = controlAvailable
+  const treatment = {
+    preK: counts.baselineK,
+    preN: counts.baselineN,
+    postK: counts.postK,
+    postN: counts.postN,
+  };
+  const controlAvailable = hasControl && (counts.controlBaselineN ?? 0) > 0 && (counts.controlPostN ?? 0) > 0;
+  const controlArm = controlAvailable
     ? {
-        baseline: measure(counts.controlBaselineK ?? 0, counts.controlBaselineN ?? 0),
-        post: measure(counts.controlPostK ?? 0, counts.controlPostN ?? 0),
+        preK: counts.controlBaselineK ?? 0,
+        preN: counts.controlBaselineN ?? 0,
+        postK: counts.controlPostK ?? 0,
+        postN: counts.controlPostN ?? 0,
       }
     : null;
-
+  const baseline = measure(treatment.preK, treatment.preN),
+    post = measure(treatment.postK, treatment.postN);
+  const control = controlArm
+    ? {
+        baseline: measure(controlArm.preK, controlArm.preN),
+        post: measure(controlArm.postK, controlArm.postN),
+      }
+    : null;
   const rawDelta =
-    counts.baselineN > 0 && counts.postN > 0 ? counts.postK / counts.postN - counts.baselineK / counts.baselineN : 0;
-
-  const didEffect = differenceInDifferences(
-    { preK: counts.baselineK, preN: counts.baselineN, postK: counts.postK, postN: counts.postN },
-    controlAvailable
-      ? {
-          preK: counts.controlBaselineK ?? 0,
-          preN: counts.controlBaselineN ?? 0,
-          postK: counts.controlPostK ?? 0,
-          postN: counts.controlPostN ?? 0,
-        }
-      : null,
-  );
-
-  const rawTest = twoProportionTest(counts.baselineK, counts.baselineN, counts.postK, counts.postN);
-  const underpowered = counts.baselineN < MIN_SAMPLES || counts.postN < MIN_SAMPLES;
-
-  // With a control, every number a customer sees comes from the controlled comparison —
-  // including "probability the improvement is real". Reporting a confident probability from
-  // the raw movement beside an inconclusive verdict is precisely the misreading this
-  // product exists to prevent.
-  const controlled = controlAvailable
-    ? didTest(
-        { preK: counts.baselineK, preN: counts.baselineN, postK: counts.postK, postN: counts.postN },
-        {
-          preK: counts.controlBaselineK ?? 0, preN: counts.controlBaselineN ?? 0,
-          postK: counts.controlPostK ?? 0, postN: counts.controlPostN ?? 0,
-        },
-      )
-    : null;
-
-  const test = { pValue: controlled ? controlled.pValue : rawTest.pValue };
-  const pReal = controlled
-    ? Math.min(1, Math.max(0, 1 - controlled.pValueOneSided))
-    : probabilityReal(counts.baselineK, counts.baselineN, counts.postK, counts.postN);
-
-  // When a control exists, the verdict rests on the difference-in-differences, not on the
-  // treatment's raw movement. A treatment that rose 25 points while its matched control rose
-  // 15 is a category-wide shift with a 10-point residual — not a 25-point win, and not
-  // something to put in front of a customer as one.
-  const effectForVerdict = controlAvailable ? didEffect : rawDelta;
-  const clearsMinimumEffect = Math.abs(effectForVerdict) >= MIN_EFFECT;
-
-  // Difference-in-differences is only causal if the two arms were already moving together.
-  // We have the pre-periods, so we check rather than assume, and a visible pre-trend
-  // divergence downgrades the verdict the same way being underpowered does.
-  const trends = controlAvailable && counts.preWindows && counts.preWindows.length >= 2
-    ? parallelTrends(counts.preWindows)
-    : null;
+    treatment.preN > 0 && treatment.postN > 0
+      ? treatment.postK / treatment.postN - treatment.preK / treatment.preN
+      : 0;
+  const didEffect = differenceInDifferences(treatment, controlArm);
+  const test = controlArm
+    ? didTest(treatment, controlArm)
+    : twoProportionTest(treatment.preK, treatment.preN, treatment.postK, treatment.postN);
+  const pReal = Math.max(0, Math.min(1, 1 - test.pValueOneSided));
+  const underpowered = Math.min(treatment.preN, treatment.postN) < MIN_SAMPLES;
+  const trends =
+    controlArm && (counts.preWindows?.length ?? 0) >= 2 ? parallelTrends(counts.preWindows!) : null;
   const trendsBroken = trends !== null && !trends.parallel;
-
-  let verdict: ExperimentVerdict;
-  if (underpowered) verdict = 'inconclusive';
-  else if (trendsBroken) verdict = 'inconclusive';
-  else if (test.pValue < ALPHA && clearsMinimumEffect && effectForVerdict > 0) verdict = 'confirmed';
-  else if (test.pValue < ALPHA && clearsMinimumEffect && effectForVerdict < 0) verdict = 'rejected';
-  else verdict = 'inconclusive';
-
-  const alternatives = [...BASE_ALTERNATIVES];
-  if (!controlAvailable) {
-    alternatives.unshift(
-      'No matched control cluster was available, so a category-wide movement cannot be separated from your change.',
-    );
-  }
-  if (underpowered) {
-    alternatives.unshift(`Sample sizes below the ${MIN_SAMPLES}-run floor cannot support a causal reading.`);
-  }
-  if (trendsBroken && trends) alternatives.unshift(trends.reason);
+  const effect = controlArm ? didEffect : rawDelta;
+  const clearsMinimumEffect = Math.abs(effect) >= MIN_EFFECT;
+  const actionable = !underpowered && !trendsBroken && test.pValue < ALPHA && clearsMinimumEffect;
+  const verdict: ExperimentVerdict =
+    actionable && effect > 0 ? 'confirmed' : actionable && effect < 0 ? 'rejected' : 'inconclusive';
   const versionNote = counts.postVersions ? versionChangeExplanation(counts.postVersions) : null;
-  if (versionNote) alternatives.unshift(versionNote);
-
-  const pct = (x: number | null) => (x === null ? 'n/a' : `${Math.round(x * 100)}%`);
-  const narrative =
-    verdict === 'confirmed'
-      ? `Rose from ${pct(baseline.point)} to ${pct(post.point)}${controlAvailable ? ` while matched controls moved ${signed(controlDelta(counts))}` : ''}; probability the improvement is real: ${Math.round(pReal * 100)}%.`
-      : verdict === 'rejected'
-        ? `Moved from ${pct(baseline.point)} to ${pct(post.point)} — the change did not help and may have hurt.`
-        : trendsBroken && trends
-          ? `Moved from ${pct(baseline.point)} to ${pct(post.point)}, but treatment and control were not on parallel paths before the change (worst pre-period gap ${Math.round(trends.divergence * 100)} points), so this cannot be read as caused by the edit.`
-          : controlAvailable && test.pValue < ALPHA && !clearsMinimumEffect
-          ? `Moved from ${pct(baseline.point)} to ${pct(post.point)}, but matched controls moved ${signed(controlDelta(counts))} over the same window — a residual of ${Math.round(didEffect * 100)} points, below the ${Math.round(MIN_EFFECT * 100)}-point bar for claiming a win.`
-          : `Moved from ${pct(baseline.point)} to ${pct(post.point)}, which this sample cannot distinguish from noise (p=${test.pValue.toFixed(3)}).`;
-
+  const alternatives = [
+    versionNote,
+    trendsBroken ? trends!.reason : null,
+    underpowered
+      ? 'Sample sizes below the ' + MIN_SAMPLES + '-run floor cannot support a causal reading.'
+      : null,
+    controlAvailable
+      ? null
+      : 'No matched control cluster was available, so a category-wide movement cannot be separated from your change.',
+    ...BASE_ALTERNATIVES,
+  ].filter((item): item is string => item !== null);
+  const percent = (point: number | null) => (point === null ? 'n/a' : Math.round(point * 100) + '%');
+  const movement = 'Moved from ' + percent(baseline.point) + ' to ' + percent(post.point);
+  let narrative =
+    movement + ', which this sample cannot distinguish from noise (p=' + test.pValue.toFixed(3) + ').';
+  if (verdict === 'confirmed')
+    narrative =
+      'Rose from ' +
+      percent(baseline.point) +
+      ' to ' +
+      percent(post.point) +
+      (controlAvailable ? ' while matched controls moved ' + signed(controlDelta(counts)) : '') +
+      '; probability the improvement is real: ' +
+      Math.round(pReal * 100) +
+      '%.';
+  else if (verdict === 'rejected') narrative = movement + ' — the change did not help and may have hurt.';
+  else if (trendsBroken)
+    narrative =
+      movement +
+      ', but treatment and control were not on parallel paths before the change (worst pre-period gap ' +
+      Math.round(trends!.divergence * 100) +
+      ' points), so this cannot be read as caused by the edit.';
+  else if (controlAvailable && test.pValue < ALPHA && !clearsMinimumEffect)
+    narrative =
+      movement +
+      ', but matched controls moved ' +
+      signed(controlDelta(counts)) +
+      ' over the same window — a residual of ' +
+      Math.round(didEffect * 100) +
+      ' points, below the ' +
+      Math.round(MIN_EFFECT * 100) +
+      '-point bar for claiming a win.';
   return {
     baseline,
     post,
@@ -181,7 +170,10 @@ export function analyzeExperiment(counts: ExperimentCounts, hasControl: boolean)
 
 function controlDelta(counts: ExperimentCounts): number {
   if (!counts.controlBaselineN || !counts.controlPostN) return 0;
-  return (counts.controlPostK ?? 0) / counts.controlPostN - (counts.controlBaselineK ?? 0) / counts.controlBaselineN;
+  return (
+    (counts.controlPostK ?? 0) / counts.controlPostN -
+    (counts.controlBaselineK ?? 0) / counts.controlBaselineN
+  );
 }
 
 function signed(x: number): string {

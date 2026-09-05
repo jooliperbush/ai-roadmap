@@ -50,54 +50,90 @@ interface PredicatePattern {
  * on top in production (see `evaluatorVotes`), never underneath it.
  */
 export const PREDICATE_PATTERNS: PredicatePattern[] = [
-  { predicate: 'acquired_by', patterns: [
+  {
+    predicate: 'acquired_by',
+    patterns: [
       /\bwas acquired by ([A-Z][\w&.\- ]+?)(?=[,.;]|\s+in\b|\s+for\b|$)/,
       /\bacquisition (?:of [\w .&-]+ )?by ([A-Z][\w&.\- ]+?)(?=[,.;]|\s+in\b|$)/,
       /\b(?:is|are) (?:now )?(?:owned|operated) by ([A-Z][\w&.\- ]+?)(?=[,.;]|$)/,
-  ] },
-  { predicate: 'ceo', patterns: [
+    ],
+  },
+  {
+    predicate: 'ceo',
+    patterns: [
       /\b(?:ceo|chief executive)(?: is| of [\w .&-]+ is)? ([A-Z][\w.\- ]+?)(?=[,.;]|$)/i,
       /\bled by ([A-Z][\w.\- ]+?)(?=[,.;]|\s+since\b|$)/,
-  ] },
-  { predicate: 'pricing', patterns: [
+    ],
+  },
+  {
+    predicate: 'pricing',
+    patterns: [
       /\b(?:starts? at|priced at|costs?|pricing (?:starts|begins) (?:at|from)) (\$[\d,.]+(?:\s?(?:per|\/)\s?\w+)?)/i,
       /\bfree tier (?:is |remains )?(available|discontinued)/i,
-  ] },
-  { predicate: 'fees', patterns: [
+    ],
+  },
+  {
+    predicate: 'fees',
+    patterns: [
       /\b(?:transaction |network |gas )?fees? (?:are|is|of)?\s*(?:around|approximately|about|roughly|typically|under|~)?\s*(\$?[\d.,]+\s?(?:%|usd|cents?)?)/i,
-  ] },
-  { predicate: 'feature_support', negatable: true, patterns: [
+    ],
+  },
+  {
+    predicate: 'feature_support',
+    negatable: true,
+    patterns: [
       /\b(?:supports?|offers?|provides?|includes?|has) ((?:sso|single sign-on|saml|scim|api access|webhooks|audit logs|two-factor authentication|mfa|staking|bridging|smart contracts)\b)/i,
       /\b(?:does not|doesn't|does not currently|lacks|has no|no) (?:support |offer |provide |have )?((?:sso|single sign-on|saml|scim|api access|webhooks|audit logs|two-factor authentication|mfa|staking|bridging|smart contracts)\b)/i,
-  ] },
-  { predicate: 'integration', negatable: true, patterns: [
+    ],
+  },
+  {
+    predicate: 'integration',
+    negatable: true,
+    patterns: [
       /\b[Ii]ntegrat(?:es|ion|ions) (?:with|for) ([A-Z][\w&.\- ]+?)(?=[,.;]|\s+and\b|\s+is\b|$)/,
       /\bno(?:t)? (?:native )?integration with ([A-Z][\w&.\- ]+?)(?=[,.;]|$)/,
-  ] },
-  { predicate: 'availability', negatable: true, patterns: [
+    ],
+  },
+  {
+    predicate: 'availability',
+    negatable: true,
+    patterns: [
       /\b(?:available|listed|live|tradable) (?:on|in) ([A-Z][\w&.\- ]+?)(?=[,.;]|\s+and\b|$)/,
       /\bnot (?:available|listed) (?:on|in) ([A-Z][\w&.\- ]+?)(?=[,.;]|$)/,
-  ] },
-  { predicate: 'product_status', patterns: [
+    ],
+  },
+  {
+    predicate: 'product_status',
+    patterns: [
       /\b(?:has been |was )?(discontinued|deprecated|sunset|shut down|no longer maintained)\b/i,
       /\b(?:is|remains) (actively maintained|in production|generally available)\b/i,
-  ] },
-  { predicate: 'compliance', patterns: [
+    ],
+  },
+  {
+    predicate: 'compliance',
+    patterns: [
       /\b(?:is )?(soc ?2(?: type ?(?:i{1,2}|\d))?|iso ?27001|gdpr[- ]compliant|hipaa[- ]compliant|mica[- ]registered)\b/i,
-  ] },
-  { predicate: 'token_supply', patterns: [
+    ],
+  },
+  {
+    predicate: 'token_supply',
+    patterns: [
       /\b(?:total|max(?:imum)?|circulating) supply (?:is |of )?([\d.,]+ ?(?:billion|million|b|m)?)/i,
-  ] },
-  { predicate: 'headquarters', patterns: [
-      /\b(?:headquartered|based) in ([A-Z][\w.\- ]+?(?:, ?[A-Z][\w.\- ]+)?)(?=[,.;]|$)/,
-  ] },
+    ],
+  },
+  {
+    predicate: 'headquarters',
+    patterns: [/\b(?:headquartered|based) in ([A-Z][\w.\- ]+?(?:, ?[A-Z][\w.\- ]+)?)(?=[,.;]|$)/],
+  },
 ];
 
 // Negation for the negatable predicates. Deliberately enumerated rather than "any nearby no":
 // a bare negative particle floating in a sentence flips claims it was never about.
-export const NEGATION_RE = /\b(?:does not|doesn't|do not|don't|cannot|can't|lacks|has no|have no|there is no|there's no|no longer|without (?:any )?(?:native |direct |official )?(?:support|integration|listing)|no (?:native |direct |official )?(?:support|integration|listing|access)|not (?:available|listed|supported|offered|integrated))\b/i;
+export const NEGATION_RE =
+  /\b(?:does not|doesn't|do not|don't|cannot|can't|lacks|has no|have no|there is no|there's no|no longer|without (?:any )?(?:native |direct |official )?(?:support|integration|listing)|no (?:native |direct |official )?(?:support|integration|listing|access)|not (?:available|listed|supported|offered|integrated))\b/i;
 const YEAR_RE = /\b(19|20)\d{2}\b/;
-const RELATIVE_TIME_RE = /\b(?:last year|this year|recently|as of \w+ (?:19|20)\d{2}|since (?:19|20)\d{2})\b/i;
+const RELATIVE_TIME_RE =
+  /\b(?:last year|this year|recently|as of \w+ (?:19|20)\d{2}|since (?:19|20)\d{2})\b/i;
 
 export function splitSentences(text: string): string[] {
   return text
@@ -111,52 +147,51 @@ export function splitSentences(text: string): string[] {
 export function splitClauses(sentence: string): string[] {
   const parts = sentence.split(/,? (?:but|and|while|whereas) /i);
   if (parts.length === 1) return [sentence];
-  const bearing = parts.filter((p) => /\b(is|are|was|were|has|have|does|do|supports?|offers?|acquired|costs?|lacks)\b/i.test(p));
+  const bearing = parts.filter((p) =>
+    /\b(is|are|was|were|has|have|does|do|supports?|offers?|acquired|costs?|lacks)\b/i.test(p),
+  );
   return bearing.length >= 2 ? parts.map((p) => p.trim()) : [sentence];
 }
 
 export function extractClaims(answerText: string, subjectHint: string): ExtractedClaim[] {
-  const out: ExtractedClaim[] = [];
-  for (const sentence of splitSentences(answerText)) {
-    for (const clause of splitClauses(sentence)) {
-      const subject = inferSubject(clause, subjectHint);
-      for (const pp of PREDICATE_PATTERNS) {
-        for (const re of pp.patterns) {
-          const m = clause.match(re);
-          if (!m) continue;
-          // Trailing sentence punctuation is not part of the value. Left in, "$0.0008." never
-          // matches "$0.0008" on the cited page, and the citation check silently reports the
-          // page as not containing a claim it states plainly.
-          const object = (m[1] ?? m[0]).trim().replace(/[.,;:]+$/, '');
+  const proposals = splitSentences(answerText)
+    .flatMap((sentence) => splitClauses(sentence))
+    .flatMap((clause) => {
+      const temporalMarker = clause.match(YEAR_RE)?.[0] ?? clause.match(RELATIVE_TIME_RE)?.[0] ?? null;
+      return PREDICATE_PATTERNS.flatMap((rule) => {
+        for (const expression of rule.patterns) {
+          const match = clause.match(expression);
+          if (!match) continue;
+          const object = (match[1] ?? match[0]).trim().replace(/[.,;:]+$/, '');
           if (!object) continue;
-          const negated = pp.negatable ? NEGATION_RE.test(clause) : false;
-          const temporal = clause.match(YEAR_RE)?.[0] ?? clause.match(RELATIVE_TIME_RE)?.[0] ?? null;
-          out.push({
+          const claim: ExtractedClaim = {
+            subject: subjectHint.trim() || 'unknown',
             statement: clause.trim(),
-            subject,
-            predicate: pp.predicate,
+            predicate: rule.predicate,
             object,
-            polarity: negated ? 'negate' : 'affirm',
-            temporalMarker: temporal,
-          });
-          break; // one hit per predicate per clause
+            polarity: rule.negatable && NEGATION_RE.test(clause) ? 'negate' : 'affirm',
+            temporalMarker,
+          };
+          return [claim];
         }
-      }
-    }
-  }
-  return dedupeClaims(out);
+        return [];
+      });
+    });
+  return dedupeClaims(proposals);
 }
 
 function dedupeClaims(claims: ExtractedClaim[]): ExtractedClaim[] {
-  const seen = new Set<string>();
-  const out: ExtractedClaim[] = [];
-  for (const c of claims) {
-    const key = `${normalizeKey(c.subject)}|${c.predicate}|${normalizeKey(c.object)}|${c.polarity}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(c);
-  }
-  return out;
+  const unique = new Map<string, ExtractedClaim>();
+  claims.forEach((claim) => {
+    const key = [
+      normalizeKey(claim.subject),
+      claim.predicate,
+      normalizeKey(claim.object),
+      claim.polarity,
+    ].join('|');
+    if (!unique.has(key)) unique.set(key, claim);
+  });
+  return Array.from(unique.values());
 }
 
 function inferSubject(clause: string, subjectHint: string): string {
@@ -213,87 +248,84 @@ export interface VerificationResult {
 }
 
 export function verifyClaim(input: VerificationInput): VerificationResult {
-  const { claim, canonicalClaims, asOf } = input;
+  const { claim, asOf, canonicalClaims } = input;
   const current = resolveTruth(canonicalClaims, claim.subject, claim.predicate, asOf);
-
+  const history = truthHistory(canonicalClaims, claim.subject, claim.predicate);
+  const unverifiable = (canonicalClaimId: string | null, explanation: string): VerificationResult => ({
+    verdict: 'UNVERIFIABLE',
+    canonicalClaimId,
+    severity: 'low',
+    misconceptionKey: null,
+    explanation,
+    requiresAdjudication: false,
+  });
   if (!current) {
-    const anyHistory = truthHistory(canonicalClaims, claim.subject, claim.predicate);
-    if (anyHistory.length === 0) {
+    if (!history.length)
       return {
         verdict: 'UNSUPPORTED',
         canonicalClaimId: null,
         severity: 'medium',
         misconceptionKey: misconception(claim),
         explanation:
-          `No approved canonical fact exists for ${claim.subject} / ${claim.predicate}. ` +
-          'The model is asserting something the truth registry cannot confirm or deny — a registry gap, not yet a defect.',
+          'No approved canonical fact exists for ' +
+          claim.subject +
+          ' / ' +
+          claim.predicate +
+          '. The model is asserting something the truth registry cannot confirm or deny — a registry gap, not yet a defect.',
         requiresAdjudication: false,
       };
-    }
-    const historic = anyHistory.find((c) => objectMatches(c.object, claim.object));
-    if (historic) {
-      return staleResult(historic, claim, 'the fact it states expired and has no current successor');
-    }
-    return {
-      verdict: 'UNVERIFIABLE',
-      canonicalClaimId: null,
-      severity: 'low',
-      misconceptionKey: null,
-      explanation: 'No canonical fact is in force for this subject/predicate at the sampled time.',
-      requiresAdjudication: false,
-    };
+    const expired = history.find((row) => objectMatches(row.object, claim.object));
+    return expired
+      ? staleResult(expired, claim, 'the fact it states expired and has no current successor')
+      : unverifiable(null, 'No canonical fact is in force for this subject/predicate at the sampled time.');
   }
-
-  const matches = objectMatches(current.object, claim.object);
-
-  // Polarity handling: "does not support SSO" against a canonical "supports SSO".
-  if (claim.polarity === 'negate') {
-    if (matches) {
-      return contradiction(current, claim, `the answer denies a capability the registry says is in force since ${current.effectiveFrom}`);
-    }
-    return {
-      verdict: 'UNVERIFIABLE',
-      canonicalClaimId: current.id,
-      severity: 'low',
-      misconceptionKey: null,
-      explanation: 'Negative statement about something outside the canonical record.',
-      requiresAdjudication: false,
-    };
+  const same = objectMatches(current.object, claim.object);
+  if (claim.polarity === 'negate')
+    return same
+      ? contradiction(
+          current,
+          claim,
+          'the answer denies a capability the registry says is in force since ' + current.effectiveFrom,
+        )
+      : unverifiable(current.id, 'Negative statement about something outside the canonical record.');
+  if (!same) {
+    const previous = history.find((row) => row.id !== current.id && objectMatches(row.object, claim.object));
+    return previous
+      ? staleResult(
+          previous,
+          claim,
+          'superseded on ' + (previous.effectiveTo ?? 'an unrecorded date') + ' by "' + current.object + '"',
+        )
+      : contradiction(
+          current,
+          claim,
+          'the registry records "' + current.object + '" in force since ' + current.effectiveFrom,
+        );
   }
-
-  if (matches) {
-    // Right object, but is the answer talking about the right period?
-    if (claim.temporalMarker && /^\d{4}$/.test(claim.temporalMarker)) {
-      const statedYear = Number(claim.temporalMarker);
-      const effectiveYear = new Date(current.effectiveFrom).getUTCFullYear();
-      if (statedYear < effectiveYear) {
-        return staleResult(current, claim, `the answer dates the fact to ${statedYear}, but it took effect in ${effectiveYear}`);
-      }
-    }
-    return {
-      verdict: 'SUPPORTED',
-      canonicalClaimId: current.id,
-      severity: 'low',
-      misconceptionKey: null,
-      explanation: `Matches the canonical fact in force since ${current.effectiveFrom}.`,
-      requiresAdjudication: false,
-    };
-  }
-
-  // Wrong object. Was it ever right? Then it is stale, which is a different fix.
-  const historic = truthHistory(canonicalClaims, claim.subject, claim.predicate).find(
-    (c) => c.id !== current.id && objectMatches(c.object, claim.object),
-  );
-  if (historic) {
-    return staleResult(historic, claim, `superseded on ${historic.effectiveTo ?? 'an unrecorded date'} by "${current.object}"`);
-  }
-
-  return contradiction(current, claim, `the registry records "${current.object}" in force since ${current.effectiveFrom}`);
+  const year = new Date(current.effectiveFrom).getUTCFullYear();
+  if (claim.temporalMarker && /^\d{4}$/.test(claim.temporalMarker) && Number(claim.temporalMarker) < year)
+    return staleResult(
+      current,
+      claim,
+      'the answer dates the fact to ' + Number(claim.temporalMarker) + ', but it took effect in ' + year,
+    );
+  return {
+    verdict: 'SUPPORTED',
+    canonicalClaimId: current.id,
+    severity: 'low',
+    misconceptionKey: null,
+    explanation: 'Matches the canonical fact in force since ' + current.effectiveFrom + '.',
+    requiresAdjudication: false,
+  };
 }
 
 function contradiction(canonical: CanonicalClaim, claim: ExtractedClaim, why: string): VerificationResult {
   const severity: Severity =
-    canonical.sensitivity === 'regulated' ? 'critical' : canonical.sensitivity === 'material' ? 'critical' : 'high';
+    canonical.sensitivity === 'regulated'
+      ? 'critical'
+      : canonical.sensitivity === 'material'
+        ? 'critical'
+        : 'high';
   return {
     verdict: 'CONTRADICTED',
     canonicalClaimId: canonical.id,
@@ -323,7 +355,11 @@ export function misconception(claim: ExtractedClaim): string {
 
 // ----------------------------------------------------------------- brand role
 
-export function classifyBrandRole(answerText: string, brandName: string, competitors: string[] = []): BrandRole {
+export function classifyBrandRole(
+  answerText: string,
+  brandName: string,
+  competitors: string[] = [],
+): BrandRole {
   const re = new RegExp(`\\b${escapeRe(brandName)}\\b`, 'i');
   if (!re.test(answerText)) return 'absent';
   const lower = answerText.toLowerCase();
@@ -364,8 +400,10 @@ export interface CitationCheckResult {
 }
 
 const CREDIBLE_TLD = /\.(gov|edu)$/i;
-const KNOWN_CREDIBLE = /(reuters\.com|bloomberg\.com|ft\.com|wsj\.com|techcrunch\.com|coindesk\.com|sec\.gov)$/i;
-const UGC = /(reddit\.com|quora\.com|medium\.com|x\.com|twitter\.com|youtube\.com|stackexchange\.com|stackoverflow\.com)$/i;
+const KNOWN_CREDIBLE =
+  /(reuters\.com|bloomberg\.com|ft\.com|wsj\.com|techcrunch\.com|coindesk\.com|sec\.gov)$/i;
+const UGC =
+  /(reddit\.com|quora\.com|medium\.com|x\.com|twitter\.com|youtube\.com|stackexchange\.com|stackoverflow\.com)$/i;
 const REVIEW = /(g2\.com|capterra\.com|trustpilot\.com|trustradius\.com)$/i;
 const SPAMMY = /(top10|best-?reviews?|-?coupons?|listicle|affiliate)/i;
 
@@ -377,44 +415,45 @@ export function hostOf(url: string): string {
   }
 }
 
-export function classifySource(url: string, ownedDomains: string[], competitorDomains: string[] = []): SourceClass {
+export function classifySource(
+  url: string,
+  ownedDomains: string[],
+  competitorDomains: string[] = [],
+): SourceClass {
   const host = hostOf(url);
   if (!host) return 'unknown';
-  if (ownedDomains.some((d) => host === d || host.endsWith(`.${d}`))) return 'owned';
-  if (competitorDomains.some((d) => host === d || host.endsWith(`.${d}`))) return 'competitor';
-  if (SPAMMY.test(url)) return 'spam';
-  if (REVIEW.test(host)) return 'ugc';
-  if (UGC.test(host)) return 'ugc';
-  if (CREDIBLE_TLD.test(host) || KNOWN_CREDIBLE.test(host)) return 'independent_credible';
-  return 'independent_low_quality';
+  const belongs = (domains: string[]) =>
+    domains.some((domain) => domain === host || host.endsWith('.' + domain));
+  if (belongs(ownedDomains)) return 'owned';
+  if (belongs(competitorDomains)) return 'competitor';
+  const checks: Array<[boolean, SourceClass]> = [
+    [SPAMMY.test(url), 'spam'],
+    [REVIEW.test(host) || UGC.test(host), 'ugc'],
+    [CREDIBLE_TLD.test(host) || KNOWN_CREDIBLE.test(host), 'independent_credible'],
+  ];
+  return checks.find(([matches]) => matches)?.[1] ?? 'independent_low_quality';
 }
 
 /** Does the cited page actually contain the claim it is cited for? Usually nobody checks. */
 export function checkCitation(input: CitationCheckInput): CitationCheckResult {
-  const sourceClass = classifySource(input.url, input.ownedDomains, input.competitorDomains ?? []);
-  if (input.snapshotText === null) {
-    return { support: 'unreachable', sourceClass, reason: 'Snapshot could not be retrieved at sampling time.' };
-  }
-  if (/subscribe to (?:continue|read)|paywall|sign in to read/i.test(input.snapshotText)) {
-    return { support: 'paywalled', sourceClass, reason: 'Page is gated; the model could not have verified it either.' };
-  }
-  const snap = input.snapshotText.toLowerCase();
-  const obj = input.claimObject.toLowerCase().trim();
-  const subj = input.claimSubject.toLowerCase().trim();
-  const mentionsSubject = subj.length === 0 || snap.includes(subj);
-  const mentionsObject = obj.length > 0 && snap.includes(obj);
-
-  if (mentionsSubject && mentionsObject) {
-    const negated = new RegExp(`(?:not|never|no longer)[^.]{0,40}${escapeRe(obj)}`, 'i').test(input.snapshotText);
-    return negated
-      ? { support: 'contradicts', sourceClass, reason: 'The cited page states the opposite of the claim it was cited for.' }
-      : { support: 'supports', sourceClass, reason: 'The cited page contains the claim.' };
-  }
-  return {
-    support: 'absent',
+  const sourceClass = classifySource(input.url, input.ownedDomains, input.competitorDomains);
+  const result = (support: CitationSupport, reason: string): CitationCheckResult => ({
+    support,
     sourceClass,
-    reason: 'The cited page does not contain the claim it was cited for.',
-  };
+    reason,
+  });
+  const snapshot = input.snapshotText;
+  if (snapshot === null) return result('unreachable', 'Snapshot could not be retrieved at sampling time.');
+  if (/subscribe to (?:continue|read)|paywall|sign in to read/i.test(snapshot))
+    return result('paywalled', 'Page is gated; the model could not have verified it either.');
+  const object = input.claimObject.toLowerCase().trim(),
+    subject = input.claimSubject.toLowerCase().trim();
+  const text = snapshot.toLowerCase();
+  if (!object || !text.includes(object) || (subject && !text.includes(subject)))
+    return result('absent', 'The cited page does not contain the claim it was cited for.');
+  if (new RegExp('(?:not|never|no longer)[^.]{0,40}' + escapeRe(object), 'i').test(snapshot))
+    return result('contradicts', 'The cited page states the opposite of the claim it was cited for.');
+  return result('supports', 'The cited page contains the claim.');
 }
 
 /**

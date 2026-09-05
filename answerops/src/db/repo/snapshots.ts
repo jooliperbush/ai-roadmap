@@ -1,3 +1,4 @@
+import { statements, atomic } from './statements.js';
 /**
  * Snapshot store.
  *
@@ -7,33 +8,55 @@
  */
 
 import type { DB } from '../index.js';
-import type { Row } from './index.js';
+export interface SnapshotRow {
+  sha256: string;
+  url: string;
+  body: string;
+  bytes: number;
+  content_type: string;
+  truncated: number;
+  http_status: number | null;
+  fetched_at: string;
+}
 
-export function putSnapshot(db: DB, s: {
-  sha256: string; url: string; body: string; bytes: number; contentType: string;
-  truncated: boolean; httpStatus: number | null; fetchedAt: string;
-}): void {
-  db.prepare(
-    `INSERT OR REPLACE INTO snapshots (sha256, url, body, bytes, content_type, truncated, http_status, fetched_at)
-     VALUES (@sha256, @url, @body, @bytes, @content_type, @truncated, @http_status, @fetched_at)`,
-  ).run({
+export function putSnapshot(
+  db: DB,
+  s: {
+    sha256: string;
+    url: string;
+    body: string;
+    bytes: number;
+    contentType: string;
+    truncated: boolean;
+    httpStatus: number | null;
+    fetchedAt: string;
+  },
+): void {
+  const record = {
     sha256: s.sha256,
     url: s.url,
     body: s.body,
     bytes: s.bytes,
     content_type: s.contentType,
-    truncated: s.truncated ? 1 : 0,
+    truncated: Number(s.truncated),
     http_status: s.httpStatus,
     fetched_at: s.fetchedAt,
-  });
+  };
+  statements(db)
+    .prepare(
+      'INSERT INTO snapshots (sha256, url, body, bytes, content_type, truncated, http_status, fetched_at) VALUES (@sha256, @url, @body, @bytes, @content_type, @truncated, @http_status, @fetched_at) ON CONFLICT(sha256) DO UPDATE SET url=excluded.url, body=excluded.body, bytes=excluded.bytes, content_type=excluded.content_type, truncated=excluded.truncated, http_status=excluded.http_status, fetched_at=excluded.fetched_at',
+    )
+    .run(record);
 }
 
-export function getSnapshot(db: DB, sha256: string): Row | undefined {
-  return db.prepare('SELECT * FROM snapshots WHERE sha256 = ?').get(sha256) as Row | undefined;
+export function getSnapshot(db: DB, sha256: string): SnapshotRow | undefined {
+  return statements(db).prepare('SELECT * FROM snapshots WHERE sha256 = ?').get(sha256) as
+    | SnapshotRow
+    | undefined;
 }
 
 export function countSnapshots(db: DB): number {
-  return Number((db.prepare('SELECT COUNT(*) AS n FROM snapshots').get() as Row).n);
+  return Number((statements(db).prepare('SELECT COUNT(*) AS n FROM snapshots').get() as { n: number }).n);
 }
 
 /**
@@ -43,7 +66,7 @@ export function countSnapshots(db: DB): number {
  * cross-tenant query the isolation lint would rightly reject.
  */
 export function protectedHashesFor(db: DB, tenantId: string): string[] {
-  const rows = db
+  const rows = statements(db)
     .prepare(
       `SELECT DISTINCT c.snapshot_sha256 AS sha FROM citations c
         WHERE c.tenant_id = ? AND c.snapshot_sha256 IS NOT NULL
@@ -55,7 +78,7 @@ export function protectedHashesFor(db: DB, tenantId: string): string[] {
                   )
                ))`,
     )
-    .all(tenantId, tenantId, tenantId) as Row[];
+    .all(tenantId, tenantId, tenantId) as Array<{ sha: string }>;
   return rows.map((r) => r.sha as string);
 }
 
@@ -65,11 +88,16 @@ export function protectedHashesFor(db: DB, tenantId: string): string[] {
  * page has changed.
  */
 export function pruneSnapshots(db: DB, olderThanIso: string, protectedHashes: string[]): number {
-  const keep = new Set(protectedHashes);
-  const stale = db.prepare('SELECT sha256 FROM snapshots WHERE fetched_at < ?').all(olderThanIso) as Row[];
-  const drop = stale.map((r) => r.sha256 as string).filter((h) => !keep.has(h));
-  const stmt = db.prepare('DELETE FROM snapshots WHERE sha256 = ?');
-  let n = 0;
-  for (const h of drop) n += stmt.run(h).changes;
-  return n;
+  return atomic(db, () => {
+    const protectedSet = new Set(protectedHashes);
+    const records = statements(db)
+      .prepare('SELECT sha256 FROM snapshots WHERE fetched_at < ?')
+      .all(olderThanIso) as Array<{ sha256: string }>;
+    const remove = statements(db).prepare('DELETE FROM snapshots WHERE sha256 = ?');
+    return records.reduce(
+      (deleted, record) =>
+        protectedSet.has(record.sha256) ? deleted : deleted + remove.run(record.sha256).changes,
+      0,
+    );
+  });
 }

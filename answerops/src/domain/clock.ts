@@ -15,23 +15,23 @@ export const systemClock: Clock = {
 };
 
 export class TestClock implements Clock {
-  private t: number;
+  private instant: Date;
   constructor(start: string | number | Date = '2026-01-01T00:00:00.000Z') {
-    this.t = new Date(start).getTime();
+    this.instant = new Date(start);
   }
   now(): Date {
-    return new Date(this.t);
+    return new Date(+this.instant);
   }
   advance(ms: number): void {
-    this.t += ms;
+    this.instant = new Date(+this.instant + ms);
   }
   advanceHours(h: number): void {
-    this.advance(h * 3600_000);
+    this.advance(h * 60 * 60 * 1000);
   }
   advanceDays(d: number): void {
-    this.advance(d * 86_400_000);
+    this.advanceHours(d * 24);
   }
   set(at: string | number | Date): void {
-    this.t = new Date(at).getTime();
+    this.instant = new Date(at);
   }
 }

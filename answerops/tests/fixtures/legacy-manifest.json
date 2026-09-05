@@ -1,0 +1,886 @@
+{
+  "reference": "8c114f6",
+  "exports": [
+    {
+      "file": "src/content/posts.ts",
+      "names": [
+        "POSTS",
+        "postBySlug",
+        "postsNewestFirst"
+      ]
+    },
+    {
+      "file": "src/db/dialect.ts",
+      "names": [
+        "UNIT_SEP",
+        "sqliteDialect",
+        "postgresDialect",
+        "dialectFor",
+        "activeDialect"
+      ]
+    },
+    {
+      "file": "src/db/index.ts",
+      "names": [
+        "openDb",
+        "migrate",
+        "addColumnIfMissing",
+        "id",
+        "nowIso",
+        "hashPassword",
+        "verifyPassword",
+        "jsonParse"
+      ]
+    },
+    {
+      "file": "src/db/repo/agency.ts",
+      "names": [
+        "setBrandRole",
+        "brandRolesFor",
+        "brandRole",
+        "rolesForBrand"
+      ]
+    },
+    {
+      "file": "src/db/repo/index.ts",
+      "names": [
+        "createTenant",
+        "listTenants",
+        "getTenant",
+        "createUser",
+        "findUserByEmail",
+        "createSession",
+        "getSession",
+        "deleteSession",
+        "createBrand",
+        "listBrands",
+        "getBrand",
+        "primaryBrand",
+        "insertDemandSignal",
+        "listDemandSignals",
+        "attachSignalsToCluster",
+        "createCluster",
+        "setClusterMarkets",
+        "listClusters",
+        "getCluster",
+        "updateClusterWeights",
+        "createPromptVariant",
+        "listVariants",
+        "createTruthSource",
+        "listTruthSources",
+        "createCanonicalClaim",
+        "listCanonicalClaims",
+        "getCanonicalClaim",
+        "approveClaim",
+        "supersedeClaim",
+        "insertRun",
+        "listRuns",
+        "getRun",
+        "runsForCluster",
+        "insertObservedClaim",
+        "observedForRun",
+        "insertCitation",
+        "getCitation",
+        "updateCitationCheck",
+        "citationsForWindow",
+        "observedForWindow",
+        "runsForWindow",
+        "citationsForRun",
+        "runCountForWindow",
+        "runsWithMisconception",
+        "insertAction",
+        "listActions",
+        "getAction",
+        "setActionState",
+        "setActionExperiment",
+        "insertTransition",
+        "listTransitions",
+        "insertExperiment",
+        "getExperiment",
+        "listExperiments",
+        "updateExperimentAnalysis",
+        "insertBusinessOutcome",
+        "outcomesForExperiment",
+        "insertCrawlerEvent",
+        "listCrawlerEvents",
+        "upsertEntity",
+        "upsertRelationship",
+        "listRelationships",
+        "insertAlert",
+        "listAlerts",
+        "audit",
+        "listAudit",
+        "getWindowStatus",
+        "setActionConnector",
+        "setActionShipped",
+        "setActionCrawled",
+        "crawlerEventsSince"
+      ]
+    },
+    {
+      "file": "src/db/repo/snapshots.ts",
+      "names": [
+        "putSnapshot",
+        "getSnapshot",
+        "countSnapshots",
+        "protectedHashesFor",
+        "pruneSnapshots"
+      ]
+    },
+    {
+      "file": "src/db/repo/unattended.ts",
+      "names": [
+        "createSchedule",
+        "listSchedules",
+        "getSchedule",
+        "dueSchedules",
+        "claimSchedule",
+        "releaseSchedule",
+        "setScheduleEnabled",
+        "updateScheduleNextRun",
+        "upsertWindow",
+        "getWindow",
+        "listWindows",
+        "monthToDateSpend",
+        "spendByProvider",
+        "insertAlertOnce",
+        "listAlertsFor",
+        "undeliveredAlerts",
+        "markAlertDelivered",
+        "createChannel",
+        "listChannels",
+        "getChannel",
+        "deleteChannel",
+        "setChannelHealth",
+        "recordAttempt",
+        "listAttempts"
+      ]
+    },
+    {
+      "file": "src/domain/actions.ts",
+      "names": [
+        "ACTION_STATES",
+        "ALLOWED_TRANSITIONS",
+        "STATE_LABEL",
+        "canTransition",
+        "IllegalTransitionError",
+        "assertTransition",
+        "MissingEvidenceError",
+        "assertEvidence"
+      ]
+    },
+    {
+      "file": "src/domain/budget.ts",
+      "names": [
+        "remainingBudget",
+        "projectRoundCost",
+        "trimToBudget"
+      ]
+    },
+    {
+      "file": "src/domain/clock.ts",
+      "names": [
+        "systemClock",
+        "TestClock"
+      ]
+    },
+    {
+      "file": "src/domain/crawlers.ts",
+      "names": [
+        "BOT_SIGNATURES",
+        "classifyBot",
+        "BOT_CLASS_LABEL",
+        "relevantBotClassFor",
+        "summariseBlocks"
+      ]
+    },
+    {
+      "file": "src/domain/entities.ts",
+      "names": [
+        "RELATIONS",
+        "RELATION_BASES",
+        "RELATION_LABEL",
+        "WeakBasisError",
+        "resolveRelation",
+        "comentionCandidate",
+        "extractCandidateEntities"
+      ]
+    },
+    {
+      "file": "src/domain/experiments.ts",
+      "names": [
+        "analyzeExperiment",
+        "OUTCOME_CAVEAT"
+      ]
+    },
+    {
+      "file": "src/domain/extractor.ts",
+      "names": [
+        "EXTRACTOR_VERSION",
+        "PRECISION_GATE",
+        "RECALL_LIFT_GATE",
+        "PREDICATE_VOCAB",
+        "levenshtein",
+        "isGrounded",
+        "groundProposal",
+        "patternProposer",
+        "HEURISTIC_RULES",
+        "heuristicProposer",
+        "ModelProposer",
+        "proposeClaims",
+        "mergeProposals"
+      ]
+    },
+    {
+      "file": "src/domain/fetcher.ts",
+      "names": [
+        "USER_AGENT",
+        "MAX_BYTES",
+        "TIMEOUT_MS",
+        "MAX_ATTEMPTS",
+        "PER_HOST_CONCURRENCY",
+        "SNAPSHOT_RETENTION_DAYS",
+        "FETCH_ERROR_KINDS",
+        "FETCH_ERROR_LABEL",
+        "sha256Of",
+        "isBlockedHost",
+        "statusToError",
+        "parseRobots",
+        "robotsAllows",
+        "textOf",
+        "HttpFetcher",
+        "StubFetcher",
+        "NullFetcher"
+      ]
+    },
+    {
+      "file": "src/domain/geo.ts",
+      "names": [
+        "MARKETS",
+        "MARKET_BY_GEO",
+        "marketLabel",
+        "GeoBlendingError",
+        "assertNoGeoBlending",
+        "LOCALISED_PREFIX",
+        "fanout"
+      ]
+    },
+    {
+      "file": "src/domain/intent.ts",
+      "names": [
+        "INTENT_FAMILIES",
+        "BUYER_STAGE",
+        "INTENT_WEIGHT",
+        "FAMILY_LABEL",
+        "classifyIntent",
+        "assertNoBlending",
+        "tokenize",
+        "jaccard",
+        "clusterDemand",
+        "promptVariantsFor"
+      ]
+    },
+    {
+      "file": "src/domain/pricing.ts",
+      "names": [
+        "PRICE_TABLE",
+        "PRICE_TABLE_REVIEWED",
+        "usageOf",
+        "costOf",
+        "estimatedRunCost"
+      ]
+    },
+    {
+      "file": "src/domain/priority.ts",
+      "names": [
+        "ACTION_TYPES",
+        "FIXABILITY",
+        "ACTION_LABEL",
+        "isActionType",
+        "clamp01",
+        "computePriority",
+        "deriveExpectedRange",
+        "quantile"
+      ]
+    },
+    {
+      "file": "src/domain/ratelimit.ts",
+      "names": [
+        "LIMIT_ON_FAILURE",
+        "LIMITS",
+        "RateLimiter"
+      ]
+    },
+    {
+      "file": "src/domain/roles.ts",
+      "names": [
+        "ROLE_RANK",
+        "rankOf",
+        "allows",
+        "ROUTE_ROLES",
+        "PUBLIC_ROUTES",
+        "CSRF_EXEMPT",
+        "routeKey"
+      ]
+    },
+    {
+      "file": "src/domain/sampling.ts",
+      "names": [
+        "planSampling",
+        "volatilityOf"
+      ]
+    },
+    {
+      "file": "src/domain/scheduler.ts",
+      "names": [
+        "CADENCES",
+        "LEASE_MS",
+        "computeNextRun",
+        "windowLabelFor",
+        "isoWeek",
+        "monthKey",
+        "leaseIsLive"
+      ]
+    },
+    {
+      "file": "src/domain/sequential.ts",
+      "names": [
+        "E_ALPHA",
+        "evalue",
+        "SequentialTest",
+        "runSequential",
+        "logGamma",
+        "PARALLEL_TREND_TOLERANCE",
+        "parallelTrends",
+        "poolByVersion",
+        "versionChangeExplanation",
+        "hierarchicalVariance"
+      ]
+    },
+    {
+      "file": "src/domain/stats.ts",
+      "names": [
+        "Z_95",
+        "MIN_SAMPLES",
+        "MAX_SAMPLES",
+        "MIN_EFFECT",
+        "ALPHA",
+        "BH_Q",
+        "wilson",
+        "measure",
+        "ciWidth",
+        "confidenceFactor",
+        "normalCdf",
+        "erf",
+        "twoProportionTest",
+        "probabilityReal",
+        "benjaminiHochberg",
+        "didTest",
+        "differenceInDifferences",
+        "requiredSampleSize",
+        "formatP",
+        "formatMeasurement"
+      ]
+    },
+    {
+      "file": "src/domain/truth.ts",
+      "names": [
+        "normalizeKey",
+        "resolveTruth",
+        "truthHistory",
+        "wasEverTrue",
+        "expiringClaims",
+        "objectMatches",
+        "normalizeObject",
+        "extractNumber"
+      ]
+    },
+    {
+      "file": "src/domain/verifier.ts",
+      "names": [
+        "PREDICATE_PATTERNS",
+        "NEGATION_RE",
+        "splitSentences",
+        "splitClauses",
+        "extractClaims",
+        "PREDICATE_LABEL",
+        "predicateLabel",
+        "verifyClaim",
+        "misconception",
+        "classifyBrandRole",
+        "hostOf",
+        "classifySource",
+        "checkCitation",
+        "adjudicate"
+      ]
+    },
+    {
+      "file": "src/providers/live.ts",
+      "names": [
+        "LiveProvider",
+        "liveProviders"
+      ]
+    },
+    {
+      "file": "src/providers/prng.ts",
+      "names": [
+        "hashSeed",
+        "mulberry32"
+      ]
+    },
+    {
+      "file": "src/providers/registry.ts",
+      "names": [
+        "buildRegistry",
+        "liveProviderCount",
+        "surfacesFor"
+      ]
+    },
+    {
+      "file": "src/providers/resilience.ts",
+      "names": [
+        "CircuitOpenError",
+        "ProviderHttpError",
+        "DEFAULT_POLICY",
+        "isRetryable",
+        "backoffDelay",
+        "ResilientProvider",
+        "withResilience"
+      ]
+    },
+    {
+      "file": "src/providers/simulated.ts",
+      "names": [
+        "SIMULATED_SURFACES",
+        "SimulatedProvider"
+      ]
+    },
+    {
+      "file": "src/server.ts",
+      "names": [
+        "SAMPLE_CSV",
+        "buildServer",
+        "undeclaredMutatingRoutes",
+        "extractorEval"
+      ]
+    },
+    {
+      "file": "src/services/actionEngine.ts",
+      "names": [
+        "METRIC_LABEL",
+        "UnknownActionTypeError",
+        "createAction",
+        "transitionAction",
+        "createExperimentForAction",
+        "matchedControlsFor",
+        "matchedControls",
+        "analyzeExperimentForAction",
+        "countMetric",
+        "attachBusinessOutcome"
+      ]
+    },
+    {
+      "file": "src/services/alerts.ts",
+      "names": [
+        "ALERT_KINDS",
+        "SEVERITY_RANK",
+        "generateAlerts",
+        "predicateOf",
+        "meetsSeverity"
+      ]
+    },
+    {
+      "file": "src/services/audit.ts",
+      "names": [
+        "AUDIT_BUDGET_RUNS",
+        "newAuditToken",
+        "createAuditReport",
+        "getAuditReportByToken",
+        "getAuditReport",
+        "listAuditReports",
+        "runAudit",
+        "summarise",
+        "poweredFor",
+        "notTested",
+        "inferCompetitors",
+        "startMonitoring"
+      ]
+    },
+    {
+      "file": "src/services/connectors.ts",
+      "names": [
+        "prBody",
+        "GithubConnector",
+        "WebflowConnector",
+        "WordpressConnector",
+        "RecordingConnector",
+        "SCHEMA_TYPES",
+        "buildJsonLd",
+        "correctionPacket",
+        "createConnectorConfig",
+        "listConnectorConfigs",
+        "getConnectorConfig",
+        "shipAction"
+      ]
+    },
+    {
+      "file": "src/services/dashboard.ts",
+      "names": [
+        "listWindows",
+        "latestWindow",
+        "rollupFrom",
+        "buildDashboard"
+      ]
+    },
+    {
+      "file": "src/services/delivery.ts",
+      "names": [
+        "MAX_ATTEMPTS",
+        "signBody",
+        "EmailTransport",
+        "SlackTransport",
+        "WebhookTransport",
+        "RecordingTransport",
+        "defaultTransports",
+        "dispatchAlerts",
+        "alertPayload",
+        "buildDigest",
+        "sendDigest"
+      ]
+    },
+    {
+      "file": "src/services/demand.ts",
+      "names": [
+        "DEMAND_SOURCES",
+        "SOURCE_LABEL",
+        "parseDemandCsv",
+        "importDemand",
+        "familyCounts",
+        "setMarkets",
+        "stripLocalePrefix",
+        "marketBreakdown"
+      ]
+    },
+    {
+      "file": "src/services/index-report.ts",
+      "names": [
+        "K_ANON",
+        "EXPORT_FIELDS",
+        "quarterOf",
+        "PREDICATE_CLASS",
+        "predicateClass",
+        "indexRowsFor",
+        "buildIndex",
+        "buildIndexReport",
+        "setConsent"
+      ]
+    },
+    {
+      "file": "src/services/observatory.ts",
+      "names": [
+        "runSamplingRound",
+        "meanRunCost"
+      ]
+    },
+    {
+      "file": "src/services/recheck.ts",
+      "names": [
+        "recheckCitation",
+        "diffAroundClaim",
+        "pruneOldSnapshots"
+      ]
+    },
+    {
+      "file": "src/services/scheduler.ts",
+      "names": [
+        "tick",
+        "Scheduler",
+        "runDigests"
+      ]
+    },
+    {
+      "file": "src/services/siteReader.ts",
+      "names": [
+        "CANDIDATE_PATHS",
+        "MAX_PAGES",
+        "THIN_TEXT_CHARS",
+        "THIN_HTML_BYTES",
+        "thinPages",
+        "crawlSite",
+        "parsePage",
+        "navLinks",
+        "inferBrandName",
+        "proposeCanonicalClaims",
+        "tightenAround",
+        "isQuestionHeading",
+        "autoDemand",
+        "TEMPLATES"
+      ]
+    },
+    {
+      "file": "src/web/html.ts",
+      "names": [
+        "Raw",
+        "raw",
+        "escapeHtml",
+        "html",
+        "pct"
+      ]
+    },
+    {
+      "file": "src/web/seo.ts",
+      "names": [
+        "SITE_URL",
+        "CANONICAL_HOST",
+        "SITE_NAME",
+        "SITE_TAGLINE",
+        "BRAND_MARK",
+        "BRAND_INK",
+        "BRAND_PAPER",
+        "BRAND_CLAY",
+        "canonical",
+        "sitemapEntries",
+        "renderSitemap",
+        "AI_CRAWLERS",
+        "renderRobots",
+        "renderLlmsTxt",
+        "organizationLd",
+        "softwareLd",
+        "faqLd",
+        "blogPostingLd",
+        "breadcrumbLd",
+        "faviconSvg"
+      ]
+    },
+    {
+      "file": "src/web/views/blog.ts",
+      "names": [
+        "blogIndexView",
+        "postView"
+      ]
+    },
+    {
+      "file": "src/web/views/dashboard.ts",
+      "names": [
+        "measureEl",
+        "dashboardView",
+        "highlight",
+        "defectDetailView"
+      ]
+    },
+    {
+      "file": "src/web/views/landing.ts",
+      "names": [
+        "landingView"
+      ]
+    },
+    {
+      "file": "src/web/views/layout.ts",
+      "names": [
+        "injectCsrf",
+        "page",
+        "flash",
+        "reportPage",
+        "publicPage",
+        "marketingPage"
+      ]
+    },
+    {
+      "file": "src/web/views/login.ts",
+      "names": [
+        "loginView"
+      ]
+    },
+    {
+      "file": "src/web/views/ops.ts",
+      "names": [
+        "schedulesView",
+        "alertsView",
+        "channelsView",
+        "snapshotView",
+        "portfolioView",
+        "marketsView",
+        "indexView",
+        "auditReportView",
+        "auditAdminView"
+      ]
+    },
+    {
+      "file": "src/web/views/pages.ts",
+      "names": [
+        "clustersView",
+        "clusterDetailView",
+        "truthView",
+        "truthHistoryView",
+        "observatoryView",
+        "runDetailView",
+        "actionsView",
+        "actionDetailView",
+        "experimentsView",
+        "experimentDetailView",
+        "crawlersView",
+        "entitiesView",
+        "methodologyView",
+        "auditView"
+      ]
+    }
+  ],
+  "protectedFiles": [
+    {
+      "file": "tests/e2e/flows.spec.ts",
+      "sha256": "74dcd21ac036ad8370cbac35c631c9277e75d1e9c0e465562f07317760cfa5b7"
+    },
+    {
+      "file": "tests/e2e/phases.spec.ts",
+      "sha256": "1b62c35c809a84e1195c03c006e0d3b8112633264ff2ecf6143e5c5050593b65"
+    },
+    {
+      "file": "tests/integration/agency-index.test.ts",
+      "sha256": "198dcc088ca0bb3a8b9cb6c05554c12494a5e9d116435622235d9d5820658396"
+    },
+    {
+      "file": "tests/integration/audit.test.ts",
+      "sha256": "f0c0b545d318541483e2963c747c3269fe7548ad72958a1615df96307bc9d9c4"
+    },
+    {
+      "file": "tests/integration/evidence.test.ts",
+      "sha256": "a669bf2b095629367d1d41e4cafed4a0a5b54bd6dad1d268a66fe4e331a5aa26"
+    },
+    {
+      "file": "tests/integration/http.test.ts",
+      "sha256": "9cf04a67f38892457b899fffe5b30584080a880c082c95272a9df9829cb4122d"
+    },
+    {
+      "file": "tests/integration/pipeline.test.ts",
+      "sha256": "ae404f8dfdcf0305c628302724a0e1d347da528c009e948fad128ef83ba7f989"
+    },
+    {
+      "file": "tests/integration/security.test.ts",
+      "sha256": "dcd7245657da0f3290a05eba5e714f0ad2b1a54764cc6e6dc7d3944d3eb4e6d9"
+    },
+    {
+      "file": "tests/integration/seo.test.ts",
+      "sha256": "811732b472d1d3030891c161de1893bce7c1c30d007de26bffadb9f79882145d"
+    },
+    {
+      "file": "tests/integration/unattended.test.ts",
+      "sha256": "2a9be6127396bcd5b3e8210b37842911895da4c73dbd0a55f500c0f96f4aab05"
+    },
+    {
+      "file": "tests/unit/actions.test.ts",
+      "sha256": "5c7d37574efb01065034ebb639e8828e347c94601ea87be00afadec55daed2fb"
+    },
+    {
+      "file": "tests/unit/agency.test.ts",
+      "sha256": "17687932ebf8481b4ee4490658c7f83bdb44d263fe77d28fe7c007efa1f5a116"
+    },
+    {
+      "file": "tests/unit/crawlers.test.ts",
+      "sha256": "9f248b68d63eeb1492991795668576b1ee5466ec00677baf38aa3d87174caff8"
+    },
+    {
+      "file": "tests/unit/entities.test.ts",
+      "sha256": "439099294c386ef37b3080ee1ee5b5756e4f60cb48a4cc0fda306f4d2d74f530"
+    },
+    {
+      "file": "tests/unit/experiments.test.ts",
+      "sha256": "af379d06469b6996a8d39a7639920e7df488fde0e0c3aa2e8d61e46354b56121"
+    },
+    {
+      "file": "tests/unit/extractor-eval.test.ts",
+      "sha256": "30eb938f68c706c4787fdd3b40e261b8d07bf4f81cb6cf174ccc17e24e4b7a8b"
+    },
+    {
+      "file": "tests/unit/extractor.test.ts",
+      "sha256": "7d111d2b5fc422e0b5722bd43d26ed514534bb7e234c231031f35a37aeb0a5d6"
+    },
+    {
+      "file": "tests/unit/fetcher.test.ts",
+      "sha256": "12964181149e4d96062528d5e0b613d7ae046a01ea224b8504ad539195dd5bc8"
+    },
+    {
+      "file": "tests/unit/foundation.test.ts",
+      "sha256": "aac8e645951b7f7f082d79835d8515637766707de269a5abfc3a4396e2e80e3b"
+    },
+    {
+      "file": "tests/unit/intent.test.ts",
+      "sha256": "3f8ead55ac23c8c36afec9778471b2bd60f1d1c2be50c1b9c29a00aafdb98c2b"
+    },
+    {
+      "file": "tests/unit/priority.test.ts",
+      "sha256": "9bc4a776d6b854be97f0774314485b9cb236ae0c67e16f276d2f378bcd038d34"
+    },
+    {
+      "file": "tests/unit/product-copy.test.ts",
+      "sha256": "395c28fedc4c91da013fb5fdf6656ddbf14512884c83df87af00651860379750"
+    },
+    {
+      "file": "tests/unit/providers.test.ts",
+      "sha256": "3011c2012eb6c12a375ac3e31ec1fae62e2d7385f87b29571db90fd21b17a18a"
+    },
+    {
+      "file": "tests/unit/resilience.test.ts",
+      "sha256": "2ff3f4ae425016aabae1c17a3f4f1cfde08647b1c08df56a356563ca67fe608c"
+    },
+    {
+      "file": "tests/unit/sampling.test.ts",
+      "sha256": "7bcf49357617974d8ad2e8ec31cbf0c475741be27f97ad3619ca08fe4eb626d4"
+    },
+    {
+      "file": "tests/unit/scheduling.test.ts",
+      "sha256": "cf5f046b7758c99112699c49ee84341e0f586e3cc2042d418b37bfbc12f05f47"
+    },
+    {
+      "file": "tests/unit/sequential.test.ts",
+      "sha256": "0164112a8a5da8e0fd3288246d24a84a3cf5910b17652dd4ab2e5c980c6612e9"
+    },
+    {
+      "file": "tests/unit/stats.test.ts",
+      "sha256": "14ebb12f1f2e026449105ada2974ba246dc9e4a6b2408f42d39c2dd1648aed00"
+    },
+    {
+      "file": "tests/unit/tenancy.test.ts",
+      "sha256": "d6ad1ea5ac3b2d6a7873671be03c1b3ed14f57472cd2d3c997813eb92b351fdc"
+    },
+    {
+      "file": "tests/unit/truth.test.ts",
+      "sha256": "9d200e35239076ef6fcc46590570e9159ed22c382ae7575853aea082a2a9d73f"
+    },
+    {
+      "file": "tests/unit/verifier.test.ts",
+      "sha256": "edca9e6831106ad7b10d72e46525d3f28cb5d6d1db407fb7ebf2fa2a100d8266"
+    },
+    {
+      "file": "src/db/migrations/001_init.sql",
+      "sha256": "7647033fc2012888bd4cebee6d3e15dbed986f89292773bdd6318c607010e1ae"
+    },
+    {
+      "file": "src/db/migrations/002_audit_requests.sql",
+      "sha256": "e76cc0f426459b38e015d55a1b8301aa73e6082b8ea9ea02525f17cb13235413"
+    },
+    {
+      "file": "src/db/migrations/003_unattended.sql",
+      "sha256": "d1d2a55e7b9f1c2f128274d3fd83d5395815ec45ec75b2153372410d1e5b18e5"
+    },
+    {
+      "file": "src/db/migrations/004_evidence.sql",
+      "sha256": "824f14161f23516f52410f89b7d82ae85d36ca5b064dd9e6ab9c112b2fd43596"
+    },
+    {
+      "file": "src/db/migrations/005_extractor.sql",
+      "sha256": "065b0badc30339ce2c070788d17f98eaf7bc7fd419a1e23c746cdc0d97181f26"
+    },
+    {
+      "file": "src/db/migrations/006_connectors.sql",
+      "sha256": "d471a5c9875d03136affdaa01c323242aa9425f163e53d9b652853d1a71e7ba9"
+    },
+    {
+      "file": "src/db/migrations/007_agency_geo_audit_index.sql",
+      "sha256": "9ed8b6f5a072aee7e9b5b547685529106a2a10d833d5dfaa88a0f2dccf628e8c"
+    },
+    {
+      "file": "src/db/migrations/008_audit_honesty.sql",
+      "sha256": "814b950a85d5cf344705a7389ed3e98067ba3fa9e00d9609600689e8fe36c837"
+    }
+  ]
+}

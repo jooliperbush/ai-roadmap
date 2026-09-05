@@ -20,7 +20,12 @@ export const RELATIONS = [
 
 export type Relation = (typeof RELATIONS)[number];
 
-export const RELATION_BASES = ['customer_declared', 'market_registry', 'contract', 'observed_comention'] as const;
+export const RELATION_BASES = [
+  'customer_declared',
+  'market_registry',
+  'contract',
+  'observed_comention',
+] as const;
 export type RelationBasis = (typeof RELATION_BASES)[number];
 
 export const RELATION_LABEL: Record<Relation, string> = {
@@ -49,13 +54,18 @@ export class WeakBasisError extends Error {
 }
 
 export function resolveRelation(proposed: Relation, basis: RelationBasis): Relation {
-  if (proposed === 'unrelated_comention') return proposed;
-  if (STRONG_BASES.includes(basis)) return proposed;
-  throw new WeakBasisError(proposed);
+  if (basis === 'observed_comention' && proposed !== 'unrelated_comention')
+    throw new WeakBasisError(proposed);
+  if (proposed !== 'unrelated_comention' && !STRONG_BASES.some((allowed) => allowed === basis))
+    throw new WeakBasisError(proposed);
+  return proposed;
 }
 
 /** Co-mention observations become candidates for human classification, not conclusions. */
-export function comentionCandidate(entityName: string, count: number): {
+export function comentionCandidate(
+  entityName: string,
+  count: number,
+): {
   entityName: string;
   relation: Relation;
   basis: RelationBasis;
@@ -72,13 +82,60 @@ export function comentionCandidate(entityName: string, count: number): {
 }
 
 /** Extract capitalised organisation-shaped names from an answer, minus the brand itself. */
-export function extractCandidateEntities(answerText: string, brandName: string, known: string[] = []): string[] {
+export function extractCandidateEntities(
+  answerText: string,
+  brandName: string,
+  known: string[] = [],
+): string[] {
   const found = new Set<string>();
   const re = /\b([A-Z][a-zA-Z0-9]+(?:\.[a-z]{2,3})?(?: [A-Z][a-zA-Z0-9]+){0,2})\b/g;
   const stop = new Set([
-    'The','This','That','These','Those','It','If','You','Your','I','A','An','And','But','However','While',
-    'For','With','From','As','At','In','On','To','Of','Note','Yes','No','Both','Their','There','When','What',
-    'Overall','Summary','Key','Sources','Source','Based','According','Here','One','Two','Three','Most','Some',
+    'The',
+    'This',
+    'That',
+    'These',
+    'Those',
+    'It',
+    'If',
+    'You',
+    'Your',
+    'I',
+    'A',
+    'An',
+    'And',
+    'But',
+    'However',
+    'While',
+    'For',
+    'With',
+    'From',
+    'As',
+    'At',
+    'In',
+    'On',
+    'To',
+    'Of',
+    'Note',
+    'Yes',
+    'No',
+    'Both',
+    'Their',
+    'There',
+    'When',
+    'What',
+    'Overall',
+    'Summary',
+    'Key',
+    'Sources',
+    'Source',
+    'Based',
+    'According',
+    'Here',
+    'One',
+    'Two',
+    'Three',
+    'Most',
+    'Some',
   ]);
   let m: RegExpExecArray | null;
   while ((m = re.exec(answerText))) {

@@ -31,7 +31,15 @@ export type FetchErrorKind =
   | 'blocked';
 
 export const FETCH_ERROR_KINDS: FetchErrorKind[] = [
-  'dns', 'timeout', 'http_404', 'http_4xx', 'http_5xx', 'robots_disallowed', 'too_large', 'invalid_url', 'blocked',
+  'dns',
+  'timeout',
+  'http_404',
+  'http_4xx',
+  'http_5xx',
+  'robots_disallowed',
+  'too_large',
+  'invalid_url',
+  'blocked',
 ];
 
 export const FETCH_ERROR_LABEL: Record<FetchErrorKind, string> = {
@@ -71,7 +79,8 @@ export function sha256Of(s: string): string {
 export function isBlockedHost(host: string): boolean {
   if (!host) return true;
   const h = host.toLowerCase();
-  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.internal') || h.endsWith('.local')) return true;
+  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.internal') || h.endsWith('.local'))
+    return true;
   if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(h)) return true;
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
   if (h === '::1' || h === '[::1]') return true;
@@ -90,45 +99,45 @@ export function statusToError(status: number): FetchErrorKind {
  * licence.
  */
 export function parseRobots(text: string, agent = 'miscited'): { disallow: string[]; allow: string[] } {
-  const lines = text.split(/\r?\n/).map((l) => l.replace(/#.*$/, '').trim()).filter(Boolean);
-  const groups: Array<{ agents: string[]; disallow: string[]; allow: string[] }> = [];
-  let current: { agents: string[]; disallow: string[]; allow: string[] } | null = null;
-  let lastWasAgent = false;
-  for (const line of lines) {
-    const [rawKey, ...rest] = line.split(':');
-    const key = rawKey.trim().toLowerCase();
-    const value = rest.join(':').trim();
+  type Group = { agents: string[]; disallow: string[]; allow: string[] };
+  const groups: Group[] = [];
+  let active: Group | undefined;
+  let consecutiveAgent = false;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/#.*$/, '').trim();
+    if (!line) continue;
+    const separator = line.indexOf(':');
+    const key = (separator < 0 ? line : line.slice(0, separator)).trim().toLowerCase();
+    const value = separator < 0 ? '' : line.slice(separator + 1).trim();
     if (key === 'user-agent') {
-      if (!current || !lastWasAgent) {
-        current = { agents: [], disallow: [], allow: [] };
-        groups.push(current);
+      if (!active || !consecutiveAgent) {
+        active = { agents: [], disallow: [], allow: [] };
+        groups.push(active);
       }
-      current.agents.push(value.toLowerCase());
-      lastWasAgent = true;
-      continue;
-    }
-    lastWasAgent = false;
-    if (!current) continue;
-    if (key === 'disallow') current.disallow.push(value);
-    else if (key === 'allow') current.allow.push(value);
+      active.agents.push(value.toLowerCase());
+    } else if (active && (key === 'disallow' || key === 'allow')) active[key].push(value);
+    consecutiveAgent = key === 'user-agent';
   }
-  const applicable = groups.filter((g) => g.agents.some((a) => a === '*' || agent.includes(a)));
-  const specific = applicable.filter((g) => g.agents.some((a) => a !== '*'));
-  const chosen = specific.length ? specific : applicable;
-  return {
-    disallow: chosen.flatMap((g) => g.disallow).filter((d) => d.length > 0),
-    allow: chosen.flatMap((g) => g.allow).filter((a) => a.length > 0),
-  };
+  const applicable = groups.filter((group) =>
+    group.agents.some((name) => name === '*' || agent.includes(name)),
+  );
+  const specific = applicable.filter((group) => group.agents.some((name) => name !== '*'));
+  return (specific.length ? specific : applicable).reduce(
+    (rules, group) => ({
+      disallow: [...rules.disallow, ...group.disallow.filter(Boolean)],
+      allow: [...rules.allow, ...group.allow.filter(Boolean)],
+    }),
+    { disallow: [] as string[], allow: [] as string[] },
+  );
 }
 
 export function robotsAllows(rules: { disallow: string[]; allow: string[] }, path: string): boolean {
-  const longest = (list: string[]) =>
-    list.filter((p) => path.startsWith(p)).sort((a, b) => b.length - a.length)[0] ?? null;
-  const d = longest(rules.disallow);
-  if (!d) return true;
-  const a = longest(rules.allow);
-  // Longest match wins, which is what the major crawlers do.
-  return a !== null && a.length >= d.length;
+  const longest = (prefixes: string[]) =>
+    prefixes.reduce(
+      (length, prefix) => (path.startsWith(prefix) ? Math.max(length, prefix.length) : length),
+      0,
+    );
+  return longest(rules.allow) >= longest(rules.disallow);
 }
 
 /** Strip markup so a claim check reads text, not attributes and script bodies. */
@@ -162,128 +171,105 @@ interface HttpFetcherOptions {
  * the rest queued, because being polite is cheaper than being blocked.
  */
 export class HttpFetcher implements Fetcher {
-  private robotsCache = new Map<string, { disallow: string[]; allow: string[] }>();
-  private hostQueues = new Map<string, Promise<unknown>[]>();
-  private fetchImpl: typeof fetch;
-  private now: () => Date;
-  private maxBytes: number;
-  private timeoutMs: number;
-  private maxAttempts: number;
-  private sleep: (ms: number) => Promise<void>;
-  private respectRobots: boolean;
-
+  private settings: Required<HttpFetcherOptions>;
+  private robots = new Map<string, { disallow: string[]; allow: string[] }>();
+  private slots = new Map<string, { active: number; waiting: Array<() => void> }>();
   constructor(opts: HttpFetcherOptions = {}) {
-    this.fetchImpl = opts.fetchImpl ?? fetch;
-    this.now = opts.now ?? (() => new Date());
-    this.maxBytes = opts.maxBytes ?? MAX_BYTES;
-    this.timeoutMs = opts.timeoutMs ?? TIMEOUT_MS;
-    this.maxAttempts = opts.maxAttempts ?? MAX_ATTEMPTS;
-    this.sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
-    this.respectRobots = opts.respectRobots ?? true;
+    this.settings = {
+      fetchImpl: opts.fetchImpl ?? fetch,
+      now: opts.now ?? (() => new Date()),
+      maxBytes: opts.maxBytes ?? MAX_BYTES,
+      timeoutMs: opts.timeoutMs ?? TIMEOUT_MS,
+      maxAttempts: opts.maxAttempts ?? MAX_ATTEMPTS,
+      sleep: opts.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
+      respectRobots: opts.respectRobots ?? true,
+    };
   }
-
   async fetch(url: string): Promise<FetchOutcome> {
-    const at = this.now().toISOString();
+    const fetchedAt = this.settings.now().toISOString();
     let parsed: URL;
     try {
       parsed = new URL(url);
-      if (!/^https?:$/.test(parsed.protocol)) throw new Error('scheme');
+      if (!['http:', 'https:'].includes(parsed.protocol)) return fail(url, 'invalid_url', fetchedAt);
     } catch {
-      return fail(url, 'invalid_url', at);
+      return fail(url, 'invalid_url', fetchedAt);
     }
-    if (isBlockedHost(parsed.hostname)) return fail(url, 'blocked', at);
-
-    if (this.respectRobots) {
-      const rules = await this.robotsFor(parsed);
-      if (!robotsAllows(rules, parsed.pathname)) return fail(url, 'robots_disallowed', at);
-    }
-
-    return this.withHostSlot(parsed.host, () => this.attempt(parsed, at));
-  }
-
-  private async attempt(parsed: URL, at: string): Promise<FetchOutcome> {
-    let lastError: FetchErrorKind = 'timeout';
-    for (let i = 1; i <= this.maxAttempts; i++) {
-      try {
-        const res = await this.withTimeout(parsed.toString());
-        if (!res.ok) {
-          lastError = statusToError(res.status);
-          // 4xx other than 429 is a fact about the page, not a transient failure.
-          if (res.status < 500 && res.status !== 429) {
-            return { ...fail(parsed.toString(), lastError, at), status: res.status };
-          }
-          if (i === this.maxAttempts) return { ...fail(parsed.toString(), lastError, at), status: res.status };
-          await this.sleep(200 * i);
-          continue;
-        }
-        const contentType = res.headers.get('content-type') ?? '';
-        const raw = await res.text();
-        const truncated = raw.length > this.maxBytes;
-        const body = truncated ? raw.slice(0, this.maxBytes) : raw;
-        return {
-          url: parsed.toString(),
-          ok: true,
-          sha256: sha256Of(raw),
-          body,
-          bytes: raw.length,
-          contentType,
-          truncated,
-          status: res.status,
-          error: null,
-          fetchedAt: at,
-        };
-      } catch (err) {
-        lastError = classifyError(err);
-        if (i === this.maxAttempts) return fail(parsed.toString(), lastError, at);
-        await this.sleep(200 * i);
-      }
-    }
-    return fail(parsed.toString(), lastError, at);
-  }
-
-  private async withTimeout(url: string): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    if (isBlockedHost(parsed.hostname)) return fail(url, 'blocked', fetchedAt);
+    if (this.settings.respectRobots && !robotsAllows(await this.rulesFor(parsed), parsed.pathname))
+      return fail(url, 'robots_disallowed', fetchedAt);
+    const release = await this.acquire(parsed.host);
     try {
-      return await this.fetchImpl(url, {
+      return await this.retrieve(parsed.toString(), fetchedAt);
+    } finally {
+      release();
+    }
+  }
+  private async acquire(host: string): Promise<() => void> {
+    const state = this.slots.get(host) ?? { active: 0, waiting: [] };
+    this.slots.set(host, state);
+    if (state.active >= PER_HOST_CONCURRENCY)
+      await new Promise<void>((resolve) => state.waiting.push(resolve));
+    else state.active++;
+    return () => {
+      const next = state.waiting.shift();
+      if (next) next();
+      else state.active--;
+    };
+  }
+  private async request(url: string): Promise<Response> {
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), this.settings.timeoutMs);
+    try {
+      return await this.settings.fetchImpl(url, {
         headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/xhtml+xml' },
-        signal: controller.signal,
+        signal: abort.signal,
         redirect: 'follow',
       });
     } finally {
-      clearTimeout(timer);
+      clearTimeout(timeout);
     }
   }
-
-  private async robotsFor(parsed: URL): Promise<{ disallow: string[]; allow: string[] }> {
-    const cached = this.robotsCache.get(parsed.host);
-    if (cached) return cached;
-    let rules = { disallow: [] as string[], allow: [] as string[] };
+  private async rulesFor(url: URL): Promise<{ disallow: string[]; allow: string[] }> {
+    let rules = this.robots.get(url.host);
+    if (rules) return rules;
+    rules = { disallow: [], allow: [] };
     try {
-      const res = await this.withTimeout(`${parsed.protocol}//${parsed.host}/robots.txt`);
-      if (res.ok) rules = parseRobots(await res.text());
+      const response = await this.request(url.protocol + '//' + url.host + '/robots.txt');
+      if (response.ok) rules = parseRobots(await response.text());
     } catch {
-      // No robots.txt reachable means no stated restriction. We do not invent one, and we do
-      // not treat the absence as permission to ignore a future one: the cache is per process.
+      /* An unreachable robots file states no restrictions. */
     }
-    this.robotsCache.set(parsed.host, rules);
+    this.robots.set(url.host, rules);
     return rules;
   }
-
-  private async withHostSlot<T>(host: string, fn: () => Promise<T>): Promise<T> {
-    const queue = this.hostQueues.get(host) ?? [];
-    this.hostQueues.set(host, queue);
-    while (queue.length >= PER_HOST_CONCURRENCY) {
-      await Promise.race(queue).catch(() => undefined);
+  private async retrieve(url: string, fetchedAt: string): Promise<FetchOutcome> {
+    let outcome = fail(url, 'timeout', fetchedAt);
+    for (let index = 0; index < this.settings.maxAttempts; index++) {
+      try {
+        const response = await this.request(url);
+        if (response.ok) {
+          const raw = await response.text();
+          return {
+            url,
+            ok: true,
+            sha256: sha256Of(raw),
+            body: raw.slice(0, this.settings.maxBytes),
+            bytes: raw.length,
+            contentType: response.headers.get('content-type') ?? '',
+            truncated: raw.length > this.settings.maxBytes,
+            status: response.status,
+            error: null,
+            fetchedAt,
+          };
+        }
+        outcome = { ...fail(url, statusToError(response.status), fetchedAt), status: response.status };
+        if (response.status < 500 && response.status !== 429) return outcome;
+      } catch (error) {
+        outcome = fail(url, classifyError(error), fetchedAt);
+      }
+      if (index + 1 < this.settings.maxAttempts) await this.settings.sleep(200 * (index + 1));
     }
-    const p = fn();
-    queue.push(p);
-    try {
-      return await p;
-    } finally {
-      const i = queue.indexOf(p);
-      if (i >= 0) queue.splice(i, 1);
-    }
+    return outcome;
   }
 }
 
@@ -295,21 +281,40 @@ function classifyError(err: unknown): FetchErrorKind {
 }
 
 function fail(url: string, error: FetchErrorKind, at: string): FetchOutcome {
-  return { url, ok: false, sha256: null, body: null, bytes: 0, contentType: '', truncated: false, status: null, error, fetchedAt: at };
+  return {
+    url,
+    ok: false,
+    sha256: null,
+    body: null,
+    bytes: 0,
+    contentType: '',
+    truncated: false,
+    status: null,
+    error,
+    fetchedAt: at,
+  };
 }
 
 /** A fetcher that never touches the network. The default in tests and in the seeded demo. */
 export class StubFetcher implements Fetcher {
-  constructor(private pages: Record<string, { body?: string; status?: number; error?: FetchErrorKind }>, private now: () => Date = () => new Date()) {}
+  constructor(
+    private pages: Record<string, { body?: string; status?: number; error?: FetchErrorKind }>,
+    private now: () => Date = () => new Date(),
+  ) {}
   async fetch(url: string): Promise<FetchOutcome> {
-    const at = this.now().toISOString();
-    const hit = this.pages[url] ?? this.pages[url.replace(/\/$/, '')];
-    if (!hit) return fail(url, 'http_404', at);
-    if (hit.error) return fail(url, hit.error, at);
-    const body = hit.body ?? '';
+    const fetchedAt = this.now().toISOString();
+    const page = this.pages[url] ?? this.pages[url.replace(/\/$/, '')];
+    if (!page || page.error) return fail(url, page?.error ?? 'http_404', fetchedAt);
+    const body = page.body ?? '';
     return {
-      url, ok: true, sha256: sha256Of(body), body, bytes: body.length,
-      contentType: 'text/html', truncated: false, status: hit.status ?? 200, error: null, fetchedAt: at,
+      ...fail(url, 'http_404', fetchedAt),
+      ok: true,
+      sha256: sha256Of(body),
+      body,
+      bytes: body.length,
+      contentType: 'text/html',
+      status: page.status ?? 200,
+      error: null,
     };
   }
 }

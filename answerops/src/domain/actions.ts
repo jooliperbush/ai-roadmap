@@ -42,11 +42,14 @@ export const STATE_LABEL: Record<ActionState, string> = {
 };
 
 export function canTransition(from: ActionState, to: ActionState): boolean {
-  return (ALLOWED_TRANSITIONS[from] ?? []).includes(to);
+  return ALLOWED_TRANSITIONS[from]?.some((state) => state === to) ?? false;
 }
 
 export class IllegalTransitionError extends Error {
-  constructor(public from: ActionState, public to: ActionState) {
+  constructor(
+    public from: ActionState,
+    public to: ActionState,
+  ) {
     super(
       `Illegal action transition ${from} -> ${to}. Allowed from ${from}: ` +
         `${(ALLOWED_TRANSITIONS[from] ?? []).join(', ') || 'none (terminal state)'}.`,
@@ -68,7 +71,10 @@ export class MissingEvidenceError extends Error {
 }
 
 export function assertEvidence(evidence: string[]): void {
-  if (!Array.isArray(evidence) || evidence.filter((e) => typeof e === 'string' && e.trim()).length === 0) {
-    throw new MissingEvidenceError();
-  }
+  if (
+    Array.isArray(evidence) &&
+    evidence.some((reference) => typeof reference === 'string' && reference.trim().length > 0)
+  )
+    return;
+  throw new MissingEvidenceError();
 }

@@ -19,25 +19,62 @@ import { hashSeed, mulberry32 } from './prng.js';
 import type { ProviderAdapter, RunRequest, RunResult, SurfaceDescriptor, ProviderCitation } from './types.js';
 
 export const SIMULATED_SURFACES: SurfaceDescriptor[] = [
-  { provider: 'openai', modelId: 'sim-gpt', modelVersion: 'sim-2026-05', surface: 'api', grounding: 'grounded_search', searchMode: 'web_search_preview', label: 'OpenAI · API · grounded' },
-  { provider: 'openai', modelId: 'sim-gpt', modelVersion: 'sim-2026-05', surface: 'consumer_app', grounding: 'training_memory', searchMode: 'off', label: 'OpenAI · consumer app · ungrounded' },
-  { provider: 'anthropic', modelId: 'sim-claude', modelVersion: 'sim-2026-04', surface: 'api', grounding: 'grounded_search', searchMode: 'web_search', label: 'Anthropic · API · grounded' },
-  { provider: 'google', modelId: 'sim-gemini', modelVersion: 'sim-2026-03', surface: 'api', grounding: 'hybrid', searchMode: 'google_search_retrieval', label: 'Google · API · hybrid' },
-  { provider: 'perplexity', modelId: 'sim-sonar', modelVersion: 'sim-2026-05', surface: 'search_product', grounding: 'grounded_search', searchMode: 'always', label: 'Perplexity · search product · grounded' },
+  {
+    provider: 'openai',
+    modelId: 'sim-gpt',
+    modelVersion: 'sim-2026-05',
+    surface: 'api',
+    grounding: 'grounded_search',
+    searchMode: 'web_search_preview',
+    label: 'OpenAI · API · grounded',
+  },
+  {
+    provider: 'openai',
+    modelId: 'sim-gpt',
+    modelVersion: 'sim-2026-05',
+    surface: 'consumer_app',
+    grounding: 'training_memory',
+    searchMode: 'off',
+    label: 'OpenAI · consumer app · ungrounded',
+  },
+  {
+    provider: 'anthropic',
+    modelId: 'sim-claude',
+    modelVersion: 'sim-2026-04',
+    surface: 'api',
+    grounding: 'grounded_search',
+    searchMode: 'web_search',
+    label: 'Anthropic · API · grounded',
+  },
+  {
+    provider: 'google',
+    modelId: 'sim-gemini',
+    modelVersion: 'sim-2026-03',
+    surface: 'api',
+    grounding: 'hybrid',
+    searchMode: 'google_search_retrieval',
+    label: 'Google · API · hybrid',
+  },
+  {
+    provider: 'perplexity',
+    modelId: 'sim-sonar',
+    modelVersion: 'sim-2026-05',
+    surface: 'search_product',
+    grounding: 'grounded_search',
+    searchMode: 'always',
+    label: 'Perplexity · search product · grounded',
+  },
 ];
 
 export class SimulatedProvider implements ProviderAdapter {
   key = 'simulated';
   displayName = 'Deterministic simulation';
   surfaces = SIMULATED_SURFACES;
-
   available(): boolean {
     return true;
   }
-
   async run(req: RunRequest): Promise<RunResult> {
-    const profile = req.beliefs;
-    const rnd = mulberry32(
+    const random = mulberry32(
       hashSeed(
         req.surface.provider,
         req.surface.modelId,
@@ -49,67 +86,50 @@ export class SimulatedProvider implements ProviderAdapter {
         req.seed,
       ),
     );
-
-    if (!profile) {
-      return {
-        answerText: `I don't have enough information about ${req.brandName} to answer that reliably.`,
-        citations: [],
-        searchQueries: [],
-        latencyMs: 400,
-        costUsd: null,
-        simulated: true,
-        systemConfigHash: configHash(req),
-        modelVersion: req.surface.modelVersion,
-      };
-    }
-
-    // Absence: on unaided and comparison questions a model often answers without naming the
-    // brand at all. That silence is the finding in section 2 of the dashboard, so it has to be
-    // producible here rather than assumed away.
-    const absenceProb = profile.absenceByFamily?.[req.intentFamily ?? ''] ?? 0;
-    if (absenceProb > 0 && rnd() < absenceProb) {
-      return {
-        answerText: absentAnswer(req, rnd),
-        citations: [],
-        searchQueries: req.surface.grounding === 'training_memory' ? [] : [firstWords(req.prompt, 6)],
-        latencyMs: 300 + Math.floor(rnd() * 1800),
-        costUsd: null,
-        simulated: true,
-        systemConfigHash: configHash(req),
-        modelVersion: req.surface.modelVersion,
-      };
-    }
-
-    const parts: string[] = [];
-    const citations: ProviderCitation[] = [];
-
-    const opening = pick(profile.opening, rnd);
-    parts.push(opening.replace(/\{brand\}/g, profile.brandName));
-
-    for (const belief of profile.beliefs) {
-      const bias = belief.surfaceBias?.[req.surface.provider] ?? belief.surfaceBias?.[req.surface.grounding] ?? 1;
-      // Grounded surfaces repeat stale training-memory claims less often than ungrounded ones.
-      const groundingAdj = req.surface.grounding === 'training_memory' ? 1.25 : 0.85;
-      const p = Math.min(0.98, belief.probability * bias * groundingAdj);
-      if (rnd() < p) {
-        parts.push(belief.text.replace(/\{brand\}/g, profile.brandName));
-        for (const c of belief.citations ?? []) citations.push(c);
-      }
-    }
-
-    parts.push(pick(profile.closing, rnd).replace(/\{brand\}/g, profile.brandName));
-
-    return {
-      answerText: parts.join(' '),
-      citations: dedupeCitations(citations),
-      searchQueries:
-        req.surface.grounding === 'training_memory' ? [] : [`${profile.brandName} ${firstWords(req.prompt, 5)}`],
-      latencyMs: 300 + Math.floor(rnd() * 2200),
+    const result: RunResult = {
+      answerText: '',
+      citations: [],
+      searchQueries: [],
+      latencyMs: 400,
       costUsd: null,
       simulated: true,
       systemConfigHash: configHash(req),
       modelVersion: req.surface.modelVersion,
     };
+    const profile = req.beliefs;
+    if (!profile)
+      return {
+        ...result,
+        answerText: "I don't have enough information about " + req.brandName + ' to answer that reliably.',
+      };
+    const chanceAbsent = profile.absenceByFamily?.[req.intentFamily ?? ''] ?? 0;
+    const grounded = req.surface.grounding !== 'training_memory';
+    if (chanceAbsent > 0 && random() < chanceAbsent) {
+      result.answerText = absentAnswer(req, random);
+      result.searchQueries = grounded ? [firstWords(req.prompt, 6)] : [];
+      result.latencyMs = 300 + Math.floor(random() * 1800);
+      return result;
+    }
+    const sentences: string[] = [];
+    const append = (sentence: string | undefined) => {
+      if (sentence !== undefined) sentences.push(sentence.replace(/\{brand\}/g, profile.brandName));
+    };
+    append(pick(profile.opening, random));
+    const citations: ProviderCitation[] = [];
+    for (const belief of profile.beliefs) {
+      const bias =
+        belief.surfaceBias?.[req.surface.provider] ?? belief.surfaceBias?.[req.surface.grounding] ?? 1;
+      const probability = Math.min(0.98, belief.probability * bias * (grounded ? 0.85 : 1.25));
+      if (random() >= probability) continue;
+      append(belief.text);
+      citations.push(...(belief.citations ?? []));
+    }
+    append(pick(profile.closing, random));
+    result.answerText = sentences.join(' ');
+    result.citations = dedupeCitations(citations);
+    result.searchQueries = grounded ? [profile.brandName + ' ' + firstWords(req.prompt, 5)] : [];
+    result.latencyMs = 300 + Math.floor(random() * 2200);
+    return result;
   }
 }
 

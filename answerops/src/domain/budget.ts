@@ -37,32 +37,21 @@ export interface TrimResult {
  * floor does not fit, the round is empty and `exhausted` is true.
  */
 export function trimToBudget(plan: SamplingPlan, perRunCost: number, remainingUsd: number): TrimResult {
-  const ordered = [...plan.allocations].sort((a, b) => b.score - a.score || a.clusterId.localeCompare(b.clusterId));
-  if (perRunCost <= 0) {
-    return {
-      allocations: ordered,
-      droppedForBudget: [],
-      projectedCost: 0,
-      exhausted: false,
-    };
-  }
-  const kept: SamplingAllocation[] = [];
-  const dropped: string[] = [];
-  let cost = 0;
-  for (const alloc of ordered) {
-    const next = cost + alloc.samples * perRunCost;
-    if (next <= remainingUsd) {
-      kept.push(alloc);
-      cost = next;
-    } else {
-      dropped.push(alloc.clusterId);
+  const ranked = plan.allocations
+    .slice()
+    .sort((a, b) => b.score - a.score || a.clusterId.localeCompare(b.clusterId));
+  const result: TrimResult = { allocations: [], droppedForBudget: [], projectedCost: 0, exhausted: false };
+  if (perRunCost <= 0) return { ...result, allocations: ranked };
+  for (const allocation of ranked) {
+    const projected = result.projectedCost + allocation.samples * perRunCost;
+    if (projected > remainingUsd || Number.isNaN(projected) || Number.isNaN(remainingUsd))
+      result.droppedForBudget.push(allocation.clusterId);
+    else {
+      result.allocations.push(allocation);
+      result.projectedCost = projected;
     }
   }
-  const floorCost = MIN_SAMPLES * perRunCost;
-  return {
-    allocations: kept,
-    droppedForBudget: dropped,
-    projectedCost: cost,
-    exhausted: kept.length === 0 || remainingUsd - cost < floorCost,
-  };
+  result.exhausted =
+    !result.allocations.length || remainingUsd - result.projectedCost < MIN_SAMPLES * perRunCost;
+  return result;
 }

@@ -17,6 +17,7 @@
 import type { DB } from '../db/index.js';
 import * as repo from '../db/repo/index.js';
 import type { Row } from '../db/repo/index.js';
+import { statements } from '../db/repo/statements.js';
 import { measure, type Measurement } from '../domain/stats.js';
 
 export const K_ANON = 5;
@@ -43,7 +44,8 @@ export interface IndexRow {
 }
 
 export function quarterOf(at: Date): string {
-  return `${at.getUTCFullYear()}-Q${Math.floor(at.getUTCMonth() / 3) + 1}`;
+  const quarter = ['Q1', 'Q2', 'Q3', 'Q4'][Math.floor(at.getUTCMonth() / 3)];
+  return [at.getUTCFullYear(), quarter].join('-');
 }
 
 /**
@@ -71,7 +73,7 @@ export const PREDICATE_CLASS: Record<string, string> = {
 };
 
 export function predicateClass(predicate: string): string {
-  return PREDICATE_CLASS[predicate] ?? 'other';
+  return Object.hasOwn(PREDICATE_CLASS, predicate) ? PREDICATE_CLASS[predicate] : 'other';
 }
 
 /**
@@ -79,21 +81,21 @@ export function predicateClass(predicate: string): string {
  * there is no code path that carries a brand name or an answer out of here.
  */
 export function indexRowsFor(db: DB, tenantId: string, quarter: string): IndexRow[] {
-  const tenant = repo.getTenant(db, tenantId);
-  if (!tenant || tenant.index_consent !== 1) return [];
-  const rows = db
+  const rows = statements(db)
     .prepare(
-      `SELECT r.provider AS provider, r.model_version AS model_version, o.predicate AS predicate, o.verdict AS verdict
-         FROM observed_claims o JOIN model_runs r ON r.id = o.run_id AND r.tenant_id = o.tenant_id
-        WHERE o.tenant_id = ? AND r.simulated = 0 AND o.predicate != 'brand_presence'`,
+      `SELECT r.provider, r.model_version, o.predicate, o.verdict,
+      COALESCE(t.industry_category, 'unclassified') AS industry_category
+    FROM tenants t JOIN model_runs r ON r.tenant_id = t.id
+    JOIN observed_claims o ON o.tenant_id = t.id AND o.run_id = r.id
+    WHERE t.id = ? AND t.index_consent = 1 AND r.simulated = 0 AND o.predicate != 'brand_presence'`,
     )
     .all(tenantId) as Row[];
-  return rows.map((r) => ({
-    provider: r.provider,
-    model_version: r.model_version,
-    predicate_class: predicateClass(r.predicate),
-    verdict: r.verdict,
-    industry_category: tenant.industry_category ?? 'unclassified',
+  return rows.map(({ provider, model_version, predicate, verdict, industry_category }) => ({
+    provider,
+    model_version,
+    predicate_class: predicateClass(predicate),
+    verdict,
+    industry_category,
     quarter,
   }));
 }
@@ -115,34 +117,56 @@ export interface IndexCell {
  * which is a different and more honest thing than an absent row.
  */
 export function buildIndex(db: DB, quarter: string, k = K_ANON): IndexCell[] {
-  const perCell = new Map<string, { k: number; n: number; tenants: Set<string> }>();
-  for (const tenant of repo.listTenants(db)) {
-    const rows = indexRowsFor(db, tenant.id, quarter);
-    for (const r of rows) {
-      const key = [r.provider, r.model_version, r.predicate_class, r.industry_category, r.quarter].join('|');
-      const cell = perCell.get(key) ?? { k: 0, n: 0, tenants: new Set<string>() };
-      cell.n++;
-      if (r.verdict === 'STALE' || r.verdict === 'CONTRADICTED') cell.k++;
-      cell.tenants.add(tenant.id);
-      perCell.set(key, cell);
+  const observations = db
+    .prepare(
+      `SELECT r.provider, r.model_version, o.predicate, o.verdict,
+      t.id AS tenant_id, COALESCE(t.industry_category, 'unclassified') AS industry_category
+    FROM tenants t JOIN model_runs r ON r.tenant_id = t.id
+    JOIN observed_claims o ON o.run_id = r.id AND o.tenant_id = t.id
+    WHERE t.index_consent = 1 AND r.simulated = 0 AND o.predicate != 'brand_presence'`,
+    )
+    .all() as Row[];
+  const grouped = new Map<
+    string,
+    {
+      dimensions: Pick<
+        IndexCell,
+        'provider' | 'modelVersion' | 'predicateClass' | 'industryCategory' | 'quarter'
+      >;
+      tenants: Set<string>;
+      wrong: number;
+      count: number;
     }
+  >();
+  for (const row of observations) {
+    const dimensions = {
+      provider: row.provider,
+      modelVersion: row.model_version,
+      predicateClass: predicateClass(row.predicate),
+      industryCategory: row.industry_category,
+      quarter,
+    };
+    const key = JSON.stringify(dimensions);
+    let cell = grouped.get(key);
+    if (!cell) {
+      cell = { dimensions, tenants: new Set(), wrong: 0, count: 0 };
+      grouped.set(key, cell);
+    }
+    cell.tenants.add(row.tenant_id);
+    cell.count++;
+    if (row.verdict === 'STALE' || row.verdict === 'CONTRADICTED') cell.wrong++;
   }
-  const out: IndexCell[] = [];
-  for (const [key, cell] of perCell) {
-    const [provider, modelVersion, pClass, industry, q] = key.split('|');
-    const suppressed = cell.tenants.size < k;
-    out.push({
-      provider,
-      modelVersion,
-      predicateClass: pClass,
-      industryCategory: industry,
-      quarter: q,
-      tenants: cell.tenants.size,
-      staleOrWrong: suppressed ? measure(0, 0) : measure(cell.k, cell.n),
-      suppressed,
-    });
-  }
-  return out.sort((a, b) => a.provider.localeCompare(b.provider) || a.predicateClass.localeCompare(b.predicateClass));
+  return [...grouped.values()]
+    .map((cell) => {
+      const suppressed = cell.tenants.size < k;
+      return {
+        ...cell.dimensions,
+        tenants: cell.tenants.size,
+        suppressed,
+        staleOrWrong: suppressed ? measure(0, 0) : measure(cell.wrong, cell.count),
+      };
+    })
+    .sort((a, b) => a.provider.localeCompare(b.provider) || a.predicateClass.localeCompare(b.predicateClass));
 }
 
 export interface IndexReport {
@@ -156,13 +180,21 @@ export interface IndexReport {
 
 export function buildIndexReport(db: DB, quarter: string, k = K_ANON): IndexReport {
   const cells = buildIndex(db, quarter, k);
-  const consenting = repo.listTenants(db).filter((t) => t.index_consent === 1).length;
+  const published: IndexCell[] = [];
+  let suppressedCells = 0;
+  for (const cell of cells) {
+    if (cell.suppressed) suppressedCells++;
+    else published.push(cell);
+  }
+  const participation = statements(db)
+    .prepare('SELECT COUNT(*) AS count FROM tenants WHERE index_consent = 1')
+    .get() as { count: number };
   return {
     quarter,
     cells,
-    published: cells.filter((c) => !c.suppressed),
-    suppressedCells: cells.filter((c) => c.suppressed).length,
-    consentingTenants: consenting,
+    published,
+    suppressedCells,
+    consentingTenants: participation.count,
     methodology: [
       `Cells built from fewer than ${k} distinct consenting workspaces are suppressed, not estimated.`,
       'Only live runs count. Simulated runs are excluded from every figure here.',
@@ -175,7 +207,11 @@ export function buildIndexReport(db: DB, quarter: string, k = K_ANON): IndexRepo
 }
 
 export function setConsent(db: DB, tenantId: string, consent: boolean, at: string): void {
-  db.prepare('UPDATE tenants SET index_consent = ?, consent_changed_at = ? WHERE id = ?')
-    .run(consent ? 1 : 0, at, tenantId);
-  repo.audit(db, tenantId, 'owner', consent ? 'index_consent_granted' : 'index_consent_revoked', 'tenant', tenantId, '');
+  db.transaction(() => {
+    statements(db)
+      .prepare('UPDATE tenants SET index_consent = @consent, consent_changed_at = @at WHERE id = @tenantId')
+      .run({ consent: Number(consent), at, tenantId });
+    const event = consent ? 'index_consent_granted' : 'index_consent_revoked';
+    repo.audit(db, tenantId, 'owner', event, 'tenant', tenantId, '');
+  })();
 }

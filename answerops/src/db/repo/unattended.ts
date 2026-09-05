@@ -1,3 +1,4 @@
+import { statements, tenantRecord, atomic } from './statements.js';
 /**
  * Repository functions for the unattended loop: schedules, window ledger, alerts and
  * delivery. Same rule as the rest of the layer — tenantId first, tenant_id in the SQL.
@@ -26,7 +27,7 @@ export interface ScheduleInput {
 }
 
 export function createSchedule(db: DB, tenantId: string, s: ScheduleInput): Row {
-  const row = {
+  const row = tenantRecord(tenantId, {
     id: id('sch'),
     tenant_id: tenantId,
     brand_id: s.brand_id,
@@ -44,31 +45,39 @@ export function createSchedule(db: DB, tenantId: string, s: ScheduleInput): Row 
     last_window_label: null,
     last_error: null,
     created_at: nowIso(),
-  };
-  db.prepare(
-    `INSERT INTO schedules (id, tenant_id, brand_id, cadence, hour_utc, timezone, monthly_budget_usd,
+  });
+  statements(db)
+    .prepare(
+      `INSERT INTO schedules (id, tenant_id, brand_id, cadence, hour_utc, timezone, monthly_budget_usd,
       budget_runs, surfaces, enabled, next_run_at, lease_owner, lease_expires_at, last_run_at,
       last_window_label, last_error, created_at)
      VALUES (@id, @tenant_id, @brand_id, @cadence, @hour_utc, @timezone, @monthly_budget_usd,
       @budget_runs, @surfaces, @enabled, @next_run_at, @lease_owner, @lease_expires_at, @last_run_at,
       @last_window_label, @last_error, @created_at)`,
-  ).run(row);
+    )
+    .run(row);
   return row;
 }
 
 export function listSchedules(db: DB, tenantId: string, brandId?: string): Row[] {
   return brandId
-    ? (db.prepare('SELECT * FROM schedules WHERE tenant_id = ? AND brand_id = ? ORDER BY created_at').all(tenantId, brandId) as Row[])
-    : (db.prepare('SELECT * FROM schedules WHERE tenant_id = ? ORDER BY created_at').all(tenantId) as Row[]);
+    ? (statements(db)
+        .prepare('SELECT * FROM schedules WHERE tenant_id = ? AND brand_id = ? ORDER BY created_at')
+        .all(tenantId, brandId) as Row[])
+    : (statements(db)
+        .prepare('SELECT * FROM schedules WHERE tenant_id = ? ORDER BY created_at')
+        .all(tenantId) as Row[]);
 }
 
 export function getSchedule(db: DB, tenantId: string, scheduleId: string): Row | undefined {
-  return db.prepare('SELECT * FROM schedules WHERE tenant_id = ? AND id = ?').get(tenantId, scheduleId) as Row | undefined;
+  return statements(db)
+    .prepare('SELECT * FROM schedules WHERE tenant_id = ? AND id = ?')
+    .get(tenantId, scheduleId) as Row | undefined;
 }
 
 /** Every enabled schedule whose time has come and whose lease is dead. Cross-tenant by design. */
 export function dueSchedules(db: DB, nowIso_: string): Row[] {
-  return db
+  return statements(db)
     .prepare(
       `SELECT * FROM schedules
         WHERE enabled = 1 AND next_run_at <= ?
@@ -82,8 +91,15 @@ export function dueSchedules(db: DB, nowIso_: string): Row[] {
  * The lock. A single conditional UPDATE: only one caller can observe changes = 1, because
  * SQLite serialises writers. Two schedulers racing the same row produce exactly one winner.
  */
-export function claimSchedule(db: DB, tenantId: string, scheduleId: string, owner: string, nowIso_: string, until: string): boolean {
-  const res = db
+export function claimSchedule(
+  db: DB,
+  tenantId: string,
+  scheduleId: string,
+  owner: string,
+  nowIso_: string,
+  until: string,
+): boolean {
+  const res = statements(db)
     .prepare(
       `UPDATE schedules SET lease_owner = ?, lease_expires_at = ?
         WHERE tenant_id = ? AND id = ? AND enabled = 1 AND next_run_at <= ?
@@ -94,67 +110,81 @@ export function claimSchedule(db: DB, tenantId: string, scheduleId: string, owne
 }
 
 export function releaseSchedule(db: DB, tenantId: string, scheduleId: string, patch: Row): void {
-  db.prepare(
-    `UPDATE schedules SET lease_owner = NULL, lease_expires_at = NULL, next_run_at = @next_run_at,
+  statements(db)
+    .prepare(
+      `UPDATE schedules SET lease_owner = NULL, lease_expires_at = NULL, next_run_at = @next_run_at,
         last_run_at = @last_run_at, last_window_label = @last_window_label, last_error = @last_error
       WHERE tenant_id = @tenant_id AND id = @id`,
-  ).run({ ...patch, tenant_id: tenantId, id: scheduleId });
+    )
+    .run({ ...patch, tenant_id: tenantId, id: scheduleId });
 }
 
 export function setScheduleEnabled(db: DB, tenantId: string, scheduleId: string, enabled: number): void {
-  db.prepare('UPDATE schedules SET enabled = ? WHERE tenant_id = ? AND id = ?').run(enabled, tenantId, scheduleId);
+  statements(db)
+    .prepare('UPDATE schedules SET enabled = ? WHERE tenant_id = ? AND id = ?')
+    .run(enabled, tenantId, scheduleId);
 }
 
 export function updateScheduleNextRun(db: DB, tenantId: string, scheduleId: string, at: string): void {
-  db.prepare('UPDATE schedules SET next_run_at = ? WHERE tenant_id = ? AND id = ?').run(at, tenantId, scheduleId);
+  statements(db)
+    .prepare('UPDATE schedules SET next_run_at = ? WHERE tenant_id = ? AND id = ?')
+    .run(at, tenantId, scheduleId);
 }
 
 // -------------------------------------------------------------------- windows
 
 export function upsertWindow(db: DB, tenantId: string, brandId: string, label: string, patch: Row): Row {
-  const existing = getWindow(db, tenantId, brandId, label);
-  if (existing) {
-    const merged = { ...existing, ...patch, tenant_id: tenantId, brand_id: brandId, window_label: label };
-    db.prepare(
-      `UPDATE windows SET status = @status, finished_at = @finished_at, planned_runs = @planned_runs,
-          actual_runs = @actual_runs, cost_usd = @cost_usd, cost_known = @cost_known, gaps = @gaps, dropped = @dropped
-        WHERE tenant_id = @tenant_id AND brand_id = @brand_id AND window_label = @window_label`,
-    ).run(merged);
-    return merged;
-  }
-  const row = {
-    id: id('win'),
-    tenant_id: tenantId,
-    brand_id: brandId,
-    window_label: label,
-    status: patch.status ?? 'complete',
-    started_at: patch.started_at ?? nowIso(),
-    finished_at: patch.finished_at ?? null,
-    planned_runs: patch.planned_runs ?? 0,
-    actual_runs: patch.actual_runs ?? 0,
-    cost_usd: patch.cost_usd ?? 0,
-    cost_known: patch.cost_known ?? 1,
-    gaps: patch.gaps ?? '[]',
-    dropped: patch.dropped ?? '[]',
-    created_at: nowIso(),
-  };
-  db.prepare(
-    `INSERT INTO windows (id, tenant_id, brand_id, window_label, status, started_at, finished_at,
-      planned_runs, actual_runs, cost_usd, cost_known, gaps, dropped, created_at)
-     VALUES (@id, @tenant_id, @brand_id, @window_label, @status, @started_at, @finished_at,
-      @planned_runs, @actual_runs, @cost_usd, @cost_known, @gaps, @dropped, @created_at)`,
-  ).run(row);
-  return row;
+  return atomic(db, () => {
+    const current = getWindow(db, tenantId, brandId, label);
+    const fields = current ?? {
+      id: id('win'),
+      status: 'complete',
+      started_at: nowIso(),
+      finished_at: null,
+      planned_runs: 0,
+      actual_runs: 0,
+      cost_usd: 0,
+      cost_known: 1,
+      gaps: '[]',
+      dropped: '[]',
+      created_at: nowIso(),
+    };
+    const writable = [
+      'status',
+      'started_at',
+      'finished_at',
+      'planned_runs',
+      'actual_runs',
+      'cost_usd',
+      'cost_known',
+      'gaps',
+      'dropped',
+    ];
+    const accepted = current
+      ? patch
+      : Object.fromEntries(
+          writable
+            .filter((key) => patch[key] !== null && patch[key] !== undefined)
+            .map((key) => [key, patch[key]]),
+        );
+    const row = tenantRecord(tenantId, { ...fields, ...accepted, brand_id: brandId, window_label: label });
+    statements(db)
+      .prepare(
+        'INSERT INTO windows (id, tenant_id, brand_id, window_label, status, started_at, finished_at, planned_runs, actual_runs, cost_usd, cost_known, gaps, dropped, created_at) VALUES (@id, @tenant_id, @brand_id, @window_label, @status, @started_at, @finished_at, @planned_runs, @actual_runs, @cost_usd, @cost_known, @gaps, @dropped, @created_at) ON CONFLICT(tenant_id, brand_id, window_label) DO UPDATE SET status = excluded.status, finished_at = excluded.finished_at, planned_runs = excluded.planned_runs, actual_runs = excluded.actual_runs, cost_usd = excluded.cost_usd, cost_known = excluded.cost_known, gaps = excluded.gaps, dropped = excluded.dropped',
+      )
+      .run(row);
+    return row;
+  });
 }
 
 export function getWindow(db: DB, tenantId: string, brandId: string, label: string): Row | undefined {
-  return db
+  return statements(db)
     .prepare('SELECT * FROM windows WHERE tenant_id = ? AND brand_id = ? AND window_label = ?')
     .get(tenantId, brandId, label) as Row | undefined;
 }
 
 export function listWindows(db: DB, tenantId: string, brandId: string): Row[] {
-  return db
+  return statements(db)
     .prepare('SELECT * FROM windows WHERE tenant_id = ? AND brand_id = ? ORDER BY window_label DESC')
     .all(tenantId, brandId) as Row[];
 }
@@ -162,21 +192,25 @@ export function listWindows(db: DB, tenantId: string, brandId: string): Row[] {
 // ------------------------------------------------------------------- spending
 
 /** Month-to-date spend, counting only runs whose cost the provider actually told us. */
-export function monthToDateSpend(db: DB, tenantId: string, monthPrefix: string): { usd: number; pricedRuns: number; unpricedRuns: number } {
-  const priced = db
+export function monthToDateSpend(
+  db: DB,
+  tenantId: string,
+  monthPrefix: string,
+): { usd: number; pricedRuns: number; unpricedRuns: number } {
+  const totals = statements(db)
     .prepare(
-      `SELECT COALESCE(SUM(cost_usd), 0) AS usd, COUNT(*) AS n FROM model_runs
-        WHERE tenant_id = ? AND cost_known = 1 AND requested_at LIKE ?`,
+      'SELECT COALESCE(SUM(CASE WHEN cost_known = 1 THEN cost_usd ELSE 0 END), 0) AS usd, COALESCE(SUM(CASE WHEN cost_known = 1 THEN 1 ELSE 0 END), 0) AS priced, COALESCE(SUM(CASE WHEN cost_known = 0 THEN 1 ELSE 0 END), 0) AS unpriced FROM model_runs WHERE tenant_id = ? AND requested_at LIKE ?',
     )
-    .get(tenantId, `${monthPrefix}%`) as Row;
-  const unpriced = db
-    .prepare('SELECT COUNT(*) AS n FROM model_runs WHERE tenant_id = ? AND cost_known = 0 AND requested_at LIKE ?')
-    .get(tenantId, `${monthPrefix}%`) as Row;
-  return { usd: Number(priced.usd ?? 0), pricedRuns: Number(priced.n ?? 0), unpricedRuns: Number(unpriced.n ?? 0) };
+    .get(tenantId, monthPrefix + '%') as { usd: number; priced: number; unpriced: number };
+  return {
+    usd: Number(totals.usd),
+    pricedRuns: Number(totals.priced),
+    unpricedRuns: Number(totals.unpriced),
+  };
 }
 
 export function spendByProvider(db: DB, tenantId: string, monthPrefix: string): Row[] {
-  return db
+  return statements(db)
     .prepare(
       `SELECT provider, COALESCE(SUM(cost_usd), 0) AS usd, COUNT(*) AS runs,
               SUM(CASE WHEN cost_known = 0 THEN 1 ELSE 0 END) AS unpriced
@@ -204,7 +238,7 @@ export interface AlertInput {
 
 /** Returns the row when it was new, or null when the unique index rejected a duplicate. */
 export function insertAlertOnce(db: DB, tenantId: string, a: AlertInput): Row | null {
-  const row = {
+  const row = tenantRecord(tenantId, {
     id: id('alt'),
     tenant_id: tenantId,
     brand_id: a.brand_id,
@@ -220,8 +254,8 @@ export function insertAlertOnce(db: DB, tenantId: string, a: AlertInput): Row | 
     link: a.link ?? '',
     delivered_at: null,
     created_at: nowIso(),
-  };
-  const res = db
+  });
+  const res = statements(db)
     .prepare(
       `INSERT OR IGNORE INTO alerts (id, tenant_id, brand_id, kind, headline, detail, p_value, effect,
         q_value, window_label, subject_key, severity, link, delivered_at, created_at)
@@ -233,25 +267,27 @@ export function insertAlertOnce(db: DB, tenantId: string, a: AlertInput): Row | 
 }
 
 export function listAlertsFor(db: DB, tenantId: string, brandId: string, limit = 100): Row[] {
-  return db
+  return statements(db)
     .prepare('SELECT * FROM alerts WHERE tenant_id = ? AND brand_id = ? ORDER BY created_at DESC LIMIT ?')
     .all(tenantId, brandId, limit) as Row[];
 }
 
 export function undeliveredAlerts(db: DB, tenantId: string): Row[] {
-  return db
+  return statements(db)
     .prepare('SELECT * FROM alerts WHERE tenant_id = ? AND delivered_at IS NULL ORDER BY created_at')
     .all(tenantId) as Row[];
 }
 
 export function markAlertDelivered(db: DB, tenantId: string, alertId: string, at: string): void {
-  db.prepare('UPDATE alerts SET delivered_at = ? WHERE tenant_id = ? AND id = ?').run(at, tenantId, alertId);
+  statements(db)
+    .prepare('UPDATE alerts SET delivered_at = ? WHERE tenant_id = ? AND id = ?')
+    .run(at, tenantId, alertId);
 }
 
 // ------------------------------------------------------------------- delivery
 
 export function createChannel(db: DB, tenantId: string, c: Row): Row {
-  const row = {
+  const row = tenantRecord(tenantId, {
     id: id('chn'),
     tenant_id: tenantId,
     kind: c.kind,
@@ -263,35 +299,52 @@ export function createChannel(db: DB, tenantId: string, c: Row): Row {
     state: 'ok',
     consecutive_failures: 0,
     created_at: nowIso(),
-  };
-  db.prepare(
-    `INSERT INTO delivery_channels (id, tenant_id, kind, target, secret, enabled, min_severity, digest,
+  });
+  statements(db)
+    .prepare(
+      `INSERT INTO delivery_channels (id, tenant_id, kind, target, secret, enabled, min_severity, digest,
       state, consecutive_failures, created_at)
      VALUES (@id, @tenant_id, @kind, @target, @secret, @enabled, @min_severity, @digest,
       @state, @consecutive_failures, @created_at)`,
-  ).run(row);
+    )
+    .run(row);
   return row;
 }
 
 export function listChannels(db: DB, tenantId: string): Row[] {
-  return db.prepare('SELECT * FROM delivery_channels WHERE tenant_id = ? ORDER BY created_at').all(tenantId) as Row[];
+  return statements(db)
+    .prepare('SELECT * FROM delivery_channels WHERE tenant_id = ? ORDER BY created_at')
+    .all(tenantId) as Row[];
 }
 
 export function getChannel(db: DB, tenantId: string, channelId: string): Row | undefined {
-  return db.prepare('SELECT * FROM delivery_channels WHERE tenant_id = ? AND id = ?').get(tenantId, channelId) as Row | undefined;
+  return statements(db)
+    .prepare('SELECT * FROM delivery_channels WHERE tenant_id = ? AND id = ?')
+    .get(tenantId, channelId) as Row | undefined;
 }
 
 export function deleteChannel(db: DB, tenantId: string, channelId: string): void {
-  db.prepare('DELETE FROM delivery_channels WHERE tenant_id = ? AND id = ?').run(tenantId, channelId);
+  statements(db)
+    .prepare('DELETE FROM delivery_channels WHERE tenant_id = ? AND id = ?')
+    .run(tenantId, channelId);
 }
 
-export function setChannelHealth(db: DB, tenantId: string, channelId: string, failures: number, state: string): void {
-  db.prepare('UPDATE delivery_channels SET consecutive_failures = ?, state = ? WHERE tenant_id = ? AND id = ?')
+export function setChannelHealth(
+  db: DB,
+  tenantId: string,
+  channelId: string,
+  failures: number,
+  state: string,
+): void {
+  statements(db)
+    .prepare(
+      'UPDATE delivery_channels SET consecutive_failures = ?, state = ? WHERE tenant_id = ? AND id = ?',
+    )
     .run(failures, state, tenantId, channelId);
 }
 
 export function recordAttempt(db: DB, tenantId: string, a: Row): Row {
-  const row = {
+  const row = tenantRecord(tenantId, {
     id: id('dla'),
     tenant_id: tenantId,
     alert_id: a.alert_id ?? null,
@@ -301,16 +354,18 @@ export function recordAttempt(db: DB, tenantId: string, a: Row): Row {
     status: a.status,
     error: a.error ?? '',
     created_at: nowIso(),
-  };
-  db.prepare(
-    `INSERT INTO delivery_attempts (id, tenant_id, alert_id, channel_id, kind, attempt, status, error, created_at)
+  });
+  statements(db)
+    .prepare(
+      `INSERT INTO delivery_attempts (id, tenant_id, alert_id, channel_id, kind, attempt, status, error, created_at)
      VALUES (@id, @tenant_id, @alert_id, @channel_id, @kind, @attempt, @status, @error, @created_at)`,
-  ).run(row);
+    )
+    .run(row);
   return row;
 }
 
 export function listAttempts(db: DB, tenantId: string, limit = 50): Row[] {
-  return db
+  return statements(db)
     .prepare('SELECT * FROM delivery_attempts WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?')
     .all(tenantId, limit) as Row[];
 }

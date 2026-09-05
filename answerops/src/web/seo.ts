@@ -1,140 +1,86 @@
-/**
- * Everything the outside world reads about this site when we are not there to explain it:
- * canonical URLs, the page registry behind the sitemap, crawler policy, and structured data.
- *
- * One rule runs through this file. This product sells the claim that we can tell you what
- * assistants say about your company, so the assistants have to be able to read us. A robots.txt
- * that blocks GPTBot while the landing page promises answer integrity would be the same defect
- * the product is built to find, committed by us.
- *
- * The structured data is held to the product's own evidence standard too. Schema.org lets you
- * assert an aggregateRating with no reviews behind it, an offer price you do not honour, and a
- * founding date you invented. None of those appear here. A JSON-LD block is a claim to a
- * machine, and a claim to a machine is still a claim.
- */
-
-import type { Raw } from './html.js';
-import { raw } from './html.js';
-
-export const SITE_URL = 'https://miscited.com';
-/** Host only, for the www redirect and anything else that compares a Host header. */
-export const CANONICAL_HOST = 'miscited.com';
-export const SITE_NAME = 'Miscited';
-export const SITE_TAGLINE = 'Quality control for what AI says about your company';
-
-/** Where the mark comes from, so the favicon and the OG card cannot drift apart. */
-export const BRAND_MARK = '◧';
-export const BRAND_INK = '#16150f';
-export const BRAND_PAPER = '#f7f6f3';
-export const BRAND_CLAY = '#9c6f4a';
-
+import { html, raw, type Raw, escapeHtml } from "./html.js";
+export const SITE_URL = "https://miscited.com";
+export const CANONICAL_HOST = "miscited.com";
+export const SITE_NAME = "Miscited";
+export const SITE_TAGLINE =
+  "Quality control for what AI says about your company";
+export const BRAND_MARK = "◧";
+export const BRAND_INK = "#16150f";
+export const BRAND_PAPER = "#f7f6f3";
+export const BRAND_CLAY = "#9c6f4a";
 export function canonical(path: string): string {
-  return `${SITE_URL}${path === '/' ? '/' : path.replace(/\/+$/, '')}`;
+  return SITE_URL + (path === "/" ? "/" : path.replace(/\/+$/, ""));
 }
-
-// ------------------------------------------------------------------ sitemap
-
 export interface SitemapEntry {
   path: string;
-  changefreq: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  changefreq: "daily" | "weekly" | "monthly" | "yearly";
   priority: string;
   lastmod?: string | null;
 }
-
-/**
- * Only pages a stranger can open and that we want indexed.
- *
- * The console is behind a session, and audit reports carry `noindex` because they are somebody
- * else's company being measured at an unguessable URL. Neither belongs here, and a sitemap that
- * lists a 302 or a private report teaches a crawler to trust the file less.
- */
-export function sitemapEntries(posts: Array<{ slug: string; updated: string }>): SitemapEntry[] {
-  return [
-    { path: '/', changefreq: 'weekly', priority: '1.0' },
-    { path: '/blog', changefreq: 'weekly', priority: '0.8' },
-    ...posts.map((p) => ({
-      path: `/blog/${p.slug}`,
-      changefreq: 'monthly' as const,
-      priority: '0.7',
-      lastmod: p.updated,
-    })),
+export function sitemapEntries(
+  posts: Array<{ slug: string; updated: string }>,
+): SitemapEntry[] {
+  const index: SitemapEntry[] = [
+    { path: "/", changefreq: "weekly", priority: "1.0" },
+    { path: "/blog", changefreq: "weekly", priority: "0.8" },
   ];
+  for (const post of posts)
+    index.push({
+      path: `/blog/${post.slug}`,
+      changefreq: "monthly",
+      priority: "0.7",
+      lastmod: post.updated,
+    });
+  return index;
 }
-
 export function renderSitemap(entries: SitemapEntry[]): string {
-  const url = (e: SitemapEntry) =>
-    `  <url>\n    <loc>${canonical(e.path)}</loc>\n` +
-    (e.lastmod ? `    <lastmod>${e.lastmod}</lastmod>\n` : '') +
-    `    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>\n  </url>`;
-  return (
-    '<?xml version="1.0" encoding="UTF-8"?>\n' +
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-    entries.map(url).join('\n') +
-    '\n</urlset>\n'
+  const urls = entries.map(
+    (entry) =>
+      html`<url><loc>${canonical(entry.path)}</loc>${
+        entry.lastmod ? html`<lastmod>${entry.lastmod}</lastmod>` : null
+      }<changefreq>${entry.changefreq}</changefreq
+        ><priority>${entry.priority}</priority></url
+      >`,
   );
+  return html`<?xml version="1.0" encoding="UTF-8"?><urlset
+      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+      >${urls}</urlset
+    >`.value;
 }
-
-// ------------------------------------------------------------------- robots
-
-/**
- * Retrieval crawlers are allowed by name rather than by silence, because silence is not a
- * policy and the next person to edit this file should see the decision.
- *
- * CCBot is the one exclusion. Common Crawl is a bulk training corpus with no retrieval path
- * back to us, so allowing it trades content for nothing a reader can click.
- */
 export const AI_CRAWLERS = [
-  'GPTBot',
-  'OAI-SearchBot',
-  'ChatGPT-User',
-  'PerplexityBot',
-  'Perplexity-User',
-  'ClaudeBot',
-  'Claude-User',
-  'anthropic-ai',
-  'Google-Extended',
-  'Applebot-Extended',
-  'Bingbot',
-  'meta-externalagent',
+  "GPTBot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "PerplexityBot",
+  "Perplexity-User",
+  "ClaudeBot",
+  "Claude-User",
+  "anthropic-ai",
+  "Google-Extended",
+  "Applebot-Extended",
+  "Bingbot",
+  "meta-externalagent",
 ];
-
 export function renderRobots(): string {
-  const lines = [
-    '# Miscited measures what AI assistants say about companies.',
-    '# Blocking the assistants that answer those questions would be the same defect',
-    '# this product exists to find, so every retrieval crawler is allowed by name.',
-    '',
-    'User-agent: *',
-    'Allow: /',
-    '',
-    '# Private by construction: the console needs a session and an audit report belongs to the',
-    '# company it measured. Both are excluded here and the reports also carry a noindex header.',
-    'Disallow: /audit/',
-    'Disallow: /api/',
-    'Disallow: /login',
-    'Disallow: /snapshot/',
-    '',
+  const groups = [
+    [
+      "User-agent: *",
+      "Allow: /",
+      "Disallow: /audit/",
+      "Disallow: /api/",
+      "Disallow: /login",
+      "Disallow: /snapshot/",
+    ],
+    ...AI_CRAWLERS.map((agent) => [`User-agent: ${agent}`, "Allow: /"]),
+    ["User-agent: CCBot", "Disallow: /"],
+    [`Sitemap: ${SITE_URL}/sitemap.xml`],
   ];
-  for (const bot of AI_CRAWLERS) {
-    lines.push(`User-agent: ${bot}`, 'Allow: /', '');
-  }
-  lines.push(
-    '# Bulk training corpus with no retrieval path back to a reader.',
-    'User-agent: CCBot',
-    'Disallow: /',
-    '',
-    `Sitemap: ${SITE_URL}/sitemap.xml`,
-    '',
-  );
-  return lines.join('\n');
+  return groups.map((lines) => lines.join("\n")).join("\n\n") + "\n";
 }
-
-/**
- * llms.txt: a plain-text brief for a model that lands here with one question and no patience
- * for our navigation. It states what we do, what we refuse to claim, and where the numbers
- * come from, because a summary written by us is more accurate than one inferred from the CSS.
- */
-export function renderLlmsTxt(posts: Array<{ slug: string; title: string; summary: string }>): string {
+// Public product brief, preserved as editorial copy.
+export function renderLlmsTxt(
+  posts: Array<{ slug: string; title: string; summary: string }>,
+): string {
   return `# ${SITE_NAME}
 
 > ${SITE_TAGLINE}. Miscited measures whether AI assistants state true things about a company,
@@ -182,7 +128,7 @@ $2,000/month (Operate, 100 clusters sampled daily), $5,000+/month (Enterprise, m
 
 ## Writing
 
-${posts.map((p) => `- [${p.title}](${canonical(`/blog/${p.slug}`)}): ${p.summary}`).join('\n')}
+${posts.map((p) => `- [${p.title}](${canonical(`/blog/${p.slug}`)}): ${p.summary}`).join("\n")}
 
 ## Contact
 
@@ -190,110 +136,117 @@ hello@miscited.com
 `;
 }
 
-// -------------------------------------------------------------- structured data
-
-function jsonLd(obj: unknown): Raw {
-  // JSON.stringify escapes nothing that matters here except the script terminator, and a
-  // stray </script> inside a description would end the block early and inject markup.
-  return raw(
-    `<script type="application/ld+json">${JSON.stringify(obj).replace(/</g, '\\u003c')}</script>`,
-  );
+type Schema = Record<string, unknown>;
+function linkedData(type: string, properties: Schema): Raw {
+  const serialized = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": type,
+    ...properties,
+  }).replace(/</g, "\\u003c");
+  return raw(`<script type="application/ld+json">${serialized}</script>`);
 }
-
+const organizationRef = () => ({ "@id": `${SITE_URL}/#organization` });
 export function organizationLd(): Raw {
-  return jsonLd({
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    '@id': `${SITE_URL}/#organization`,
+  return linkedData("Organization", {
+    "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: SITE_URL,
-    email: 'hello@miscited.com',
+    email: "hello@miscited.com",
     description:
-      'Miscited measures whether AI assistants state true things about a company, corrects the ' +
-      'source pages those answers came from, and proves whether the answers changed.',
+      "Miscited measures whether AI assistants state true things about a company, corrects the source pages those answers came from, and proves whether the answers changed.",
   });
 }
-
-/**
- * SoftwareApplication with an offer, because the price is public and a buyer asking an
- * assistant "what does Miscited cost" should get the real number rather than a guess.
- * No aggregateRating: there are no reviews, and inventing one is the exact behaviour this
- * product was built to detect.
- */
 export function softwareLd(): Raw {
-  return jsonLd({
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    '@id': `${SITE_URL}/#software`,
-    name: SITE_NAME,
-    applicationCategory: 'BusinessApplication',
-    applicationSubCategory: 'AI answer accuracy monitoring',
-    operatingSystem: 'Web',
-    url: SITE_URL,
-    publisher: { '@id': `${SITE_URL}/#organization` },
-    offers: [
-      { '@type': 'Offer', name: 'Answer Risk Audit', price: '0', priceCurrency: 'USD', description: 'One-time audit of what assistants say about your domain.' },
-      { '@type': 'Offer', name: 'Monitor', price: '750', priceCurrency: 'USD', description: '50 question clusters across four assistants, sampled weekly.' },
-      { '@type': 'Offer', name: 'Operate', price: '2000', priceCurrency: 'USD', description: '100 clusters sampled daily, plus the fact registry, action list and experiment ledger.' },
+  const offers = [
+    [
+      "Answer Risk Audit",
+      "0",
+      "One-time audit of what assistants say about your domain.",
     ],
+    [
+      "Monitor",
+      "750",
+      "50 question clusters across four assistants, sampled weekly.",
+    ],
+    [
+      "Operate",
+      "2000",
+      "100 clusters sampled daily, plus the fact registry, action list and experiment ledger.",
+    ],
+  ];
+  return linkedData("SoftwareApplication", {
+    "@id": `${SITE_URL}/#software`,
+    name: SITE_NAME,
+    applicationCategory: "BusinessApplication",
+    applicationSubCategory: "AI answer accuracy monitoring",
+    operatingSystem: "Web",
+    url: SITE_URL,
+    publisher: organizationRef(),
+    offers: offers.map(([name, price, description]) => ({
+      "@type": "Offer",
+      name,
+      price,
+      priceCurrency: "USD",
+      description,
+    })),
   });
 }
-
 export interface FaqItem {
   q: string;
   a: string;
 }
-
 export function faqLd(items: FaqItem[]): Raw {
-  return jsonLd({
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: items.map((i) => ({
-      '@type': 'Question',
-      name: i.q,
-      acceptedAnswer: { '@type': 'Answer', text: i.a },
+  return linkedData("FAQPage", {
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
     })),
   });
 }
-
-export function blogPostingLd(p: {
+export function blogPostingLd(post: {
   slug: string;
   title: string;
   summary: string;
   published: string;
   updated: string;
 }): Raw {
-  return jsonLd({
-    '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    '@id': `${canonical(`/blog/${p.slug}`)}#post`,
-    headline: p.title,
-    description: p.summary,
-    datePublished: p.published,
-    dateModified: p.updated,
-    mainEntityOfPage: canonical(`/blog/${p.slug}`),
-    publisher: { '@id': `${SITE_URL}/#organization` },
-    author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+  const url = canonical(`/blog/${post.slug}`);
+  return linkedData("BlogPosting", {
+    "@id": `${url}#post`,
+    headline: post.title,
+    description: post.summary,
+    datePublished: post.published,
+    dateModified: post.updated,
+    mainEntityOfPage: url,
+    publisher: organizationRef(),
+    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
   });
 }
-
-export function breadcrumbLd(trail: Array<{ name: string; path: string }>): Raw {
-  return jsonLd({
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: trail.map((t, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      name: t.name,
-      item: canonical(t.path),
+export function breadcrumbLd(
+  trail: Array<{ name: string; path: string }>,
+): Raw {
+  return linkedData("BreadcrumbList", {
+    itemListElement: trail.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: canonical(item.path),
     })),
   });
 }
-
-/** The wordmark, as a favicon. Inline so it costs no request and cannot 404. */
 export function faviconSvg(): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<rect width="64" height="64" rx="12" fill="${BRAND_INK}"/>
-<text x="32" y="45" font-family="Georgia,serif" font-size="40" fill="${BRAND_PAPER}" text-anchor="middle">${BRAND_MARK}</text>
-</svg>`;
+  return html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+    <rect width="64" height="64" rx="12" fill="${BRAND_INK}">
+    <text
+      x="32"
+      y="45"
+      font-family="Georgia,serif"
+      font-size="40"
+      fill="${BRAND_PAPER}"
+      text-anchor="middle"
+    >
+      ${BRAND_MARK}
+    </text>
+  </svg>`.value;
 }

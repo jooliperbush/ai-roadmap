@@ -49,31 +49,41 @@ export const FAMILY_LABEL: Record<IntentFamily, string> = {
 };
 
 const COMPARISON_RE = /\b(vs\.?|versus|compared to|alternative(s)? to|better than|instead of)\b/i;
-const TRANSACTIONAL_RE = /\b(buy|purchase|pricing|price|cost|sign ?up|get started|where can i|how much|subscribe|trial|checkout|listed on)\b/i;
-const SUPPORT_RE = /\b(how do i|how to|troubleshoot|error|not working|reset|migrate|migration|configure|setup|set up|fix)\b/i;
-const NAVIGATIONAL_RE = /\b(docs|documentation|login|log in|dashboard|status page|website|homepage|contact)\b/i;
-const REPUTATION_RE = /\b(legit|legitimate|scam|safe|trustworthy|reliable|reviews?|complaints?|lawsuit|shut down|dead|rug)\b/i;
-const FACTUAL_RE = /\b(what (is|are)|who (is|are|owns)|when (did|was)|does .* (support|have)|fees?|supply|integrations?|acquired|acquisition|founder|ceo|headquarters|compliance|certified)\b/i;
-const DISCOVERY_RE = /\b(best|top|leading|recommend(ed)?|options for|solutions for|help with|which .* should)\b/i;
+const TRANSACTIONAL_RE =
+  /\b(buy|purchase|pricing|price|cost|sign ?up|get started|where can i|how much|subscribe|trial|checkout|listed on)\b/i;
+const SUPPORT_RE =
+  /\b(how do i|how to|troubleshoot|error|not working|reset|migrate|migration|configure|setup|set up|fix)\b/i;
+const NAVIGATIONAL_RE =
+  /\b(docs|documentation|login|log in|dashboard|status page|website|homepage|contact)\b/i;
+const REPUTATION_RE =
+  /\b(legit|legitimate|scam|safe|trustworthy|reliable|reviews?|complaints?|lawsuit|shut down|dead|rug)\b/i;
+const FACTUAL_RE =
+  /\b(what (is|are)|who (is|are|owns)|when (did|was)|does .* (support|have)|fees?|supply|integrations?|acquired|acquisition|founder|ceo|headquarters|compliance|certified)\b/i;
+const DISCOVERY_RE =
+  /\b(best|top|leading|recommend(ed)?|options for|solutions for|help with|which .* should)\b/i;
 
 /**
  * Classify a raw buyer question into an intent family.
  * `brandTerms` matter: the same phrasing is reputation when branded and discovery when not.
  */
 export function classifyIntent(question: string, brandTerms: string[] = []): IntentFamily {
-  const q = question.trim();
-  const lower = q.toLowerCase();
-  const branded = brandTerms.some((t) => t.trim().length > 1 && lower.includes(t.toLowerCase()));
-
-  if (COMPARISON_RE.test(lower)) return 'comparison';
-  if (NAVIGATIONAL_RE.test(lower) && branded) return 'navigational';
-  if (REPUTATION_RE.test(lower) && branded) return 'branded_reputation';
-  if (TRANSACTIONAL_RE.test(lower)) return 'transactional';
-  if (SUPPORT_RE.test(lower)) return 'support';
-  if (FACTUAL_RE.test(lower)) return 'factual';
-  if (DISCOVERY_RE.test(lower)) return branded ? 'branded_reputation' : 'unaided_discovery';
-  if (branded) return 'branded_reputation';
-  return 'unaided_discovery';
+  const normalized = question.trim().toLowerCase();
+  const branded = brandTerms.some(
+    (term) => term.trim().length > 1 && normalized.includes(term.toLowerCase()),
+  );
+  const rules: Array<[RegExp, IntentFamily, boolean]> = [
+    [COMPARISON_RE, 'comparison', true],
+    [NAVIGATIONAL_RE, 'navigational', branded],
+    [REPUTATION_RE, 'branded_reputation', branded],
+    [TRANSACTIONAL_RE, 'transactional', true],
+    [SUPPORT_RE, 'support', true],
+    [FACTUAL_RE, 'factual', true],
+    [DISCOVERY_RE, branded ? 'branded_reputation' : 'unaided_discovery', true],
+  ];
+  return (
+    rules.find(([pattern, , enabled]) => enabled && pattern.test(normalized))?.[1] ??
+    (branded ? 'branded_reputation' : 'unaided_discovery')
+  );
 }
 
 /** Guard invoked wherever a caller might be tempted to produce a single blended score. */
@@ -93,8 +103,40 @@ export function assertNoBlending(families: IntentFamily[]): void {
  * reproducible clusterer is worth more here than an opaque embedding call.
  */
 const STOP = new Set([
-  'the','a','an','is','are','to','for','of','and','or','in','on','with','my','i','me','do','does',
-  'can','what','how','which','best','you','your','it','that','this','be','have','has','was','were','from',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'to',
+  'for',
+  'of',
+  'and',
+  'or',
+  'in',
+  'on',
+  'with',
+  'my',
+  'i',
+  'me',
+  'do',
+  'does',
+  'can',
+  'what',
+  'how',
+  'which',
+  'best',
+  'you',
+  'your',
+  'it',
+  'that',
+  'this',
+  'be',
+  'have',
+  'has',
+  'was',
+  'were',
+  'from',
 ]);
 
 export function tokenize(text: string): string[] {
@@ -107,12 +149,11 @@ export function tokenize(text: string): string[] {
 }
 
 export function jaccard(a: string[], b: string[]): number {
-  const sa = new Set(a);
-  const sb = new Set(b);
-  if (sa.size === 0 || sb.size === 0) return 0;
-  let inter = 0;
-  for (const t of sa) if (sb.has(t)) inter++;
-  return inter / (sa.size + sb.size - inter);
+  const left = new Set(a),
+    right = new Set(b);
+  if (!left.size || !right.size) return 0;
+  const intersection = [...left].reduce((size, token) => size + Number(right.has(token)), 0);
+  return intersection / new Set([...left, ...right]).size;
 }
 
 export interface ClusterInput {
@@ -134,37 +175,32 @@ export function clusterDemand(
   brandTerms: string[] = [],
   threshold = 0.34,
 ): ClusterOutput[] {
-  const seeds: Array<{ tokens: string[]; family: IntentFamily; members: ClusterInput[] }> = [];
-  // Highest-volume questions become cluster seeds so labels read like real demand.
-  const ordered = [...inputs].sort((a, b) => b.volume - a.volume || a.question.localeCompare(b.question));
-
+  const groups: Array<{ tokens: string[]; output: ClusterOutput }> = [];
+  const ordered = inputs.slice().sort((a, b) => b.volume - a.volume || a.question.localeCompare(b.question));
   for (const item of ordered) {
-    const tokens = tokenize(item.question);
-    const family = classifyIntent(item.question, brandTerms);
-    let best: (typeof seeds)[number] | null = null;
-    let bestScore = 0;
-    for (const seed of seeds) {
-      if (seed.family !== family) continue; // never merge across families
-      const score = jaccard(seed.tokens, tokens);
-      if (score > bestScore) {
-        bestScore = score;
-        best = seed;
-      }
-    }
-    if (best && bestScore >= threshold) {
-      best.members.push(item);
-    } else {
-      seeds.push({ tokens, family, members: [item] });
-    }
+    const tokens = tokenize(item.question),
+      family = classifyIntent(item.question, brandTerms);
+    const candidates = groups
+      .filter((group) => group.output.intentFamily === family)
+      .map((group) => ({ group, overlap: jaccard(group.tokens, tokens) }))
+      .sort((a, b) => b.overlap - a.overlap);
+    const best = candidates[0];
+    if (best && best.overlap > 0 && best.overlap >= threshold) {
+      best.group.output.memberIds.push(item.id);
+      best.group.output.volume += item.volume;
+    } else
+      groups.push({
+        tokens,
+        output: {
+          label: titleCase(item.question),
+          intentFamily: family,
+          buyerStage: BUYER_STAGE[family],
+          memberIds: [item.id],
+          volume: item.volume,
+        },
+      });
   }
-
-  return seeds.map((seed) => ({
-    label: titleCase(seed.members[0].question),
-    intentFamily: seed.family,
-    buyerStage: BUYER_STAGE[seed.family],
-    memberIds: seed.members.map((m) => m.id),
-    volume: seed.members.reduce((s, m) => s + m.volume, 0),
-  }));
+  return groups.map((group) => group.output);
 }
 
 function titleCase(s: string): string {

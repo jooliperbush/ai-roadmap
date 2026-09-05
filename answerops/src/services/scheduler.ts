@@ -25,6 +25,9 @@ import type { Fetcher } from '../domain/fetcher.js';
 import type { BeliefProfile, ProviderAdapter } from '../providers/types.js';
 
 export interface SchedulerOptions {
+  /** Optional scope for an authorized manual run; omitted for the background worker. */
+  tenantId?: string;
+  scheduleId?: string;
   clock?: Clock;
   /** identifies this worker in the lease; two workers must not share one */
   owner?: string;
@@ -49,85 +52,110 @@ export interface TickResult {
  * One pass over everything that is due. Returns what it did, so the caller can log it and a
  * test can assert it, rather than the loop being a thing that happens somewhere.
  */
+function samplingOptions(schedule: repo.Row, opts: SchedulerOptions, clock: Clock, windowLabel: string) {
+  return {
+    tenantId: schedule.tenant_id,
+    brandId: schedule.brand_id,
+    windowLabel,
+    budget: schedule.budget_runs,
+    samplingReason: 'scheduled',
+    actor: 'scheduler',
+    beliefs: opts.beliefsFor?.(windowLabel) ?? null,
+    providers: opts.providers,
+    clock,
+    fetcher: opts.fetcher,
+    monthlyBudgetUsd: schedule.monthly_budget_usd,
+    surfaceKeys: safeParseArray(schedule.surfaces),
+    seedOffset: hashSeed(windowLabel),
+  };
+}
+
 export async function tick(db: DB, opts: SchedulerOptions = {}): Promise<TickResult> {
   const clock = opts.clock ?? systemClock;
   const owner = opts.owner ?? `worker-${randomBytes(4).toString('hex')}`;
-  const leaseMs = opts.leaseMs ?? LEASE_MS;
-  const out: TickResult = { claimed: 0, ran: 0, failed: 0, alertsCreated: 0, delivered: 0, windows: [], errors: [] };
-
   const now = clock.now();
-  const due = sched.dueSchedules(db, now.toISOString());
-
-  for (const s of due) {
-    const until = new Date(now.getTime() + leaseMs).toISOString();
-    if (!sched.claimSchedule(db, s.tenant_id, s.id, owner, now.toISOString(), until)) continue;
-    out.claimed++;
-
-    const cadence = s.cadence as Cadence;
-    const windowLabel = windowLabelFor(cadence, now);
-    let result: SampleRoundResult | null = null;
+  const schedules = sched
+    .dueSchedules(db, now.toISOString())
+    .filter(
+      (schedule) =>
+        (!opts.tenantId || schedule.tenant_id === opts.tenantId) &&
+        (!opts.scheduleId || schedule.id === opts.scheduleId),
+    );
+  const result: TickResult = {
+    claimed: 0,
+    ran: 0,
+    failed: 0,
+    alertsCreated: 0,
+    delivered: 0,
+    windows: [],
+    errors: [],
+  };
+  for (const schedule of schedules) {
+    const expires = new Date(now.getTime() + (opts.leaseMs ?? LEASE_MS)).toISOString();
+    if (!sched.claimSchedule(db, schedule.tenant_id, schedule.id, owner, now.toISOString(), expires))
+      continue;
+    result.claimed++;
+    const cadence = schedule.cadence as Cadence;
+    const label = windowLabelFor(cadence, now);
     let error: string | null = null;
-
     try {
-      result = await runSamplingRound(db, {
-        tenantId: s.tenant_id,
-        brandId: s.brand_id,
-        windowLabel,
-        budget: s.budget_runs,
-        samplingReason: 'scheduled',
-        actor: 'scheduler',
-        beliefs: opts.beliefsFor ? opts.beliefsFor(windowLabel) : null,
-        providers: opts.providers,
-        clock,
-        fetcher: opts.fetcher,
-        monthlyBudgetUsd: s.monthly_budget_usd,
-        surfaceKeys: safeParseArray(s.surfaces),
-        seedOffset: hashSeed(windowLabel),
-      });
-      out.ran++;
-      out.windows.push(windowLabel);
-    } catch (err) {
-      error = err instanceof Error ? err.message.slice(0, 200) : 'unknown error';
-      out.failed++;
-      out.errors.push(error);
-      // A failed round still owns a window. Marking it partial is what stops it becoming a
-      // baseline later, which would silently contaminate every experiment that used it.
-      sched.upsertWindow(db, s.tenant_id, s.brand_id, windowLabel, {
-        status: 'partial',
-        started_at: now.toISOString(),
-        finished_at: clock.now().toISOString(),
-        gaps: JSON.stringify([{ provider: 'all', surface: 'all', clusterId: '', reason: error }]),
-      });
-      repo.audit(db, s.tenant_id, 'scheduler', 'sampling_round_failed', 'brand', s.brand_id, `window=${windowLabel} error=${error}`);
-    }
-
-    if (result && result.runsCreated > 0) {
+      let round: SampleRoundResult | undefined;
       try {
-        const data = buildDashboard(db, s.tenant_id, s.brand_id, windowLabel);
-        const alerts = generateAlerts(db, s.tenant_id, s.brand_id, windowLabel, data, clock);
-        out.alertsCreated += alerts.created;
-      } catch (err) {
-        out.errors.push(err instanceof Error ? err.message.slice(0, 200) : 'alerting failed');
+        round = await runSamplingRound(db, samplingOptions(schedule, opts, clock, label));
+        result.ran++;
+        result.windows.push(label);
+      } catch (failure) {
+        error = failure instanceof Error ? failure.message.slice(0, 200) : 'unknown error';
+        result.failed++;
+        result.errors.push(error);
+        db.transaction(() => {
+          sched.upsertWindow(db, schedule.tenant_id, schedule.brand_id, label, {
+            status: 'partial',
+            started_at: now.toISOString(),
+            finished_at: clock.now().toISOString(),
+            gaps: JSON.stringify([{ provider: 'all', surface: 'all', clusterId: '', reason: error }]),
+          });
+          repo.audit(
+            db,
+            schedule.tenant_id,
+            'scheduler',
+            'sampling_round_failed',
+            'brand',
+            schedule.brand_id,
+            `window=${label} error=${error}`,
+          );
+        })();
       }
+      if (round && round.runsCreated > 0) {
+        try {
+          const dashboard = buildDashboard(db, schedule.tenant_id, schedule.brand_id, label);
+          result.alertsCreated += generateAlerts(
+            db,
+            schedule.tenant_id,
+            schedule.brand_id,
+            label,
+            dashboard,
+            clock,
+          ).created;
+        } catch (failure) {
+          result.errors.push(failure instanceof Error ? failure.message.slice(0, 200) : 'alerting failed');
+        }
+      }
+    } finally {
+      sched.releaseSchedule(db, schedule.tenant_id, schedule.id, {
+        next_run_at: computeNextRun(cadence, clock.now(), schedule.hour_utc).toISOString(),
+        last_run_at: clock.now().toISOString(),
+        last_window_label: label,
+        last_error: error,
+      });
     }
-
-    sched.releaseSchedule(db, s.tenant_id, s.id, {
-      next_run_at: computeNextRun(cadence, clock.now(), s.hour_utc).toISOString(),
-      last_run_at: clock.now().toISOString(),
-      last_window_label: windowLabel,
-      last_error: error,
-    });
   }
-
   if (opts.transports) {
-    const tenants = new Set(due.map((s) => s.tenant_id));
-    for (const tenantId of tenants) {
-      const res = await dispatchAlerts(db, tenantId, opts.transports, clock);
-      out.delivered += res.delivered;
+    for (const tenantId of new Set(schedules.map((schedule) => schedule.tenant_id))) {
+      result.delivered += (await dispatchAlerts(db, tenantId, opts.transports, clock)).delivered;
     }
   }
-
-  return out;
+  return result;
 }
 
 /**
@@ -136,14 +164,21 @@ export async function tick(db: DB, opts: SchedulerOptions = {}): Promise<TickRes
  */
 export class Scheduler {
   private timer: NodeJS.Timeout | null = null;
-  private running = false;
+  private inFlight: Promise<TickResult | null> | null = null;
+  private closing = false;
 
-  constructor(private db: DB, private opts: SchedulerOptions = {}, private intervalMs = 60_000) {}
+  constructor(
+    private db: DB,
+    private opts: SchedulerOptions = {},
+    private intervalMs = 60_000,
+  ) {}
 
   start(): void {
-    if (this.timer) return;
-    this.timer = setInterval(() => void this.runOnce(), this.intervalMs);
-    if (typeof this.timer.unref === 'function') this.timer.unref();
+    if (this.timer || this.closing) return;
+    this.timer = setInterval(() => {
+      void this.runOnce();
+    }, this.intervalMs);
+    this.timer.unref?.();
   }
 
   stop(): void {
@@ -151,16 +186,20 @@ export class Scheduler {
     this.timer = null;
   }
 
-  async runOnce(): Promise<TickResult | null> {
-    if (this.running) return null;
-    this.running = true;
-    try {
-      return await tick(this.db, this.opts);
-    } catch {
-      return null;
-    } finally {
-      this.running = false;
-    }
+  async shutdown(): Promise<void> {
+    this.closing = true;
+    this.stop();
+    await this.inFlight;
+  }
+
+  runOnce(): Promise<TickResult | null> {
+    if (this.inFlight || this.closing) return Promise.resolve(null);
+    this.inFlight = tick(this.db, this.opts)
+      .catch(() => null)
+      .finally(() => {
+        this.inFlight = null;
+      });
+    return this.inFlight;
   }
 }
 
@@ -170,32 +209,30 @@ export async function runDigests(
   transports: Record<string, Transport>,
   clock: Clock = systemClock,
 ): Promise<{ tenants: number; sent: number }> {
-  const now = clock.now();
-  const week = windowLabelFor('weekly', now);
-  let tenants = 0;
+  const week = windowLabelFor('weekly', clock.now());
+  const workspaces = db
+    .prepare(
+      `SELECT t.id AS tenantId,
+    (SELECT b.id FROM brands b WHERE b.tenant_id = t.id ORDER BY b.created_at LIMIT 1) AS brandId
+    FROM tenants t WHERE brandId IS NOT NULL ORDER BY t.created_at`,
+    )
+    .all() as Array<{ tenantId: string; brandId: string }>;
   let sent = 0;
-  for (const t of repo.listTenants(db)) {
-    const brand = repo.primaryBrand(db, t.id);
-    if (!brand) continue;
-    tenants++;
-    const res = await sendDigest(db, t.id, brand.id, week, transports);
-    sent += res.sent;
+  for (const workspace of workspaces) {
+    const delivery = await sendDigest(db, workspace.tenantId, workspace.brandId, week, transports);
+    sent += delivery.sent;
   }
-  return { tenants, sent };
+  return { tenants: workspaces.length, sent };
 }
 
 function safeParseArray(raw: unknown): string[] {
-  if (typeof raw !== 'string') return [];
-  try {
-    const v = JSON.parse(raw);
-    return Array.isArray(v) ? v.map(String) : [];
-  } catch {
-    return [];
-  }
+  const parsed = repo.jsonParse<unknown>(typeof raw === 'string' ? raw : null, []);
+  return Array.isArray(parsed) ? parsed.map((value) => String(value)) : [];
 }
 
-function hashSeed(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0;
-  return Math.abs(h) % 100000;
+function hashSeed(value: string): number {
+  const hash = value
+    .split('')
+    .reduce((sum, character) => (Math.imul(sum, 31) + character.charCodeAt(0)) | 0, 0);
+  return Math.abs(hash) % 100000;
 }

@@ -22,7 +22,11 @@ interface LiveConfig {
   endpoint: string;
   surfaces: SurfaceDescriptor[];
   buildBody: (req: RunRequest) => unknown;
-  parse: (json: any) => { answerText: string; citations: { url: string; title: string }[]; searchQueries: string[] };
+  parse: (json: any) => {
+    answerText: string;
+    citations: { url: string; title: string }[];
+    searchQueries: string[];
+  };
   headers: (apiKey: string) => Record<string, string>;
 }
 
@@ -33,7 +37,15 @@ const CONFIGS: LiveConfig[] = [
     envKey: 'OPENAI_API_KEY',
     endpoint: 'https://api.openai.com/v1/responses',
     surfaces: [
-      { provider: 'openai', modelId: 'gpt-5.1', modelVersion: 'gpt-5.1', surface: 'api', grounding: 'grounded_search', searchMode: 'web_search', label: 'OpenAI · API · web search' },
+      {
+        provider: 'openai',
+        modelId: 'gpt-5.1',
+        modelVersion: 'gpt-5.1',
+        surface: 'api',
+        grounding: 'grounded_search',
+        searchMode: 'web_search',
+        label: 'OpenAI · API · web search',
+      },
     ],
     headers: (k) => ({ authorization: `Bearer ${k}`, 'content-type': 'application/json' }),
     buildBody: (req) => ({
@@ -54,9 +66,21 @@ const CONFIGS: LiveConfig[] = [
     envKey: 'ANTHROPIC_API_KEY',
     endpoint: 'https://api.anthropic.com/v1/messages',
     surfaces: [
-      { provider: 'anthropic', modelId: 'claude-opus-4-5', modelVersion: 'claude-opus-4-5', surface: 'api', grounding: 'grounded_search', searchMode: 'web_search', label: 'Anthropic · API · web search' },
+      {
+        provider: 'anthropic',
+        modelId: 'claude-opus-4-5',
+        modelVersion: 'claude-opus-4-5',
+        surface: 'api',
+        grounding: 'grounded_search',
+        searchMode: 'web_search',
+        label: 'Anthropic · API · web search',
+      },
     ],
-    headers: (k) => ({ 'x-api-key': k, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }),
+    headers: (k) => ({
+      'x-api-key': k,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    }),
     buildBody: (req) => ({
       model: req.surface.modelId,
       max_tokens: 1500,
@@ -75,7 +99,15 @@ const CONFIGS: LiveConfig[] = [
     envKey: 'PERPLEXITY_API_KEY',
     endpoint: 'https://api.perplexity.ai/chat/completions',
     surfaces: [
-      { provider: 'perplexity', modelId: 'sonar-pro', modelVersion: 'sonar-pro', surface: 'search_product', grounding: 'grounded_search', searchMode: 'always', label: 'Perplexity · Sonar Pro' },
+      {
+        provider: 'perplexity',
+        modelId: 'sonar-pro',
+        modelVersion: 'sonar-pro',
+        surface: 'search_product',
+        grounding: 'grounded_search',
+        searchMode: 'always',
+        label: 'Perplexity · Sonar Pro',
+      },
     ],
     headers: (k) => ({ authorization: `Bearer ${k}`, 'content-type': 'application/json' }),
     buildBody: (req) => ({ model: req.surface.modelId, messages: [{ role: 'user', content: req.prompt }] }),
@@ -91,7 +123,15 @@ const CONFIGS: LiveConfig[] = [
     envKey: 'GEMINI_API_KEY',
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
     surfaces: [
-      { provider: 'google', modelId: 'gemini-2.5-pro', modelVersion: 'gemini-2.5-pro', surface: 'api', grounding: 'hybrid', searchMode: 'google_search', label: 'Google · Gemini · grounded' },
+      {
+        provider: 'google',
+        modelId: 'gemini-2.5-pro',
+        modelVersion: 'gemini-2.5-pro',
+        surface: 'api',
+        grounding: 'hybrid',
+        searchMode: 'google_search',
+        label: 'Google · Gemini · grounded',
+      },
     ],
     headers: (k) => ({ 'x-goog-api-key': k, 'content-type': 'application/json' }),
     buildBody: (req) => ({
@@ -109,77 +149,86 @@ const CONFIGS: LiveConfig[] = [
 function extractText(json: any): string {
   if (typeof json?.output_text === 'string') return json.output_text;
   const chunks: string[] = [];
-  const walk = (node: any) => {
-    if (!node || typeof node !== 'object') return;
-    if (typeof node.text === 'string') chunks.push(node.text);
-    for (const v of Object.values(node)) if (v && typeof v === 'object') walk(v);
-  };
-  walk(json);
+  const nodes: unknown[] = [json];
+  while (nodes.length) {
+    const node = nodes.pop();
+    if (!node || typeof node !== 'object') continue;
+    const record = node as Record<string, unknown>;
+    if (typeof record.text === 'string') chunks.push(record.text);
+    nodes.push(
+      ...Object.values(record)
+        .filter((value) => value && typeof value === 'object')
+        .reverse(),
+    );
+  }
   return chunks.join(' ').trim();
 }
 
 function extractUrls(json: any): string[] {
   const urls = new Set<string>();
-  const walk = (node: any) => {
-    if (!node || typeof node !== 'object') return;
-    for (const [k, v] of Object.entries(node)) {
-      if ((k === 'url' || k === 'uri') && typeof v === 'string' && /^https?:/.test(v)) urls.add(v);
-      if (v && typeof v === 'object') walk(v);
-    }
-  };
-  walk(json);
-  return [...urls];
+  const nodes: unknown[] = [json];
+  while (nodes.length) {
+    const node = nodes.pop();
+    if (!node || typeof node !== 'object') continue;
+    const entries = Object.entries(node);
+    for (const [key, value] of entries)
+      if ((key === 'url' || key === 'uri') && typeof value === 'string' && /^https?:/.test(value))
+        urls.add(value);
+    nodes.push(
+      ...entries
+        .map(([, value]) => value)
+        .filter((value) => value && typeof value === 'object')
+        .reverse(),
+    );
+  }
+  return Array.from(urls);
 }
 
 export class LiveProvider implements ProviderAdapter {
   key: string;
   displayName: string;
   surfaces: SurfaceDescriptor[];
-
-  constructor(private cfg: LiveConfig, private fetchImpl: typeof fetch = fetch) {
+  constructor(
+    private cfg: LiveConfig,
+    private fetchImpl: typeof fetch = fetch,
+  ) {
     this.key = cfg.key;
     this.displayName = cfg.displayName;
     this.surfaces = cfg.surfaces;
   }
-
   available(): boolean {
     return Boolean(process.env[this.cfg.envKey]);
   }
-
   async run(req: RunRequest): Promise<RunResult> {
-    const apiKey = process.env[this.cfg.envKey];
-    if (!apiKey) throw new Error(`${this.cfg.displayName} adapter requires ${this.cfg.envKey}`);
+    const credential = process.env[this.cfg.envKey];
+    if (!credential) throw new Error(this.displayName + ' adapter requires ' + this.cfg.envKey);
     const started = Date.now();
-    const url =
-      this.cfg.key === 'google'
-        ? `${this.cfg.endpoint}/${req.surface.modelId}:generateContent`
+    const endpoint =
+      this.key === 'google'
+        ? this.cfg.endpoint + '/' + req.surface.modelId + ':generateContent'
         : this.cfg.endpoint;
-    const res = await this.fetchImpl(url, {
+    const response = await this.fetchImpl(endpoint, {
       method: 'POST',
-      headers: this.cfg.headers(apiKey),
+      headers: this.cfg.headers(credential),
       body: JSON.stringify(this.cfg.buildBody(req)),
     });
-    if (!res.ok) {
-      const retryAfter = Number(res.headers.get('retry-after'));
+    if (!response.ok) {
+      const seconds = Number(response.headers.get('retry-after'));
       throw new ProviderHttpError(
-        res.status,
-        `${this.cfg.displayName} run failed: ${res.status}`,
-        Number.isFinite(retryAfter) ? retryAfter : undefined,
+        response.status,
+        this.displayName + ' run failed: ' + response.status,
+        Number.isFinite(seconds) ? seconds : undefined,
       );
     }
-    const json = await res.json();
-    const parsed = this.cfg.parse(json);
-    // Cost comes from the provider's own usage block. If it did not send one, the run is
-    // unpriced and says so, rather than reporting a confident zero.
-    const cost = costOf(this.cfg.surfaces[0].modelId, usageOf(this.cfg.key, json));
+    const payload = await response.json();
+    const parsed = this.cfg.parse(payload);
     return {
-      answerText: parsed.answerText,
-      citations: parsed.citations.map((c) => ({ ...c, snapshotText: null })),
-      searchQueries: parsed.searchQueries,
+      ...parsed,
+      citations: parsed.citations.map((citation) => ({ ...citation, snapshotText: null })),
       latencyMs: Date.now() - started,
-      costUsd: cost,
+      costUsd: costOf(this.surfaces[0].modelId, usageOf(this.key, payload)),
       simulated: false,
-      systemConfigHash: `${this.cfg.key}:${req.surface.modelVersion}:${req.temperature}:${req.personalization}`,
+      systemConfigHash: [this.key, req.surface.modelVersion, req.temperature, req.personalization].join(':'),
       modelVersion: req.surface.modelVersion,
     };
   }

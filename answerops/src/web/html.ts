@@ -1,41 +1,36 @@
-/** Minimal, escaping-by-default template helper. Values are escaped unless wrapped in raw(). */
-
+/** Trusted markup is explicit; every other template value is escaped recursively. */
 export class Raw {
   constructor(public value: string) {}
 }
-
-export function raw(value: string): Raw {
-  return new Raw(value);
-}
-
-export function escapeHtml(s: unknown): string {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
+export const raw = (value: string): Raw => new Raw(value);
+const ENTITIES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+export const escapeHtml = (value: unknown): string =>
+  String(value).replace(/[&<>"']/g, (char) => ENTITIES[char]!);
 type Value = string | number | boolean | null | undefined | Raw | Value[];
-
-function render(v: Value): string {
-  if (v === null || v === undefined || v === false) return '';
-  if (v instanceof Raw) return v.value;
-  if (Array.isArray(v)) return v.map(render).join('');
-  return escapeHtml(v);
+function output(value: Value): string {
+  if (value == null || value === false) return "";
+  if (value instanceof Raw) return value.value;
+  return Array.isArray(value)
+    ? value.reduce<string>((text, item) => text + output(item), "")
+    : escapeHtml(value);
 }
-
-export function html(strings: TemplateStringsArray, ...values: Value[]): Raw {
-  let out = '';
-  strings.forEach((s, i) => {
-    out += s;
-    if (i < values.length) out += render(values[i]);
-  });
-  return new Raw(out);
+export function html(parts: TemplateStringsArray, ...values: Value[]): Raw {
+  return raw(
+    parts.reduce(
+      (text, part, index) =>
+        text + part + (index < values.length ? output(values[index]) : ""),
+      "",
+    ),
+  );
 }
-
-export function pct(x: number | null | undefined, digits = 0): string {
-  if (x === null || x === undefined || !Number.isFinite(x)) return '—';
-  return `${(x * 100).toFixed(digits)}%`;
+export function pct(value: number | null | undefined, digits = 0): string {
+  return value == null || !Number.isFinite(value)
+    ? "—"
+    : `${(100 * value).toFixed(digits)}%`;
 }

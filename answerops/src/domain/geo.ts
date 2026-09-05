@@ -77,22 +77,15 @@ export const LOCALISED_PREFIX: Record<string, string> = {
  * budget that only affords two markets affords the two the customer listed first.
  */
 export function fanout(req: FanoutRequest, maxVariants = Infinity): FanoutVariant[] {
-  const out: FanoutVariant[] = [];
-  const geos = req.geos.length ? req.geos : ['US'];
+  const geographies = req.geos.length ? req.geos : ['US'];
   const languages = req.languages.length ? req.languages : ['en'];
-  for (const geo of geos) {
+  const variants: FanoutVariant[] = [];
+  for (const geo of geographies)
     for (const language of languages) {
-      if (out.length >= maxVariants) return out;
-      // A market pairs a geo with the language actually spoken there when we know it; an
-      // explicit pair the customer asked for wins over the table.
-      const market = MARKET_BY_GEO.get(geo);
-      if (geos.length > 1 && languages.length > 1 && market && market.language !== language) continue;
-      out.push({
-        prompt: `${LOCALISED_PREFIX[language] ?? ''}${req.prompt}`,
-        geo,
-        language,
-      });
+      if (variants.length >= maxVariants) return variants;
+      const native = MARKET_BY_GEO.get(geo)?.language;
+      if (geographies.length > 1 && languages.length > 1 && native && native !== language) continue;
+      variants.push({ geo, language, prompt: (LOCALISED_PREFIX[language] ?? '') + req.prompt });
     }
-  }
-  return out;
+  return variants;
 }

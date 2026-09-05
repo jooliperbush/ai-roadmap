@@ -18,46 +18,117 @@ export interface BotSignature {
 }
 
 export const BOT_SIGNATURES: BotSignature[] = [
-  { name: 'GPTBot', operator: 'OpenAI', botClass: 'training', match: /GPTBot/i,
-    effect: 'Affects whether your content can inform future model training. No effect on answers today.' },
-  { name: 'OAI-SearchBot', operator: 'OpenAI', botClass: 'search_index', match: /OAI-SearchBot/i,
-    effect: 'Affects whether ChatGPT search can retrieve and cite your pages. This is usually the one that matters.' },
-  { name: 'ChatGPT-User', operator: 'OpenAI', botClass: 'user_fetch', match: /ChatGPT-User/i,
-    effect: 'Affects live fetches triggered by a user in-conversation.' },
-  { name: 'ClaudeBot', operator: 'Anthropic', botClass: 'training', match: /ClaudeBot/i,
-    effect: 'Affects training-time ingestion only.' },
-  { name: 'Claude-User', operator: 'Anthropic', botClass: 'user_fetch', match: /Claude-User/i,
-    effect: 'Affects fetches Claude performs on behalf of a user in a conversation.' },
-  { name: 'Claude-SearchBot', operator: 'Anthropic', botClass: 'search_index', match: /Claude-SearchBot/i,
-    effect: 'Affects search-time retrieval for grounded Claude answers.' },
-  { name: 'PerplexityBot', operator: 'Perplexity', botClass: 'search_index', match: /PerplexityBot/i,
-    effect: 'Affects Perplexity index coverage and citation eligibility.' },
-  { name: 'Perplexity-User', operator: 'Perplexity', botClass: 'user_fetch', match: /Perplexity-User/i,
-    effect: 'Affects user-triggered live fetches.' },
-  { name: 'Google-Extended', operator: 'Google', botClass: 'training', match: /Google-Extended/i,
-    effect: 'Controls Gemini training use. Does not affect Google Search or AI Overviews eligibility.' },
-  { name: 'Googlebot', operator: 'Google', botClass: 'search_index', match: /Googlebot(?!-)/i,
-    effect: 'Standard search indexing — also the substrate for AI Overviews eligibility.' },
-  { name: 'Bingbot', operator: 'Microsoft', botClass: 'search_index', match: /bingbot/i,
-    effect: 'Search indexing used by several assistants for grounding.' },
-  { name: 'Amazonbot', operator: 'Amazon', botClass: 'search_index', match: /Amazonbot/i,
-    effect: 'Affects retrieval for Amazon assistant surfaces. Blocking it removes you from that index only.' },
-  { name: 'meta-externalagent', operator: 'Meta', botClass: 'agent', match: /meta-externalagent/i,
-    effect: 'Affects agentic browsing that fetches pages mid-task. Blocking it can break task completion, not just citation.' },
+  {
+    name: 'GPTBot',
+    operator: 'OpenAI',
+    botClass: 'training',
+    match: /GPTBot/i,
+    effect: 'Affects whether your content can inform future model training. No effect on answers today.',
+  },
+  {
+    name: 'OAI-SearchBot',
+    operator: 'OpenAI',
+    botClass: 'search_index',
+    match: /OAI-SearchBot/i,
+    effect:
+      'Affects whether ChatGPT search can retrieve and cite your pages. This is usually the one that matters.',
+  },
+  {
+    name: 'ChatGPT-User',
+    operator: 'OpenAI',
+    botClass: 'user_fetch',
+    match: /ChatGPT-User/i,
+    effect: 'Affects live fetches triggered by a user in-conversation.',
+  },
+  {
+    name: 'ClaudeBot',
+    operator: 'Anthropic',
+    botClass: 'training',
+    match: /ClaudeBot/i,
+    effect: 'Affects training-time ingestion only.',
+  },
+  {
+    name: 'Claude-User',
+    operator: 'Anthropic',
+    botClass: 'user_fetch',
+    match: /Claude-User/i,
+    effect: 'Affects fetches Claude performs on behalf of a user in a conversation.',
+  },
+  {
+    name: 'Claude-SearchBot',
+    operator: 'Anthropic',
+    botClass: 'search_index',
+    match: /Claude-SearchBot/i,
+    effect: 'Affects search-time retrieval for grounded Claude answers.',
+  },
+  {
+    name: 'PerplexityBot',
+    operator: 'Perplexity',
+    botClass: 'search_index',
+    match: /PerplexityBot/i,
+    effect: 'Affects Perplexity index coverage and citation eligibility.',
+  },
+  {
+    name: 'Perplexity-User',
+    operator: 'Perplexity',
+    botClass: 'user_fetch',
+    match: /Perplexity-User/i,
+    effect: 'Affects user-triggered live fetches.',
+  },
+  {
+    name: 'Google-Extended',
+    operator: 'Google',
+    botClass: 'training',
+    match: /Google-Extended/i,
+    effect: 'Controls Gemini training use. Does not affect Google Search or AI Overviews eligibility.',
+  },
+  {
+    name: 'Googlebot',
+    operator: 'Google',
+    botClass: 'search_index',
+    match: /Googlebot(?!-)/i,
+    effect: 'Standard search indexing — also the substrate for AI Overviews eligibility.',
+  },
+  {
+    name: 'Bingbot',
+    operator: 'Microsoft',
+    botClass: 'search_index',
+    match: /bingbot/i,
+    effect: 'Search indexing used by several assistants for grounding.',
+  },
+  {
+    name: 'Amazonbot',
+    operator: 'Amazon',
+    botClass: 'search_index',
+    match: /Amazonbot/i,
+    effect: 'Affects retrieval for Amazon assistant surfaces. Blocking it removes you from that index only.',
+  },
+  {
+    name: 'meta-externalagent',
+    operator: 'Meta',
+    botClass: 'agent',
+    match: /meta-externalagent/i,
+    effect:
+      'Affects agentic browsing that fetches pages mid-task. Blocking it can break task completion, not just citation.',
+  },
 ];
 
-export function classifyBot(userAgent: string): { name: string; operator: string; botClass: BotClass; effect: string } {
-  for (const sig of BOT_SIGNATURES) {
-    if (sig.match.test(userAgent)) {
-      return { name: sig.name, operator: sig.operator, botClass: sig.botClass, effect: sig.effect };
-    }
-  }
-  return {
-    name: 'unrecognised',
-    operator: 'unknown',
-    botClass: 'unknown',
-    effect: 'Unmatched user agent. Listed for transparency; never counted as an AI visibility signal.',
-  };
+export function classifyBot(userAgent: string): {
+  name: string;
+  operator: string;
+  botClass: BotClass;
+  effect: string;
+} {
+  const signature = BOT_SIGNATURES.find((item) => item.match.test(userAgent));
+  if (!signature)
+    return {
+      name: 'unrecognised',
+      operator: 'unknown',
+      botClass: 'unknown',
+      effect: 'Unmatched user agent. Listed for transparency; never counted as an AI visibility signal.',
+    };
+  const { match: _, ...classification } = signature;
+  return classification;
 }
 
 export const BOT_CLASS_LABEL: Record<BotClass, string> = {
@@ -99,16 +170,21 @@ export interface CrawlerBlockFinding {
 }
 
 export function summariseBlocks(events: CrawlerEventLike[]): CrawlerBlockFinding[] {
-  const byBot = new Map<string, CrawlerBlockFinding>();
-  for (const e of events) {
-    const cur =
-      byBot.get(e.botName) ?? { botName: e.botName, botClass: e.botClass, blockedCount: 0, totalCount: 0, blockedBy: '' };
-    cur.totalCount++;
-    if (e.statusCode === 403 || e.statusCode === 401 || e.blockedBy) {
-      cur.blockedCount++;
-      if (e.blockedBy) cur.blockedBy = e.blockedBy;
-    }
-    byBot.set(e.botName, cur);
+  const groups = new Map<string, CrawlerEventLike[]>();
+  for (const event of events) {
+    const group = groups.get(event.botName) ?? [];
+    group.push(event);
+    groups.set(event.botName, group);
   }
-  return [...byBot.values()].sort((a, b) => b.blockedCount - a.blockedCount || a.botName.localeCompare(b.botName));
+  return [...groups]
+    .map(([botName, group]) => ({
+      botName,
+      botClass: group[0].botClass,
+      totalCount: group.length,
+      blockedCount: group.filter(
+        (event) => event.statusCode === 401 || event.statusCode === 403 || Boolean(event.blockedBy),
+      ).length,
+      blockedBy: group.filter((event) => Boolean(event.blockedBy)).at(-1)?.blockedBy ?? '',
+    }))
+    .sort((a, b) => b.blockedCount - a.blockedCount || a.botName.localeCompare(b.botName));
 }

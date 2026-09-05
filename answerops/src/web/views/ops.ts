@@ -1,22 +1,67 @@
-/**
- * Views for the parts of the product that run without anyone watching: schedules, alerts,
- * delivery channels, the snapshot locker, the multi-brand portfolio, market coverage, the
- * accuracy index, and the self-serve audit report.
- */
-
-import { html, Raw, raw, pct } from '../html.js';
-import { MIN_SAMPLES } from '../../domain/stats.js';
-import { MARKETS, marketLabel } from '../../domain/geo.js';
-import { CADENCES } from '../../domain/scheduler.js';
-import { K_ANON } from '../../services/index-report.js';
-import { SNAPSHOT_RETENTION_DAYS } from '../../domain/fetcher.js';
-
-function when(iso: string | null | undefined): string {
-  return iso ? String(iso).slice(0, 19).replace('T', ' ') : '—';
+import { html, raw, pct, type Raw } from "../html.js";
+import { MIN_SAMPLES } from "../../domain/stats.js";
+import { MARKETS, marketLabel } from "../../domain/geo.js";
+import { CADENCES } from "../../domain/scheduler.js";
+import { K_ANON } from "../../services/index-report.js";
+import { SNAPSHOT_RETENTION_DAYS } from "../../domain/fetcher.js";
+import { section, table, empty } from "./components.js";
+const when = (date: unknown): string =>
+  date ? String(date).slice(0, 19).replace("T", " ") : "—";
+const money = (value: unknown, digits = 2): string =>
+  `$${Number(value).toFixed(digits)}`;
+const heading = (title: string, description: string): Raw =>
+  html`<h1>${title}</h1> <p class="lede">${description}</p>`;
+const badge = (text: string, tone = "", id?: string): Raw =>
+  html`<span class="pill ${tone}" ${id ? raw(`data-testid="${id}"`) : ""} >${text}</span >`;
+const action = (
+  path: string,
+  label: string,
+  id: string,
+  fields: Record<string, string> = {},
+): Raw =>
+  html`<form method="post" action="${path}"> ${Object.entries(fields).map(
+    ([name, value]) =>
+      html`<input type="hidden" name="${name}" value="${value}">`,
+  )}<button class="linkbtn" data-testid="${id}">${label}</button> </form>`;
+function grid(
+  headers: string[],
+  rows: Raw[],
+  message: string,
+  id?: string,
+): Raw {
+  return rows.length
+    ? table(headers, rows)
+    : table(headers, [
+        html`<tr> <td colspan="${headers.length}">${empty(message, id)}</td> </tr>`,
+      ]);
 }
-
-// ------------------------------------------------------------------ schedules
-
+function field(
+  name: string,
+  label: string,
+  id: string,
+  options: {
+    type?: string;
+    value?: string;
+    min?: number;
+    max?: number;
+    choices?: Array<[string, string]>;
+  } = {},
+): Raw {
+  return html`<div> <label for="${name}">${label}</label>${
+    options.choices
+      ? html`<select id="${name}" name="${name}" data-testid="${id}"> ${options.choices.map(
+          ([value, text]) =>
+            html`<option value="${value}" ${value === options.value ? raw("selected") : ""} > ${text} </option>`,
+        )} </select>`
+      : html`<input id="${name}" name="${name}" type="${options.type ?? "text"}" value="${options.value ?? ""}" ${options.min != null ? raw(`min="${options.min}"`) : ""} ${options.max != null ? raw(`max="${options.max}"`) : ""} data-testid="${id}">`
+  } </div>`;
+}
+function stats(items: Array<[string, string | number, string]>): Raw {
+  return html`<div class="stat-row"> ${items.map(
+    ([label, value, id]) =>
+      html`<div class="stat"> <span class="stat-label">${label}</span ><span class="stat-value" data-testid="${id}">${value}</span> </div>`,
+  )} </div>`;
+}
 export function schedulesView(v: {
   schedules: any[];
   brands: any[];
@@ -26,593 +71,472 @@ export function schedulesView(v: {
   windows: any[];
   lastTick: string | null;
 }): Raw {
-  return html`
-<h1>Schedules</h1>
-<p class="lede">
-  The product's value is a time series, and a time series with gaps is a worse time series. A schedule
-  claims a lease before it runs, so two workers cannot sample the same window twice, and a round that
-  fails leaves its window marked partial rather than pretending to be a baseline.
-</p>
-
-<section class="section">
-  <div class="section-head"><h2>Month to date</h2><span class="count" data-testid="mtd-month">${v.month}</span></div>
-  <div class="stat-row">
-    <div class="stat"><span class="stat-label">Spend</span><span class="stat-value" data-testid="mtd-spend">$${v.spend.usd.toFixed(2)}</span></div>
-    <div class="stat"><span class="stat-label">Priced runs</span><span class="stat-value" data-testid="mtd-priced">${v.spend.pricedRuns}</span></div>
-    <div class="stat"><span class="stat-label">Unpriced runs</span><span class="stat-value" data-testid="mtd-unpriced">${v.spend.unpricedRuns}</span></div>
-  </div>
-  ${v.spend.unpricedRuns > 0
-    ? html`<p class="hint" data-testid="unpriced-note">
-        ${v.spend.unpricedRuns} runs are unpriced: the provider returned no usage block, so their cost is
-        unknown. They are excluded from the total rather than counted as free.
-      </p>`
-    : null}
-  <div class="table-wrap"><table>
-    <thead><tr><th>Provider</th><th>Spend</th><th>Runs</th><th>Unpriced</th></tr></thead>
-    <tbody>
-      ${v.byProvider.length === 0
-        ? html`<tr><td colspan="4" class="empty">No runs this month.</td></tr>`
-        : v.byProvider.map((p) => html`<tr>
-            <td class="mono">${p.provider}</td>
-            <td class="mono">$${Number(p.usd).toFixed(4)}</td>
-            <td class="mono">${p.runs}</td>
-            <td class="mono">${p.unpriced}</td>
-          </tr>`)}
-    </tbody>
-  </table></div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Active schedules</h2><span class="count" data-testid="schedule-count">${v.schedules.length}</span></div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Brand</th><th>Cadence</th><th>Next run</th><th>Last run</th><th>Budget</th><th>State</th><th></th></tr></thead>
-    <tbody>
-      ${v.schedules.length === 0
-        ? html`<tr><td colspan="7" class="empty" data-testid="no-schedules">No schedule yet. Nothing is being sampled on its own.</td></tr>`
-        : v.schedules.map((s) => html`<tr data-testid="schedule-row">
-            <td>${v.brands.find((b) => b.id === s.brand_id)?.name ?? s.brand_id}</td>
-            <td class="mono">${s.cadence} @ ${s.hour_utc}:00 UTC</td>
-            <td class="mono" data-testid="next-run">${when(s.next_run_at)}</td>
-            <td class="mono">${when(s.last_run_at)}${s.last_window_label ? html` · ${s.last_window_label}` : null}</td>
-            <td class="mono">$${Number(s.monthly_budget_usd).toFixed(0)}/mo · ${s.budget_runs} runs</td>
-            <td>
-              ${s.enabled === 1 ? html`<span class="pill ok" data-testid="schedule-enabled">enabled</span>` : html`<span class="pill" data-testid="schedule-disabled">paused</span>`}
-              ${s.last_error ? html`<span class="pill bad" title="${s.last_error}">last run failed</span>` : null}
-            </td>
-            <td class="row-actions">
-              <form method="post" action="/schedules/${s.id}/toggle"><button class="linkbtn" data-testid="toggle-schedule">${s.enabled === 1 ? 'Pause' : 'Resume'}</button></form>
-              <form method="post" action="/schedules/${s.id}/run"><button class="linkbtn" data-testid="run-schedule-now">Run now</button></form>
-            </td>
-          </tr>`)}
-    </tbody>
-  </table></div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Add a schedule</h2></div>
-  <form method="post" action="/schedules" class="stack" data-testid="schedule-form">
-    <div>
-      <label for="brand_id">Brand</label>
-      <select id="brand_id" name="brand_id" data-testid="schedule-brand">
-        ${v.brands.map((b) => html`<option value="${b.id}">${b.name}</option>`)}
-      </select>
-    </div>
-    <div>
-      <label for="cadence">Cadence</label>
-      <select id="cadence" name="cadence" data-testid="schedule-cadence">
-        ${CADENCES.map((c) => html`<option value="${c}">${c}</option>`)}
-      </select>
-    </div>
-    <div>
-      <label for="monthly_budget_usd">Monthly budget (USD)</label>
-      <input id="monthly_budget_usd" name="monthly_budget_usd" type="number" value="500" min="10" max="100000" data-testid="schedule-budget">
-    </div>
-    <div>
-      <label for="budget_runs">Runs per round</label>
-      <input id="budget_runs" name="budget_runs" type="number" value="60" min="${MIN_SAMPLES}" max="600" data-testid="schedule-runs">
-    </div>
-    <button class="primary" type="submit" data-testid="create-schedule">Create schedule</button>
-  </form>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Window ledger</h2><span class="count" data-testid="window-count">${v.windows.length}</span></div>
-  <p class="hint">A partial window lost at least one surface. It is never used as an experiment baseline.</p>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Window</th><th>Status</th><th>Runs</th><th>Cost</th><th>Gaps</th><th>Finished</th></tr></thead>
-    <tbody>
-      ${v.windows.length === 0
-        ? html`<tr><td colspan="6" class="empty">No windows recorded yet.</td></tr>`
-        : v.windows.map((w) => html`<tr data-testid="window-row">
-            <td class="mono">${w.window_label}</td>
-            <td>${w.status === 'partial'
-              ? html`<span class="pill bad" data-testid="window-partial">partial</span>`
-              : html`<span class="pill ok">complete</span>`}</td>
-            <td class="mono">${w.actual_runs}/${w.planned_runs}</td>
-            <td class="mono">${w.cost_known === 1 ? html`$${Number(w.cost_usd).toFixed(4)}` : 'partly unpriced'}</td>
-            <td class="mono">${(JSON.parse(w.gaps || '[]') as any[]).length}</td>
-            <td class="mono">${when(w.finished_at)}</td>
-          </tr>`)}
-    </tbody>
-  </table></div>
-</section>`;
+  const spend = html`${stats([
+    ["Spend", money(v.spend.usd), "mtd-spend"],
+    ["Priced runs", v.spend.pricedRuns, "mtd-priced"],
+    ["Unpriced runs", v.spend.unpricedRuns, "mtd-unpriced"],
+  ])}${
+    v.spend.unpricedRuns
+      ? html`<p class="hint" data-testid="unpriced-note"> ${v.spend.unpricedRuns} runs are unpriced: the provider returned no usage block, so their cost is unknown. They are excluded from the total rather than counted as free. </p>`
+      : null
+  }${grid(
+    ["Provider", "Spend", "Runs", "Unpriced"],
+    v.byProvider.map(
+      (p) =>
+        html`<tr> <td class="mono">${p.provider}</td> <td class="mono">${money(p.usd, 4)}</td> <td>${p.runs}</td> <td>${p.unpriced}</td> </tr>`,
+    ),
+    "No runs this month.",
+  )}`;
+  const schedules = grid(
+    ["Brand", "Cadence", "Next run", "Last run", "Budget", "State", ""],
+    v.schedules.map(
+      (s) =>
+        html`<tr data-testid="schedule-row"> <td> ${v.brands.find((b) => b.id === s.brand_id)?.name ?? s.brand_id} </td> <td class="mono">${s.cadence} @ ${s.hour_utc}:00 UTC</td> <td class="mono" data-testid="next-run">${when(s.next_run_at)}</td> <td class="mono"> ${when(s.last_run_at)} ${s.last_window_label ?? ""} </td> <td class="mono"> ${money(s.monthly_budget_usd, 0)}/mo · ${s.budget_runs} runs </td> <td> ${
+          s.enabled === 1
+            ? badge("enabled", "ok", "schedule-enabled")
+            : badge("paused", "", "schedule-disabled")
+        }${
+          s.last_error
+            ? html`<span class="pill bad" title="${s.last_error}" >last run failed</span >`
+            : null
+        } </td> <td class="row-actions"> ${action(
+          `/schedules/${s.id}/toggle`,
+          s.enabled === 1 ? "Pause" : "Resume",
+          "toggle-schedule",
+        )}${action(`/schedules/${s.id}/run`, "Run now", "run-schedule-now")} </td> </tr>`,
+    ),
+    "No schedule yet. Nothing is being sampled on its own.",
+    "no-schedules",
+  );
+  const form = html`<form method="post" action="/schedules" class="stack" data-testid="schedule-form" > ${field(
+    "brand_id",
+    "Brand",
+    "schedule-brand",
+    {
+      choices: v.brands.map((b) => [b.id, b.name]),
+    },
+  )}${field("cadence", "Cadence", "schedule-cadence", {
+    choices: CADENCES.map((c) => [c, c]),
+  })}${field("monthly_budget_usd", "Monthly budget (USD)", "schedule-budget", {
+    type: "number",
+    value: "500",
+    min: 10,
+    max: 100000,
+  })}${field("budget_runs", "Runs per round", "schedule-runs", {
+    type: "number",
+    value: "60",
+    min: MIN_SAMPLES,
+    max: 600,
+  })}<button class="primary" type="submit" data-testid="create-schedule"> Create schedule </button> </form>`;
+  const windows = html`<p class="hint"> A partial window lost at least one surface. It is never used as an experiment baseline. </p> ${grid(
+    ["Window", "Status", "Runs", "Cost", "Gaps", "Finished"],
+    v.windows.map(
+      (w) =>
+        html`<tr data-testid="window-row"> <td class="mono">${w.window_label}</td> <td> ${
+          w.status === "partial"
+            ? badge("partial", "bad", "window-partial")
+            : badge("complete", "ok")
+        } </td> <td>${w.actual_runs}/${w.planned_runs}</td> <td class="mono"> ${w.cost_known === 1 ? money(w.cost_usd, 4) : "partly unpriced"} </td> <td>${JSON.parse(w.gaps || "[]").length}</td> <td class="mono">${when(w.finished_at)}</td> </tr>`,
+    ),
+    "No windows recorded yet.",
+  )}`;
+  return html`${heading(
+    "Schedules",
+    "The product's value is a time series, and a time series with gaps is a worse time series. A schedule claims a lease before it runs, so two workers cannot sample the same window twice, and a round that fails leaves its window marked partial rather than pretending to be a baseline.",
+  )}${section("Month to date", spend, {
+    count: v.month,
+    countId: "mtd-month",
+  })}${section("Active schedules", schedules, {
+    count: String(v.schedules.length),
+    countId: "schedule-count",
+  })}${section("Add a schedule", form)}${section("Window ledger", windows, {
+    count: String(v.windows.length),
+    countId: "window-count",
+  })}`;
 }
-
-// --------------------------------------------------------------------- alerts
-
-export function alertsView(v: { alerts: any[]; channels: any[]; attempts: any[] }): Raw {
-  return html`
-<h1>Alerts</h1>
-<p class="lede">
-  Only two things reach this page: movement that survived the two-proportion test, the minimum effect and
-  the Benjamini-Hochberg correction, and a critical contradiction two evaluators agreed on. Every body
-  carries its sample size, because an alert is read fastest and questioned least.
-</p>
-
-<section class="section">
-  <div class="section-head"><h2>Recent alerts</h2><span class="count" data-testid="alert-count">${v.alerts.length}</span></div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>When</th><th>Kind</th><th>Severity</th><th>Window</th><th>Headline</th><th>Delivered</th></tr></thead>
-    <tbody>
-      ${v.alerts.length === 0
-        ? html`<tr><td colspan="6" class="empty" data-testid="no-alerts">No alerts. Nothing crossed the gates.</td></tr>`
-        : v.alerts.map((a) => html`<tr data-testid="alert-row">
-            <td class="mono">${when(a.created_at)}</td>
-            <td class="mono" data-testid="alert-kind">${a.kind}</td>
-            <td><span class="pill ${a.severity === 'critical' ? 'bad' : ''}">${a.severity}</span></td>
-            <td class="mono">${a.window_label}</td>
-            <td>
-              ${a.link ? html`<a href="${a.link}" data-testid="alert-link">${a.headline}</a>` : a.headline}
-              <div class="hint">${a.detail}</div>
-            </td>
-            <td class="mono">${a.delivered_at ? when(a.delivered_at) : html`<span class="pill">queued</span>`}</td>
-          </tr>`)}
-    </tbody>
-  </table></div>
-</section>
-
-${channelsView(v)}`;
+export function alertsView(v: {
+  alerts: any[];
+  channels: any[];
+  attempts: any[];
+}): Raw {
+  const rows = v.alerts.map(
+    (a) =>
+      html`<tr data-testid="alert-row"> <td class="mono">${when(a.created_at)}</td> <td class="mono" data-testid="alert-kind">${a.kind}</td> <td>${badge(a.severity, a.severity === "critical" ? "bad" : "")}</td> <td class="mono">${a.window_label}</td> <td> ${
+        a.link
+          ? html`<a href="${a.link}" data-testid="alert-link" >${a.headline}</a >`
+          : a.headline
+      } <div class="hint">${a.detail}</div> </td> <td class="mono"> ${a.delivered_at ? when(a.delivered_at) : badge("queued")} </td> </tr>`,
+  );
+  return html`${heading(
+    "Alerts",
+    "Only two things reach this page: movement that survived the two-proportion test, the minimum effect and the Benjamini-Hochberg correction, and a critical contradiction two evaluators agreed on. Every body carries its sample size, because an alert is read fastest and questioned least.",
+  )}${section(
+    "Recent alerts",
+    grid(
+      ["When", "Kind", "Severity", "Window", "Headline", "Delivered"],
+      rows,
+      "No alerts. Nothing crossed the gates.",
+      "no-alerts",
+    ),
+    { count: String(rows.length), countId: "alert-count" },
+  )}${channelsView(v)}`;
 }
-
 export function channelsView(v: { channels: any[]; attempts: any[] }): Raw {
-  return html`
-<section class="section">
-  <div class="section-head"><h2>Delivery channels</h2><span class="count" data-testid="channel-count">${v.channels.length}</span></div>
-  <p class="hint">
-    A delivery route that has quietly stopped working looks exactly like a quiet week, so a channel that
-    fails three times in a row is marked failing here rather than failing silently.
-  </p>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Kind</th><th>Target</th><th>Minimum severity</th><th>Digest</th><th>State</th><th></th></tr></thead>
-    <tbody>
-      ${v.channels.length === 0
-        ? html`<tr><td colspan="6" class="empty" data-testid="no-channels">No channels. Alerts are recorded and nobody is told.</td></tr>`
-        : v.channels.map((c) => html`<tr data-testid="channel-row">
-            <td class="mono">${c.kind}</td>
-            <td class="mono">${c.target}</td>
-            <td class="mono">${c.min_severity}</td>
-            <td class="mono">${c.digest === 1 ? 'yes' : 'no'}</td>
-            <td>${c.state === 'failing'
-              ? html`<span class="pill bad" data-testid="channel-failing">failing</span>`
-              : html`<span class="pill ok">ok</span>`}</td>
-            <td class="row-actions">
-              <form method="post" action="/channels/${c.id}/test"><button class="linkbtn" data-testid="test-channel">Send test</button></form>
-              <form method="post" action="/channels/${c.id}/delete"><button class="linkbtn" data-testid="delete-channel">Remove</button></form>
-            </td>
-          </tr>`)}
-    </tbody>
-  </table></div>
-
-  <form method="post" action="/channels" class="stack" data-testid="channel-form">
-    <div>
-      <label for="kind">Channel</label>
-      <select id="kind" name="kind" data-testid="channel-kind">
-        <option value="email">Email</option>
-        <option value="slack">Slack incoming webhook</option>
-        <option value="webhook">Signed webhook</option>
-      </select>
-    </div>
-    <div>
-      <label for="target">Address or URL</label>
-      <input id="target" name="target" type="text" placeholder="ops@example.com" data-testid="channel-target">
-    </div>
-    <div>
-      <label for="min_severity">Minimum severity</label>
-      <select id="min_severity" name="min_severity" data-testid="channel-severity">
-        <option value="low">low</option><option value="medium">medium</option>
-        <option value="high" selected>high</option><option value="critical">critical</option>
-      </select>
-    </div>
-    <button class="primary" type="submit" data-testid="create-channel">Add channel</button>
-  </form>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Delivery attempts</h2><span class="count">${v.attempts.length}</span></div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>When</th><th>Kind</th><th>Attempt</th><th>Status</th><th>Error</th></tr></thead>
-    <tbody>
-      ${v.attempts.length === 0
-        ? html`<tr><td colspan="5" class="empty">Nothing sent yet.</td></tr>`
-        : v.attempts.slice(0, 30).map((t) => html`<tr data-testid="attempt-row">
-            <td class="mono">${when(t.created_at)}</td>
-            <td class="mono">${t.kind}</td>
-            <td class="mono">${t.attempt}</td>
-            <td>${t.status === 'sent' ? html`<span class="pill ok">sent</span>` : html`<span class="pill bad">failed</span>`}</td>
-            <td class="mono">${t.error || '—'}</td>
-          </tr>`)}
-    </tbody>
-  </table></div>
-</section>`;
+  const channels = grid(
+    ["Kind", "Target", "Minimum severity", "Digest", "State", ""],
+    v.channels.map(
+      (c) =>
+        html`<tr data-testid="channel-row"> <td class="mono">${c.kind}</td> <td class="mono">${c.target}</td> <td>${c.min_severity}</td> <td>${c.digest === 1 ? "yes" : "no"}</td> <td> ${
+          c.state === "failing"
+            ? badge("failing", "bad", "channel-failing")
+            : badge("ok", "ok")
+        } </td> <td class="row-actions"> ${action(
+          `/channels/${c.id}/test`,
+          "Send test",
+          "test-channel",
+        )}${action(`/channels/${c.id}/delete`, "Remove", "delete-channel")} </td> </tr>`,
+    ),
+    "No channels. Alerts are recorded and nobody is told.",
+    "no-channels",
+  );
+  const form = html`<form method="post" action="/channels" class="stack" data-testid="channel-form" > ${field(
+    "kind",
+    "Channel",
+    "channel-kind",
+    {
+      choices: [
+        ["email", "Email"],
+        ["slack", "Slack incoming webhook"],
+        ["webhook", "Signed webhook"],
+      ],
+    },
+  )}${field("target", "Address or URL", "channel-target")}${field(
+    "min_severity",
+    "Minimum severity",
+    "channel-severity",
+    {
+      choices: ["low", "medium", "high", "critical"].map((x) => [x, x]),
+      value: "high",
+    },
+  )}<button class="primary" type="submit" data-testid="create-channel"> Add channel </button> </form>`;
+  const attempts = grid(
+    ["When", "Kind", "Attempt", "Status", "Error"],
+    v.attempts
+      .slice(0, 30)
+      .map(
+        (t) =>
+          html`<tr data-testid="attempt-row"> <td class="mono">${when(t.created_at)}</td> <td>${t.kind}</td> <td>${t.attempt}</td> <td> ${badge(
+            t.status === "sent" ? "sent" : "failed",
+            t.status === "sent" ? "ok" : "bad",
+          )} </td> <td class="mono">${t.error || "—"}</td> </tr>`,
+      ),
+    "Nothing sent yet.",
+  );
+  return html`${section(
+    "Delivery channels",
+    html`<p class="hint"> A delivery route that has quietly stopped working looks exactly like a quiet week, so a channel that fails three times in a row is marked failing here rather than failing silently. </p> ${channels}${form}`,
+    { count: String(v.channels.length), countId: "channel-count" },
+  )}${section("Delivery attempts", attempts, {
+    count: String(v.attempts.length),
+  })}`;
 }
-
-// ------------------------------------------------------------------ snapshots
-
 export function snapshotView(v: { snapshot: any; citation: any | null }): Raw {
-  return html`
-<div class="snapshot-banner" data-testid="snapshot-banner">
-  This is a snapshot captured on <b>${when(v.snapshot.fetched_at)}</b>. It is not the live page, and the live
-  page may since have changed. That is the reason it is kept.
-</div>
-<h1>Snapshot ${v.snapshot.sha256.slice(0, 12)}</h1>
-<div class="table-wrap"><table>
-  <tbody>
-    <tr><th>URL</th><td class="mono"><a href="${v.snapshot.url}" rel="nofollow noopener">${v.snapshot.url}</a></td></tr>
-    <tr><th>Captured</th><td class="mono" data-testid="snapshot-date">${when(v.snapshot.fetched_at)}</td></tr>
-    <tr><th>sha256</th><td class="mono" data-testid="snapshot-sha">${v.snapshot.sha256}</td></tr>
-    <tr><th>HTTP status</th><td class="mono">${v.snapshot.http_status ?? '—'}</td></tr>
-    <tr><th>Bytes</th><td class="mono">${v.snapshot.bytes}${v.snapshot.truncated === 1 ? ' (truncated)' : ''}</td></tr>
-    <tr><th>Retention</th><td>Kept indefinitely while an open defect or a confirmed experiment refers to it, otherwise pruned after ${SNAPSHOT_RETENTION_DAYS} days.</td></tr>
-  </tbody>
-</table></div>
-<section class="section">
-  <div class="section-head"><h2>Captured content</h2></div>
-  <pre class="snapshot-body" data-testid="snapshot-body">${String(v.snapshot.body).slice(0, 20000)}</pre>
-</section>`;
+  const s = v.snapshot;
+  const values: Array<[string, Raw]> = [
+    ["URL", html`<a href="${s.url}" rel="nofollow noopener">${s.url}</a>`],
+    [
+      "Captured",
+      html`<span data-testid="snapshot-date">${when(s.fetched_at)}</span>`,
+    ],
+    ["sha256", html`<span data-testid="snapshot-sha">${s.sha256}</span>`],
+    ["HTTP status", html`${s.http_status ?? "—"}`],
+    ["Bytes", html`${s.bytes}${s.truncated === 1 ? " (truncated)" : ""}`],
+    [
+      "Retention",
+      html`Kept indefinitely while an open defect or a confirmed experiment refers to it, otherwise pruned after ${SNAPSHOT_RETENTION_DAYS} days.`,
+    ],
+  ];
+  return html`<div class="snapshot-banner" data-testid="snapshot-banner"> This is a snapshot captured on <b>${when(s.fetched_at)}</b>. It is not the live page, and the live page may since have changed. That is the reason it is kept. </div> <h1>Snapshot ${s.sha256.slice(0, 12)}</h1> <div class="table-wrap"> <table> <tbody> ${values.map(
+    ([label, value]) =>
+      html`<tr> <th scope="row">${label}</th> <td class="mono">${value}</td> </tr>`,
+  )} </tbody> </table> </div> ${section(
+    "Captured content",
+    html`<pre class="snapshot-body" data-testid="snapshot-body"> ${String(s.body).slice(0, 20000)}</pre >`,
+  )}`;
 }
-
-// ------------------------------------------------------------------ portfolio
-
-export function portfolioView(v: { rows: Array<{ brand: any; critical: number; defects: number; runs: number; lastWindow: string | null; partial: boolean }> }): Raw {
-  return html`
-<h1>Portfolio</h1>
-<p class="lede">
-  Every brand in this workspace, ranked by open critical defects. The schema has been multi-brand since the
-  first migration; this is the page that makes an agency able to use it.
-</p>
-<div class="table-wrap"><table>
-  <thead><tr><th>Brand</th><th>Critical</th><th>All defects</th><th>Runs in last window</th><th>Last window</th><th></th></tr></thead>
-  <tbody>
-    ${v.rows.length === 0
-      ? html`<tr><td colspan="6" class="empty">No brands.</td></tr>`
-      : v.rows.map((r) => html`<tr data-testid="portfolio-row">
-          <td><b>${r.brand.name}</b><div class="hint mono">${r.brand.domain}</div></td>
-          <td class="mono ${r.critical > 0 ? 'bad' : ''}" data-testid="portfolio-critical">${r.critical}</td>
-          <td class="mono">${r.defects}</td>
-          <td class="mono">${r.runs}</td>
-          <td class="mono">${r.lastWindow ?? '—'} ${r.partial ? html`<span class="pill bad">partial</span>` : null}</td>
-          <td class="row-actions">
-            <form method="post" action="/brands/switch">
-              <input type="hidden" name="brand_id" value="${r.brand.id}">
-              <button class="linkbtn" data-testid="open-brand">Open</button>
-            </form>
-          </td>
-        </tr>`)}
-  </tbody>
-</table></div>`;
+export function portfolioView(v: {
+  rows: Array<{
+    brand: any;
+    critical: number;
+    defects: number;
+    runs: number;
+    lastWindow: string | null;
+    partial: boolean;
+  }>;
+}): Raw {
+  return html`${heading(
+    "Portfolio",
+    "Every brand in this workspace, ranked by open critical defects. The schema has been multi-brand since the first migration; this is the page that makes an agency able to use it.",
+  )}${grid(
+    [
+      "Brand",
+      "Critical",
+      "All defects",
+      "Runs in last window",
+      "Last window",
+      "",
+    ],
+    v.rows.map(
+      (r) =>
+        html`<tr data-testid="portfolio-row"> <td> <b>${r.brand.name}</b> <div class="hint mono">${r.brand.domain}</div> </td> <td class="mono ${r.critical > 0 ? "bad" : ""}" data-testid="portfolio-critical" > ${r.critical} </td> <td>${r.defects}</td> <td>${r.runs}</td> <td> ${r.lastWindow ?? "—"} ${r.partial ? badge("partial", "bad") : null} </td> <td> ${action(
+          "/brands/switch",
+          "Open",
+          "open-brand",
+          {
+            brand_id: r.brand.id,
+          },
+        )} </td> </tr>`,
+    ),
+    "No brands.",
+  )}`;
 }
-
-// -------------------------------------------------------------------- markets
-
-export function marketsView(v: { cluster: any; variants: any[]; breakdown: any[]; geos: string[]; languages: string[] }): Raw {
-  return html`
-<h1>Markets for "${v.cluster.label}"</h1>
-<p class="lede">
-  Two markets are two populations. Rates are reported per market and never pooled, for the same reason
-  intent families are never blended: an average across them describes nobody.
-</p>
-
-<section class="section">
-  <div class="section-head"><h2>Sampled markets</h2><span class="count" data-testid="variant-count">${v.variants.length}</span></div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Market</th><th>Prompt</th></tr></thead>
-    <tbody>
-      ${v.variants.map((x) => html`<tr data-testid="variant-row">
-        <td class="mono">${marketLabel(x.geo, x.language)}</td>
-        <td>${x.prompt}</td>
-      </tr>`)}
-    </tbody>
-  </table></div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Add markets</h2></div>
-  <form method="post" action="/clusters/${v.cluster.id}/markets" class="stack" data-testid="markets-form">
-    <fieldset>
-      <legend>Markets</legend>
-      ${MARKETS.map((m) => html`<label class="check">
-        <input type="checkbox" name="market" value="${m.geo}:${m.language}" ${v.geos.includes(m.geo) ? raw('checked') : ''} data-testid="market-${m.geo}">
-        ${m.label}
-      </label>`)}
-    </fieldset>
-    <button class="primary" type="submit" data-testid="save-markets">Save markets</button>
-  </form>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Defect rate by market</h2></div>
-  <p class="hint">Shown separately, never combined.</p>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Market</th><th>Runs</th><th>Runs with a defect</th><th>Rate</th></tr></thead>
-    <tbody>
-      ${v.breakdown.length === 0
-        ? html`<tr><td colspan="4" class="empty">No runs in this window.</td></tr>`
-        : v.breakdown.map((b) => html`<tr data-testid="market-row">
-            <td class="mono">${b.label}</td>
-            <td class="mono">${b.runs}</td>
-            <td class="mono">${b.defects}</td>
-            <td class="mono">${b.runs >= MIN_SAMPLES ? pct(b.defects / b.runs) : `insufficient data (n=${b.runs})`}</td>
-          </tr>`)}
-    </tbody>
-  </table></div>
-</section>`;
+export function marketsView(v: {
+  cluster: any;
+  variants: any[];
+  breakdown: any[];
+  geos: string[];
+  languages: string[];
+}): Raw {
+  return html`${heading(
+    `Markets for "${v.cluster.label}"`,
+    "Two markets are two populations. Rates are reported per market and never pooled, for the same reason intent families are never blended: an average across them describes nobody.",
+  )}${section(
+    "Sampled markets",
+    table(
+      ["Market", "Prompt"],
+      v.variants.map(
+        (x) =>
+          html`<tr data-testid="variant-row"> <td class="mono">${marketLabel(x.geo, x.language)}</td> <td>${x.prompt}</td> </tr>`,
+      ),
+    ),
+    { count: String(v.variants.length), countId: "variant-count" },
+  )}${section(
+    "Add markets",
+    html`<form method="post" action="/clusters/${v.cluster.id}/markets" class="stack" data-testid="markets-form" > <fieldset> <legend>Markets</legend> ${MARKETS.map(
+      (m) =>
+        html`<label class="check" ><input type="checkbox" name="market" value="${m.geo}:${m.language}" ${v.geos.includes(m.geo) ? raw("checked") : ""} data-testid="market-${m.geo}">${m.label}</label >`,
+    )} </fieldset> <button class="primary" type="submit" data-testid="save-markets"> Save markets </button> </form>`,
+  )}${section(
+    "Defect rate by market",
+    html`<p class="hint">Shown separately, never combined.</p> ${grid(
+      ["Market", "Runs", "Runs with a defect", "Rate"],
+      v.breakdown.map(
+        (b) =>
+          html`<tr data-testid="market-row"> <td>${b.label}</td> <td>${b.runs}</td> <td>${b.defects}</td> <td class="mono"> ${
+            b.runs >= MIN_SAMPLES
+              ? pct(b.defects / b.runs)
+              : `insufficient data (n=${b.runs})`
+          } </td> </tr>`,
+      ),
+      "No runs in this window.",
+    )}`,
+  )}`;
 }
-
-// ---------------------------------------------------------------------- index
-
-export function indexView(v: { report: any; consent: boolean; tenantName: string }): Raw {
-  return html`
-<h1>AI Brand Accuracy Index</h1>
-<p class="lede">
-  Which models repeat stale or contradicted company facts, by category, over time. Built only from
-  workspaces that opted in, and suppressed wherever a cell would rest on fewer than ${K_ANON} of them.
-</p>
-
-<section class="section">
-  <div class="section-head"><h2>Your participation</h2></div>
-  <p>
-    ${v.consent
-      ? html`<b>${v.tenantName}</b> is contributing to the index. You can revoke this at any time and the
-        next report will exclude you.`
-      : html`<b>${v.tenantName}</b> is not contributing. Participation is off by default.`}
-  </p>
-  <p class="hint" data-testid="export-fields">
-    Exactly these fields leave your workspace: ${EXPORT_FIELDS_TEXT}. No brand name, cluster label,
-    prompt or answer text ever crosses the boundary.
-  </p>
-  <form method="post" action="/index-consent">
-    <input type="hidden" name="consent" value="${v.consent ? '0' : '1'}">
-    <button class="primary" type="submit" data-testid="toggle-consent">${v.consent ? 'Stop contributing' : 'Contribute to the index'}</button>
-  </form>
-</section>
-
-<section class="section">
-  <div class="section-head">
-    <h2>${v.report.quarter}</h2>
-    <span class="count" data-testid="index-participants">${v.report.consentingTenants} participating workspaces</span>
-  </div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Provider</th><th>Model version</th><th>Claim class</th><th>Category</th><th>Workspaces</th><th>Stale or contradicted</th></tr></thead>
-    <tbody>
-      ${v.report.cells.length === 0
-        ? html`<tr><td colspan="6" class="empty" data-testid="index-empty">No live runs from consenting workspaces yet.</td></tr>`
-        : v.report.cells.map((c: any) => html`<tr data-testid="index-row">
-            <td class="mono">${c.provider}</td>
-            <td class="mono">${c.modelVersion}</td>
-            <td class="mono">${c.predicateClass}</td>
-            <td class="mono">${c.industryCategory}</td>
-            <td class="mono">${c.tenants}</td>
-            <td class="mono">${c.suppressed
-              ? html`<span class="pill" data-testid="index-suppressed">suppressed, fewer than ${K_ANON} workspaces</span>`
-              : html`${pct(c.staleOrWrong.point)} (n=${c.staleOrWrong.n})`}</td>
-          </tr>`)}
-    </tbody>
-  </table></div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Methodology</h2></div>
-  <ul class="rules">${v.report.methodology.map((m: string) => html`<li>${m}</li>`)}</ul>
-</section>`;
+export function indexView(v: {
+  report: any;
+  consent: boolean;
+  tenantName: string;
+}): Raw {
+  const participation = html`<p> <b>${v.tenantName}</b> ${
+    v.consent
+      ? "is contributing to the index. You can revoke this at any time and the next report will exclude you."
+      : "is not contributing. Participation is off by default."
+  } </p> <p class="hint" data-testid="export-fields"> Exactly these fields leave your workspace: provider, model_version, predicate_class, verdict, industry_category, quarter. No brand name, cluster label, prompt or answer text ever crosses the boundary. </p> <form method="post" action="/index-consent"> <input type="hidden" name="consent" value="${v.consent ? "0" : "1"}"><button class="primary" type="submit" data-testid="toggle-consent"> ${v.consent ? "Stop contributing" : "Contribute to the index"} </button> </form>`;
+  const rows = v.report.cells.map(
+    (c: any) =>
+      html`<tr data-testid="index-row"> <td>${c.provider}</td> <td>${c.modelVersion}</td> <td>${c.predicateClass}</td> <td>${c.industryCategory}</td> <td>${c.tenants}</td> <td class="mono"> ${
+        c.suppressed
+          ? badge(
+              `suppressed, fewer than ${K_ANON} workspaces`,
+              "",
+              "index-suppressed",
+            )
+          : html`${pct(c.staleOrWrong.point)} (n=${c.staleOrWrong.n})`
+      } </td> </tr>`,
+  );
+  return html`${heading(
+    "AI Brand Accuracy Index",
+    `Which models repeat stale or contradicted company facts, by category, over time. Built only from workspaces that opted in, and suppressed wherever a cell would rest on fewer than ${K_ANON} of them.`,
+  )}${section("Your participation", participation)}${section(
+    v.report.quarter,
+    grid(
+      [
+        "Provider",
+        "Model version",
+        "Claim class",
+        "Category",
+        "Workspaces",
+        "Stale or contradicted",
+      ],
+      rows,
+      "No live runs from consenting workspaces yet.",
+      "index-empty",
+    ),
+    {
+      count: `${v.report.consentingTenants} participating workspaces`,
+      countId: "index-participants",
+    },
+  )}${section(
+    "Methodology",
+    html`<ul class="rules"> ${v.report.methodology.map((text: string) => html`<li>${text}</li>`)} </ul>`,
+  )}`;
 }
-
-const EXPORT_FIELDS_TEXT = 'provider, model_version, predicate_class, verdict, industry_category, quarter';
-
-// --------------------------------------------------------------- audit report
-
-export function auditReportView(v: { report: any; findings: any; candidates: any[]; surfaces: string[]; notTested: string[] }): Raw {
-  const r = v.report;
-  const empty = (v.findings.defects ?? []).length === 0 && (v.findings.missed ?? []).length === 0;
-  // Two things a reader cannot infer from the numbers, and must be told before reading them:
-  // whether a real model was asked at all, and whether there was anything to check answers
-  // against. Both were already known to the system and neither reached this page.
-  const simulated = Number(r.simulated_runs ?? 0);
+function disclosure(title: string, body: Raw, tone: string, id: string): Raw {
+  return html`<aside class="disclosure ${tone}" data-testid="${id}"> <h2>${title}</h2> ${body} </aside>`;
+}
+export function auditReportView(v: {
+  report: any;
+  findings: any;
+  candidates: any[];
+  surfaces: string[];
+  notTested: string[];
+}): Raw {
+  const r = v.report,
+    findings = v.findings;
+  const simulated = Number(r.simulated_runs ?? 0),
+    facts = Number(r.facts_read ?? 0);
   const allSimulated = simulated > 0 && simulated >= Number(r.sample_size ?? 0);
-  const factsRead = Number(r.facts_read ?? 0);
-  return html`
-<article class="audit">
-<h1>Answer risk audit: ${r.brand_name || r.domain}</h1>
-
-${simulated > 0
-  ? html`<div class="disclosure danger" data-testid="audit-simulated-banner">
-      <h2>${allSimulated ? 'No real assistant was asked for this report' : 'Part of this sample did not come from a real assistant'}</h2>
-      <p>
-        ${allSimulated
-          ? html`All ${simulated} answers below were produced by a deterministic stand-in that this deployment
-              runs when no provider API key is configured. Nothing here was said by ChatGPT, Claude, Gemini or
-              Perplexity, and no number in this report is a measurement of what those assistants tell your
-              buyers.`
-          : html`${simulated} of the ${r.sample_size} answers below came from a deterministic stand-in rather than
-              a real assistant, because a provider key was missing or its adapter failed mid-round.`}
-      </p>
-      <p class="hint">
-        The stand-in exists so the pipeline can be rehearsed end to end at no cost, and every such run is
-        flagged in the database. It is not a forecast: it cannot tell you what a real model would say.
-      </p>
-    </div>`
-  : null}
-
-${factsRead === 0
-  ? html`<div class="disclosure warn" data-testid="audit-no-facts-banner">
-      <h2>We could not read a checkable fact from your site, so accuracy was not tested</h2>
-      <p>
-        An answer is only wrong relative to something. This audit reads your own published pages for
-        statements it can check — a price, a fee, a founding year, a headquarters, a certification, an
-        integration — and found none it could extract. Every defect count in this report therefore has an
-        empty registry behind it. <b>Zero defects here means "not checked", not "nothing wrong".</b>
-      </p>
-      <p class="hint">
-        The absence and demand figures below are unaffected: whether you appear in an answer does not depend
-        on the registry. See "what this did not test" for why your pages may have read as empty.
-      </p>
-    </div>`
-  : null}
-
-<p class="lede">
-  Dated ${when(r.completed_at ?? r.created_at)}. We read ${r.domain}, took what it says about itself as the
-  comparison, asked ${(v.findings.familySummaries ?? []).length} families of buyer question across
-  ${v.surfaces.length} surfaces, and checked every answer and every citation.
-</p>
-
-<section class="section">
-  <div class="section-head"><h2>What this sample was</h2></div>
-  <div class="stat-row">
-    <div class="stat"><span class="stat-label">Answers sampled</span><span class="stat-value" data-testid="audit-sample">${r.sample_size}</span></div>
-    <div class="stat"><span class="stat-label">Cost of the sample</span><span class="stat-value" data-testid="audit-cost">${r.cost_known === 1 ? `$${Number(r.cost_usd).toFixed(2)}` : 'partly unpriced'}</span></div>
-    <div class="stat"><span class="stat-label">Powered to detect</span><span class="stat-value" data-testid="audit-power">${Math.round(Number(r.powered_for ?? 1) * 100)} points</span></div>
-  </div>
-  <p class="hint">
-    Surfaces: ${v.surfaces.join('; ') || 'none recorded'}.
-    ${simulated > 0 ? html` <b data-testid="audit-surface-sim">A "sim-" model id means the stand-in, not that vendor's model.</b>` : null}
-  </p>
-</section>
-
-${empty
-  ? html`<section class="section" data-testid="audit-nothing-found">
-      <div class="section-head">
-        <h2>${factsRead === 0 ? 'Nothing was checked, so nothing was found' : 'We found no defect at this sample size'}</h2>
-      </div>
-      ${factsRead === 0
-        ? html`<p data-testid="audit-empty-unchecked">
-            Across ${r.sample_size} sampled answers nothing was compared against anything, because no
-            checkable fact was read from your site. This is an empty result, not a clean one. The fastest way
-            to a real answer is to publish the facts that matter in plain text on a page we can read, or to
-            approve a registry by hand once monitoring starts.
-          </p>`
-        : html`<p>
-            That is the finding. Across ${r.sample_size} sampled answers nothing contradicted or outdated what
-            your own pages say. At this sample size a difference of about
-            <b>${Math.round(Number(r.powered_for ?? 1) * 100)} points</b> would have been detectable, so a smaller
-            problem could still exist and this audit would not have seen it.
-          </p>`}
-    </section>`
-  : html`
-<section class="section">
-  <div class="section-head">
-    <h2>1. Answer defects</h2>
-    <span class="count" data-testid="audit-defect-count">${factsRead === 0 ? 'not checked' : (v.findings.defects ?? []).length}</span>
-  </div>
-  ${factsRead === 0
-    ? html`<p data-testid="audit-defects-unchecked">
-        No count is shown. Defects are found by comparing an answer with a fact you published, and no fact
-        could be read from your site, so this section had nothing to test against. A zero here would have
-        been an artefact of the empty registry rather than a finding about your answers.
-      </p>`
-    : null}
-  ${(v.findings.defects ?? []).map((d: any) => html`<div class="finding" data-testid="audit-defect">
-    <h3>${d.headline}</h3>
-    <p class="mono">${d.measurementText}</p>
-    <blockquote>${d.example}</blockquote>
-    ${d.canonical ? html`<p class="hint">Your own page says: ${d.canonical}</p>` : null}
-  </div>`)}
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>2. Missed demand</h2><span class="count">${(v.findings.missed ?? []).length}</span></div>
-  ${(v.findings.missed ?? []).length === 0
-    ? html`<p>No question cluster showed defensible absence at this sample size.</p>`
-    : (v.findings.missed ?? []).map((m: any) => html`<div class="finding" data-testid="audit-missed">
-        <h3>${m.label}</h3><p class="mono">absent in ${m.absenceText}</p>
-      </div>`)}
-</section>`}
-
-<section class="section">
-  <div class="section-head"><h2>By question family</h2></div>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Family</th><th>Runs</th><th>Defect rate</th></tr></thead>
-    <tbody>
-      ${(v.findings.familySummaries ?? []).map((f: any) => html`<tr>
-        <td>${f.label}</td><td class="mono">${f.runs}</td><td class="mono">${f.defectRateText}</td>
-      </tr>`)}
-    </tbody>
-  </table></div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Facts we read from your site</h2><span class="count" data-testid="audit-candidate-count">${v.candidates.length}</span></div>
-  <p class="hint">
-    Candidates, not an approved registry. Nobody has confirmed these; they are what your own published pages
-    state, read the same way we read a model's answer.
-  </p>
-  ${v.candidates.length === 0
-    ? html`<p class="hint" data-testid="audit-candidates-empty">
-        None. We look for statements of price, fees, availability, product status, integrations, feature
-        support, headquarters, founding year, funding, employee count, leadership, partnerships, compliance
-        and certification. Your pages either state none of those in a form a reader could check, or state
-        them only in copy rendered after the page loads.
-      </p>`
-    : null}
-  <div class="table-wrap"><table>
-    <thead><tr><th>Subject</th><th>Predicate</th><th>Value</th><th>Source</th></tr></thead>
-    <tbody>
-      ${v.candidates.slice(0, 20).map((c: any) => html`<tr data-testid="audit-candidate">
-        <td>${c.subject}</td><td class="mono">${c.predicate}</td><td>${c.object}</td>
-        <td class="mono"><a href="${c.sourceUrl}" rel="nofollow noopener">${String(c.sourceUrl).slice(0, 48)}</a></td>
-      </tr>`)}
-    </tbody>
-  </table></div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>What this did not test</h2></div>
-  <ul class="rules" data-testid="audit-not-tested">${v.notTested.map((n) => html`<li>${n}</li>`)}</ul>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Start monitoring</h2></div>
-  <p>
-    This workspace already holds the candidates, the question clusters and one window of runs. Creating an
-    account attaches you to it and schedules the first daily round.
-  </p>
-  <form method="post" action="/audit/${r.token}/start" class="stack" data-testid="convert-form">
-    <div><label for="email">Work email</label><input id="email" name="email" type="email" required data-testid="convert-email"></div>
-    <div><label for="password">Choose a password</label><input id="password" name="password" type="password" required minlength="8" data-testid="convert-password"></div>
-    <button class="primary" type="submit" data-testid="start-monitoring">Start monitoring</button>
-  </form>
-</section>
-</article>`;
+  const power = `${Math.round(Number(r.powered_for ?? 1) * 100)} points`;
+  const defects = findings.defects ?? [],
+    missed = findings.missed ?? [],
+    families = findings.familySummaries ?? [];
+  const simulation = simulated
+    ? disclosure(
+        allSimulated
+          ? "No real assistant was asked for this report"
+          : "Part of this sample did not come from a real assistant",
+        html`<p> ${
+          allSimulated
+            ? html`All ${simulated} answers below were produced by a deterministic stand-in that this deployment runs when no provider API key is configured. Nothing here was said by ChatGPT, Claude, Gemini or Perplexity, and no number in this report is a measurement of what those assistants tell your buyers.`
+            : html`${simulated} of the ${r.sample_size} answers below came from a deterministic stand-in rather than a real assistant, because a provider key was missing or its adapter failed mid-round.`
+        } </p> <p class="hint"> The stand-in exists so the pipeline can be rehearsed end to end at no cost, and every such run is flagged in the database. It is not a forecast: it cannot tell you what a real model would say. </p>`,
+        "danger",
+        "audit-simulated-banner",
+      )
+    : null;
+  const noFacts =
+    facts === 0
+      ? disclosure(
+          "We could not read a checkable fact from your site, so accuracy was not tested",
+          html`<p> An answer is only wrong relative to something. This audit reads your own published pages for statements it can check — a price, a fee, a founding year, a headquarters, a certification, an integration — and found none it could extract. Every defect count in this report therefore has an empty registry behind it. <b>Zero defects here means "not checked", not "nothing wrong".</b> </p> <p class="hint"> The absence and demand figures below are unaffected: whether you appear in an answer does not depend on the registry. See "what this did not test" for why your pages may have read as empty. </p>`,
+          "warn",
+          "audit-no-facts-banner",
+        )
+      : null;
+  const sample = section(
+    "What this sample was",
+    html`${stats([
+      ["Answers sampled", r.sample_size, "audit-sample"],
+      [
+        "Cost of the sample",
+        r.cost_known === 1 ? money(r.cost_usd) : "partly unpriced",
+        "audit-cost",
+      ],
+      ["Powered to detect", power, "audit-power"],
+    ])} <p class="hint"> Surfaces: ${v.surfaces.join("; ") || "none recorded"}. ${
+      simulated
+        ? html`<b data-testid="audit-surface-sim" >A "sim-" model id means the stand-in, not that vendor's model.</b >`
+        : null
+    } </p>`,
+  );
+  const result =
+    defects.length === 0 && missed.length === 0
+      ? section(
+          facts === 0
+            ? "Nothing was checked, so nothing was found"
+            : "We found no defect at this sample size",
+          facts === 0
+            ? html`<p data-testid="audit-empty-unchecked"> Across ${r.sample_size} sampled answers nothing was compared against anything, because no checkable fact was read from your site. This is an empty result, not a clean one. The fastest way to a real answer is to publish the facts that matter in plain text on a page we can read, or to approve a registry by hand once monitoring starts. </p>`
+            : html`<p> That is the finding. Across ${r.sample_size} sampled answers nothing contradicted or outdated what your own pages say. At this sample size a difference of about <b>${power}</b> would have been detectable, so a smaller problem could still exist and this audit would not have seen it. </p>`,
+          { id: "audit-nothing-found" },
+        )
+      : html`${section(
+          "1. Answer defects",
+          html`${
+            facts === 0
+              ? html`<p data-testid="audit-defects-unchecked"> No count is shown. Defects are found by comparing an answer with a fact you published, and no fact could be read from your site, so this section had nothing to test against. A zero here would have been an artefact of the empty registry rather than a finding about your answers. </p>`
+              : null
+          }${defects.map(
+            (d: any) =>
+              html`<article class="finding" data-testid="audit-defect"> <h3>${d.headline}</h3> <p class="mono">${d.measurementText}</p> <blockquote>${d.example}</blockquote> ${
+                d.canonical
+                  ? html`<p class="hint">Your own page says: ${d.canonical}</p>`
+                  : null
+              } </article>`,
+          )}`,
+          {
+            count: facts === 0 ? "not checked" : String(defects.length),
+            countId: "audit-defect-count",
+          },
+        )}${section(
+          "2. Missed demand",
+          missed.length
+            ? html`${missed.map(
+                (m: any) =>
+                  html`<article class="finding" data-testid="audit-missed"> <h3>${m.label}</h3> <p class="mono">absent in ${m.absenceText}</p> </article>`,
+              )}`
+            : html`<p> No question cluster showed defensible absence at this sample size. </p>`,
+          { count: String(missed.length) },
+        )}`;
+  const candidates = html`<p class="hint"> Candidates, not an approved registry. Nobody has confirmed these; they are what your own published pages state, read the same way we read a model's answer. </p> ${
+    v.candidates.length
+      ? null
+      : html`<p class="hint" data-testid="audit-candidates-empty"> None. We look for statements of price, fees, availability, product status, integrations, feature support, headquarters, founding year, funding, employee count, leadership, partnerships, compliance and certification. Your pages either state none of those in a form a reader could check, or state them only in copy rendered after the page loads. </p>`
+  }${table(
+    ["Subject", "Predicate", "Value", "Source"],
+    v.candidates
+      .slice(0, 20)
+      .map(
+        (c) =>
+          html`<tr data-testid="audit-candidate"> <td>${c.subject}</td> <td class="mono">${c.predicate}</td> <td>${c.object}</td> <td class="mono"> <a href="${c.sourceUrl}" rel="nofollow noopener" >${String(c.sourceUrl).slice(0, 48)}</a > </td> </tr>`,
+      ),
+  )}`;
+  const conversion = html`<p> This workspace already holds the candidates, the question clusters and one window of runs. Creating an account attaches you to it and schedules the first daily round. </p> <form method="post" action="/audit/${r.token}/start" class="stack" data-testid="convert-form" > <div> <label for="email">Work email</label ><input id="email" name="email" type="email" autocomplete="email" required data-testid="convert-email"> </div> <div> <label for="password">Choose a password</label ><input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" data-testid="convert-password"> </div> <button class="primary" type="submit" data-testid="start-monitoring"> Start monitoring </button> </form>`;
+  return html`<article class="audit"> <h1>Answer risk audit: ${r.brand_name || r.domain}</h1> ${simulation}${noFacts} <p class="lede"> Dated ${when(r.completed_at ?? r.created_at)}. We read ${r.domain}, took what it says about itself as the comparison, asked ${families.length} families of buyer question across ${v.surfaces.length} surfaces, and checked every answer and every citation. </p> ${sample}${result}${section(
+    "By question family",
+    table(
+      ["Family", "Runs", "Defect rate"],
+      families.map(
+        (f: any) =>
+          html`<tr> <td>${f.label}</td> <td class="mono">${f.runs}</td> <td class="mono">${f.defectRateText}</td> </tr>`,
+      ),
+    ),
+  )}${section("Facts we read from your site", candidates, {
+    count: String(v.candidates.length),
+    countId: "audit-candidate-count",
+  })}${section(
+    "What this did not test",
+    html`<ul class="rules" data-testid="audit-not-tested"> ${v.notTested.map((text) => html`<li>${text}</li>`)} </ul>`,
+  )}${section("Start monitoring", conversion)} </article>`;
 }
-
 export function auditAdminView(v: { reports: any[] }): Raw {
-  return html`
-<h1>Audit requests</h1>
-<p class="lede">Self-serve audits, newest first. Each ran the real pipeline in its own provisional workspace.</p>
-<div class="table-wrap"><table>
-  <thead><tr><th>When</th><th>Domain</th><th>Status</th><th>Sample</th><th>Report</th></tr></thead>
-  <tbody>
-    ${v.reports.length === 0
-      ? html`<tr><td colspan="5" class="empty">No audits requested.</td></tr>`
-      : v.reports.map((r) => html`<tr data-testid="audit-report-row">
-          <td class="mono">${when(r.created_at)}</td>
-          <td class="mono">${r.domain}</td>
-          <td>${r.status === 'complete'
-            ? html`<span class="pill ok">complete</span>`
-            : r.status === 'failed'
-              ? html`<span class="pill bad" title="${r.error ?? ''}">failed</span>`
-              : html`<span class="pill">${r.status}</span>`}</td>
-          <td class="mono">${r.sample_size}</td>
-          <td>${r.status === 'complete' ? html`<a href="/audit/${r.token}" data-testid="audit-report-link">open</a>` : '—'}</td>
-        </tr>`)}
-  </tbody>
-</table></div>`;
+  return html`${heading(
+    "Audit requests",
+    "Self-serve audits, newest first. Each ran the real pipeline in its own provisional workspace.",
+  )}${grid(
+    ["When", "Domain", "Status", "Sample", "Report"],
+    v.reports.map(
+      (r) =>
+        html`<tr data-testid="audit-report-row"> <td>${when(r.created_at)}</td> <td>${r.domain}</td> <td> ${
+          r.status === "failed"
+            ? html`<span class="pill bad" title="${r.error ?? ""}" >failed</span >`
+            : badge(r.status, r.status === "complete" ? "ok" : "")
+        } </td> <td>${r.sample_size}</td> <td> ${
+          r.status === "complete"
+            ? html`<a href="/audit/${r.token}" data-testid="audit-report-link" >open</a >`
+            : "—"
+        } </td> </tr>`,
+    ),
+    "No audits requested.",
+  )}`;
 }

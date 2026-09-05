@@ -37,59 +37,44 @@ export const PRICE_TABLE_REVIEWED = '2026-08-21';
 
 /** Pull a usage block out of whatever shape the provider returned. Null means unknown. */
 export function usageOf(providerKey: string, json: any): Usage | null {
-  if (!json || typeof json !== 'object') return null;
-  switch (providerKey) {
-    case 'openai': {
-      const u = json.usage;
-      if (!u) return null;
-      return {
-        inputTokens: num(u.input_tokens ?? u.prompt_tokens),
-        outputTokens: num(u.output_tokens ?? u.completion_tokens),
-        searchCalls: countToolCalls(json, 'web_search'),
-      };
-    }
-    case 'anthropic': {
-      const u = json.usage;
-      if (!u) return null;
-      return {
-        inputTokens: num(u.input_tokens),
-        outputTokens: num(u.output_tokens),
-        searchCalls: num(u.server_tool_use?.web_search_requests) || countToolCalls(json, 'web_search'),
-      };
-    }
-    case 'perplexity': {
-      const u = json.usage;
-      if (!u) return null;
-      return {
-        inputTokens: num(u.prompt_tokens),
-        outputTokens: num(u.completion_tokens),
-        searchCalls: num(u.num_search_queries),
-      };
-    }
-    case 'google': {
-      const u = json.usageMetadata;
-      if (!u) return null;
-      return {
-        inputTokens: num(u.promptTokenCount),
-        outputTokens: num(u.candidatesTokenCount),
-        searchCalls: (json?.candidates?.[0]?.groundingMetadata?.webSearchQueries ?? []).length,
-      };
-    }
-    default:
-      return null;
-  }
+  if (json === null || typeof json !== 'object') return null;
+  const usage = providerKey === 'google' ? json.usageMetadata : json.usage;
+  if (!usage) return null;
+  const readers: Record<string, () => Usage> = {
+    openai: () => ({
+      inputTokens: num(usage.input_tokens ?? usage.prompt_tokens),
+      outputTokens: num(usage.output_tokens ?? usage.completion_tokens),
+      searchCalls: countToolCalls(json, 'web_search'),
+    }),
+    anthropic: () => ({
+      inputTokens: num(usage.input_tokens),
+      outputTokens: num(usage.output_tokens),
+      searchCalls: num(usage.server_tool_use?.web_search_requests) || countToolCalls(json, 'web_search'),
+    }),
+    perplexity: () => ({
+      inputTokens: num(usage.prompt_tokens),
+      outputTokens: num(usage.completion_tokens),
+      searchCalls: num(usage.num_search_queries),
+    }),
+    google: () => ({
+      inputTokens: num(usage.promptTokenCount),
+      outputTokens: num(usage.candidatesTokenCount),
+      searchCalls: (json.candidates?.[0]?.groundingMetadata?.webSearchQueries ?? []).length,
+    }),
+  };
+  return readers[providerKey]?.() ?? null;
 }
 
 /** Null in, null out. An unknown usage block must not become a confident $0.00. */
 export function costOf(modelId: string, usage: Usage | null): number | null {
-  if (!usage) return null;
   const price = PRICE_TABLE[modelId];
-  if (!price) return null;
-  return (
-    (usage.inputTokens / 1_000_000) * price.inputPerMTok +
-    (usage.outputTokens / 1_000_000) * price.outputPerMTok +
-    usage.searchCalls * price.searchPerCall
-  );
+  if (usage === null || !price) return null;
+  const charges = [
+    (usage.inputTokens / 1_000_000) * price.inputPerMTok,
+    (usage.outputTokens / 1_000_000) * price.outputPerMTok,
+    usage.searchCalls * price.searchPerCall,
+  ];
+  return charges.reduce((sum, charge) => sum + charge, 0);
 }
 
 /**
@@ -97,9 +82,7 @@ export function costOf(modelId: string, usage: Usage | null): number | null {
  * it. Based on a typical grounded answer: ~2k in, ~700 out, one search call.
  */
 export function estimatedRunCost(modelId: string): number {
-  const price = PRICE_TABLE[modelId];
-  if (!price) return 0.02;
-  return (2000 / 1_000_000) * price.inputPerMTok + (700 / 1_000_000) * price.outputPerMTok + price.searchPerCall;
+  return costOf(modelId, { inputTokens: 2000, outputTokens: 700, searchCalls: 1 }) ?? 0.02;
 }
 
 function num(x: unknown): number {
@@ -107,13 +90,15 @@ function num(x: unknown): number {
 }
 
 function countToolCalls(json: any, name: string): number {
-  let n = 0;
-  const walk = (node: any) => {
-    if (!node || typeof node !== 'object') return;
-    const type = node.type ?? node.name;
-    if (typeof type === 'string' && type.includes(name)) n++;
-    for (const v of Object.values(node)) if (v && typeof v === 'object') walk(v);
-  };
-  walk(json);
-  return n;
+  const pending: unknown[] = [json];
+  let calls = 0;
+  while (pending.length) {
+    const node = pending.pop();
+    if (!node || typeof node !== 'object') continue;
+    const record = node as Record<string, unknown>;
+    const tag = record.type ?? record.name;
+    if (typeof tag === 'string' && tag.includes(name)) calls++;
+    pending.push(...Object.values(record).filter((value) => value !== null && typeof value === 'object'));
+  }
+  return calls;
 }

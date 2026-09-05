@@ -43,42 +43,43 @@ export function evalue(k: number, n: number, p0: number, a = 1, b = 1): number {
  * crosses 1/alpha and stays true, because an always-valid test is allowed to stop there.
  */
 export class SequentialTest {
-  private product = 1;
-  private looks = 0;
-  private crossedAt: number | null = null;
-
-  constructor(private p0: number, private alpha = E_ALPHA) {}
-
+  private logEvidence = 0;
+  private observations = 0;
+  private crossing: number | null = null;
+  constructor(
+    private p0: number,
+    private alpha = E_ALPHA,
+  ) {}
   observe(look: Look): number {
-    this.looks++;
-    this.product *= evalue(look.k, look.n, this.p0);
-    if (this.crossedAt === null && this.product >= 1 / this.alpha) this.crossedAt = this.looks;
-    return this.product;
+    this.observations++;
+    this.logEvidence += Math.log(evalue(look.k, look.n, this.p0));
+    if (this.crossing === null && this.logEvidence >= Math.log(1 / this.alpha))
+      this.crossing = this.observations;
+    return this.value;
   }
-
   get value(): number {
-    return this.product;
+    return Math.exp(Math.min(700, this.logEvidence));
   }
-
   get fired(): boolean {
-    return this.crossedAt !== null;
+    return this.crossing !== null;
   }
-
   get firedAtLook(): number | null {
-    return this.crossedAt;
+    return this.crossing;
   }
-
-  /** The always-valid analogue of a p-value: 1/e, clamped to 1. */
   get pValueAnytime(): number {
-    return Math.min(1, 1 / this.product);
+    return Math.min(1, Math.exp(-this.logEvidence));
   }
 }
 
 /** Convenience: run a whole series through a fresh test and report whether it ever fired. */
-export function runSequential(looks: Look[], p0: number, alpha = E_ALPHA): { fired: boolean; value: number; firedAtLook: number | null } {
-  const t = new SequentialTest(p0, alpha);
-  for (const l of looks) t.observe(l);
-  return { fired: t.fired, value: t.value, firedAtLook: t.firedAtLook };
+export function runSequential(
+  looks: Look[],
+  p0: number,
+  alpha = E_ALPHA,
+): { fired: boolean; value: number; firedAtLook: number | null } {
+  const test = new SequentialTest(p0, alpha);
+  looks.forEach((look) => test.observe(look));
+  return { fired: test.fired, value: test.value, firedAtLook: test.firedAtLook };
 }
 
 function logBeta(a: number, b: number): number {
@@ -89,9 +90,8 @@ function logBeta(a: number, b: number): number {
 export function logGamma(x: number): number {
   const g = 7;
   const c = [
-    0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
-    -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6,
-    1.5056327351493116e-7,
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
+    12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
   ];
   if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
   const z = x - 1;
@@ -172,14 +172,18 @@ export interface VersionGroup {
  * every run, so the honest move is to refuse to pool and report per version.
  */
 export function poolByVersion(runs: VersionedRun[]): { groups: VersionGroup[]; mixed: boolean } {
-  const byVersion = new Map<string, VersionGroup>();
-  for (const r of runs) {
-    const g = byVersion.get(r.modelVersion) ?? { modelVersion: r.modelVersion, k: 0, n: 0 };
-    g.n++;
-    if (r.defect) g.k++;
-    byVersion.set(r.modelVersion, g);
-  }
-  const groups = [...byVersion.values()].sort((a, b) => a.modelVersion.localeCompare(b.modelVersion));
+  const versions = new Map<string, VersionGroup>();
+  runs.forEach((run) => {
+    const group = versions.get(run.modelVersion) ?? { modelVersion: run.modelVersion, k: 0, n: 0 };
+    versions.set(run.modelVersion, {
+      modelVersion: group.modelVersion,
+      k: group.k + Number(run.defect),
+      n: group.n + 1,
+    });
+  });
+  const groups = Array.from(versions.values()).sort((left, right) =>
+    left.modelVersion.localeCompare(right.modelVersion),
+  );
   return { groups, mixed: groups.length > 1 };
 }
 
@@ -222,7 +226,8 @@ export function hierarchicalVariance(observations: VariantObservation[]): Varian
       between: 0,
       icc: 0,
       variants: usable.length,
-      interpretation: 'Fewer than two wordings, so wording variance cannot be separated from sampling variance.',
+      interpretation:
+        'Fewer than two wordings, so wording variance cannot be separated from sampling variance.',
     };
   }
   const rates = usable.map((o) => o.k / o.n);

@@ -11,14 +11,21 @@ import { systemClock } from '../domain/clock.js';
 import type { ProviderAdapter, RunRequest, RunResult, SurfaceDescriptor } from './types.js';
 
 export class CircuitOpenError extends Error {
-  constructor(public providerKey: string, public until: Date) {
+  constructor(
+    public providerKey: string,
+    public until: Date,
+  ) {
     super(`circuit open for ${providerKey} until ${until.toISOString()}`);
     this.name = 'CircuitOpenError';
   }
 }
 
 export class ProviderHttpError extends Error {
-  constructor(public status: number, message: string, public retryAfterSec?: number) {
+  constructor(
+    public status: number,
+    message: string,
+    public retryAfterSec?: number,
+  ) {
     super(message);
     this.name = 'ProviderHttpError';
   }
@@ -54,25 +61,27 @@ export const DEFAULT_POLICY: ResiliencePolicy = {
 };
 
 export function isRetryable(err: unknown): boolean {
-  if (err instanceof ProviderHttpError) return err.status === 429 || err.status >= 500;
-  const msg = err instanceof Error ? err.message : String(err);
-  return /ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|fetch failed/i.test(msg);
+  if (err instanceof ProviderHttpError) return err.status >= 500 || err.status === 429;
+  return ['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'socket hang up', 'fetch failed'].some((fragment) =>
+    (err instanceof Error ? err.message : String(err)).toLowerCase().includes(fragment.toLowerCase()),
+  );
 }
 
 /** Full jitter: delay is uniform in [0, exponential backoff], which spreads a thundering herd. */
 export function backoffDelay(attempt: number, policy: ResiliencePolicy, retryAfterSec?: number): number {
-  if (retryAfterSec && retryAfterSec > 0) return Math.min(retryAfterSec * 1000, policy.maxRetryAfterMs);
-  const ceiling = Math.min(policy.baseDelayMs * 2 ** (attempt - 1), policy.maxDelayMs);
-  return Math.floor(policy.jitter() * ceiling);
+  if (retryAfterSec !== undefined && retryAfterSec > 0)
+    return Math.min(policy.maxRetryAfterMs, retryAfterSec * 1000);
+  return Math.floor(
+    Math.min(policy.maxDelayMs, policy.baseDelayMs * Math.pow(2, attempt - 1)) * policy.jitter(),
+  );
 }
 
 export class ResilientProvider implements ProviderAdapter {
   key: string;
   displayName: string;
   surfaces: SurfaceDescriptor[];
-  private consecutiveFailures = 0;
-  private openUntil: number | null = null;
-
+  private failures = 0;
+  private blockedUntil = 0;
   constructor(
     private inner: ProviderAdapter,
     private policy: ResiliencePolicy = DEFAULT_POLICY,
@@ -82,36 +91,38 @@ export class ResilientProvider implements ProviderAdapter {
     this.displayName = inner.displayName;
     this.surfaces = inner.surfaces;
   }
-
   available(): boolean {
     return this.inner.available();
   }
-
   get circuitOpen(): boolean {
-    return this.openUntil !== null && this.openUntil > this.clock.now().getTime();
+    return this.blockedUntil > +this.clock.now();
   }
-
   async run(req: RunRequest): Promise<RunResult> {
-    if (this.circuitOpen) throw new CircuitOpenError(this.key, new Date(this.openUntil!));
-    let lastErr: unknown;
-    for (let attempt = 1; attempt <= this.policy.maxAttempts; attempt++) {
+    if (this.circuitOpen) throw new CircuitOpenError(this.key, new Date(this.blockedUntil));
+    let failure: unknown;
+    let attempt = 0;
+    while (attempt < this.policy.maxAttempts) {
+      attempt++;
       try {
-        const out = await this.inner.run(req);
-        this.consecutiveFailures = 0;
-        this.openUntil = null;
-        return out;
-      } catch (err) {
-        lastErr = err;
-        if (!isRetryable(err) || attempt === this.policy.maxAttempts) break;
-        const retryAfter = err instanceof ProviderHttpError ? err.retryAfterSec : undefined;
-        await this.policy.sleep(backoffDelay(attempt, this.policy, retryAfter));
+        const result = await this.inner.run(req);
+        this.failures = 0;
+        this.blockedUntil = 0;
+        return result;
+      } catch (error) {
+        failure = error;
+        if (attempt >= this.policy.maxAttempts || !isRetryable(error)) break;
+        await this.policy.sleep(
+          backoffDelay(
+            attempt,
+            this.policy,
+            error instanceof ProviderHttpError ? error.retryAfterSec : undefined,
+          ),
+        );
       }
     }
-    this.consecutiveFailures++;
-    if (this.consecutiveFailures >= this.policy.failureThreshold) {
-      this.openUntil = this.clock.now().getTime() + this.policy.openMs;
-    }
-    throw lastErr;
+    if (++this.failures >= this.policy.failureThreshold)
+      this.blockedUntil = +this.clock.now() + this.policy.openMs;
+    throw failure;
   }
 }
 

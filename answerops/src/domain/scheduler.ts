@@ -18,40 +18,34 @@ export const LEASE_MS = 10 * 60_000;
  */
 export function computeNextRun(cadence: Cadence, from: Date, hourUtc = 6): Date {
   if (cadence === 'manual') return new Date('2999-01-01T00:00:00.000Z');
-  const next = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate(), hourUtc, 0, 0, 0));
-  if (cadence === 'daily') {
-    while (next.getTime() <= from.getTime()) next.setUTCDate(next.getUTCDate() + 1);
-    return next;
-  }
-  // Weekly runs on Monday at hourUtc.
-  while (next.getUTCDay() !== 1 || next.getTime() <= from.getTime()) next.setUTCDate(next.getUTCDate() + 1);
-  return next;
+  const boundary = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate(), hourUtc);
+  const dayMs = 86_400_000;
+  if (cadence === 'daily') return new Date(boundary + (boundary <= +from ? dayMs : 0));
+  const weekday = new Date(boundary).getUTCDay();
+  const monday = boundary + ((8 - weekday) % 7) * dayMs;
+  return new Date(monday + (monday <= +from ? 7 * dayMs : 0));
 }
 
 /** Daily windows are dated; weekly windows are ISO week numbers. Both sort lexically. */
 export function windowLabelFor(cadence: Cadence, at: Date): string {
-  if (cadence === 'weekly') {
-    const { year, week } = isoWeek(at);
-    return `${year}-W${String(week).padStart(2, '0')}`;
-  }
-  return at.toISOString().slice(0, 10);
+  if (cadence !== 'weekly') return at.toISOString().substring(0, 10);
+  const value = isoWeek(at);
+  return value.year + '-W' + String(value.week).padStart(2, '0');
 }
 
 export function isoWeek(at: Date): { year: number; week: number } {
-  const d = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
-  const day = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
-  return { year: d.getUTCFullYear(), week };
+  const dayMs = 86_400_000;
+  const midnight = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate());
+  const thursday = new Date(midnight + (4 - (at.getUTCDay() || 7)) * dayMs);
+  const year = thursday.getUTCFullYear();
+  return { year, week: 1 + Math.floor((+thursday - Date.UTC(year, 0, 1)) / (7 * dayMs)) };
 }
 
 /** Month key used by the budget ledger. */
 export function monthKey(at: Date): string {
-  return at.toISOString().slice(0, 7);
+  return at.toISOString().substring(0, 7);
 }
 
 export function leaseIsLive(leaseExpiresAt: string | null | undefined, now: Date): boolean {
-  if (!leaseExpiresAt) return false;
-  return new Date(leaseExpiresAt).getTime() > now.getTime();
+  return Boolean(leaseExpiresAt && Date.parse(leaseExpiresAt) > +now);
 }

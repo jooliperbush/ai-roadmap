@@ -6,7 +6,13 @@
 
 import type { DB } from '../db/index.js';
 import * as repo from '../db/repo/index.js';
-import { Measurement, measure, formatMeasurement, benjaminiHochberg, twoProportionTest } from '../domain/stats.js';
+import {
+  Measurement,
+  measure,
+  formatMeasurement,
+  benjaminiHochberg,
+  twoProportionTest,
+} from '../domain/stats.js';
 import { IntentFamily, INTENT_WEIGHT, FAMILY_LABEL, assertNoBlending } from '../domain/intent.js';
 import { computePriority, ActionType } from '../domain/priority.js';
 import { analyzeExperiment } from '../domain/experiments.js';
@@ -72,7 +78,13 @@ export interface DashboardData {
   missedDemand: MissedDemandItem[];
   missedDemandShare: number;
   confirmedWins: ConfirmedWinItem[];
-  familySummaries: Array<{ family: IntentFamily; label: string; clusters: number; runs: number; defectRate: Measurement }>;
+  familySummaries: Array<{
+    family: IntentFamily;
+    label: string;
+    clusters: number;
+    runs: number;
+    defectRate: Measurement;
+  }>;
   coverage: { clusters: number; sampledClusters: number; surfaces: number };
   windows: WindowSummary[];
   /** facts models asserted that the registry can neither confirm nor deny */
@@ -90,37 +102,33 @@ export interface WindowSummary {
 
 /** Every sampling window recorded for this brand, newest first. */
 export function listWindows(db: DB, tenantId: string, brandId: string): WindowSummary[] {
-  const rows = db
+  const windows = db
     .prepare(
-      `SELECT window_label AS label, MAX(requested_at) AS last_at, COUNT(*) AS runs,
-              COUNT(DISTINCT cluster_id) AS clusters
-         FROM model_runs WHERE tenant_id = ? AND brand_id = ?
-        GROUP BY window_label ORDER BY last_at DESC`,
+      `WITH window_counts AS (
+    SELECT window_label AS label, MAX(requested_at) AS lastAt, COUNT(*) AS runs, COUNT(DISTINCT cluster_id) AS clusters
+    FROM model_runs WHERE tenant_id = ? AND brand_id = ? GROUP BY window_label)
+    SELECT label, lastAt, runs, clusters, CASE WHEN clusters >= 0.8 * (SELECT MAX(clusters) FROM window_counts)
+      THEN 1 ELSE 0 END AS comparable FROM window_counts ORDER BY lastAt DESC`,
     )
     .all(tenantId, brandId) as repo.Row[];
-  const maxClusters = rows.reduce((acc, r) => Math.max(acc, r.clusters), 0);
-  return rows.map((r) => ({
-    label: r.label,
-    lastAt: r.last_at,
-    runs: r.runs,
-    clusters: r.clusters,
-    // A partial probe is not a substitute for a full scheduled round. Comparing a 40-run
-    // spot check against a 300-run baseline would move headline numbers for reasons that
-    // have nothing to do with what the models are saying.
-    comparable: maxClusters === 0 ? true : r.clusters >= 0.8 * maxClusters,
+  return windows.map((window) => ({
+    label: window.label,
+    lastAt: window.lastAt,
+    runs: window.runs,
+    clusters: window.clusters,
+    comparable: Boolean(window.comparable),
   }));
 }
 
-/**
- * The desk defaults to the most recent window with coverage comparable to the best round on
- * record; thinner probes stay available in the window picker rather than silently taking over.
- */
-export function latestWindow(db: DB, tenantId: string, brandId: string): { current: string; baseline: string | null } {
-  const windows = listWindows(db, tenantId, brandId);
-  if (windows.length === 0) return { current: 'baseline', baseline: null };
-  const comparable = windows.filter((w) => w.comparable);
-  const usable = comparable.length ? comparable : windows;
-  return { current: usable[0].label, baseline: usable[1]?.label ?? null };
+export function latestWindow(
+  db: DB,
+  tenantId: string,
+  brandId: string,
+): { current: string; baseline: string | null } {
+  const all = listWindows(db, tenantId, brandId);
+  const complete = all.filter((window) => window.comparable);
+  const [current, baseline] = complete.length ? complete : all;
+  return { current: current?.label ?? 'baseline', baseline: baseline?.label ?? null };
 }
 
 /**
@@ -138,20 +146,21 @@ interface WindowSnapshot {
 
 function loadWindow(db: DB, tenantId: string, brandId: string, label: string): WindowSnapshot {
   const runs = repo.runsForWindow(db, tenantId, brandId, label);
-  const observedByRun = repo.observedForWindow(db, tenantId, brandId, label);
-  const runsByCluster = new Map<string, repo.Row[]>();
-  for (const r of runs) {
-    const list = runsByCluster.get(r.cluster_id) ?? [];
-    list.push(r);
-    runsByCluster.set(r.cluster_id, list);
-  }
-  return { label, runs, observedByRun, runsByCluster };
+  return {
+    label,
+    runs,
+    observedByRun: repo.observedForWindow(db, tenantId, brandId, label),
+    runsByCluster: runs.reduce<Map<string, repo.Row[]>>((groups, run) => {
+      const group = groups.get(run.cluster_id);
+      if (group) group.push(run);
+      else groups.set(run.cluster_id, [run]);
+      return groups;
+    }, new Map<string, repo.Row[]>()),
+  };
 }
 
 function runsInClusters(snap: WindowSnapshot, clusterIds: string[]): repo.Row[] {
-  const out: repo.Row[] = [];
-  for (const cid of clusterIds) out.push(...(snap.runsByCluster.get(cid) ?? []));
-  return out;
+  return clusterIds.flatMap((id) => snap.runsByCluster.get(id) ?? []);
 }
 
 export interface RollupItem {
@@ -174,341 +183,340 @@ export interface RollupItem {
  * opaque so it is safe" is exactly the kind of accidental safety that stops being true.
  */
 export function rollupFrom(snap: WindowSnapshot): RollupItem[] {
-  const byKey = new Map<string, RollupItem & { providerSet: Set<string>; clusterSet: Set<string> }>();
-  const runById = new Map(snap.runs.map((r) => [r.id, r]));
-  for (const [runId, claims] of snap.observedByRun) {
-    const run = runById.get(runId);
-    if (!run) continue;
-    for (const o of claims) {
-      if (o.verdict !== 'CONTRADICTED' && o.verdict !== 'STALE') continue;
-      if (!['not_required', 'agreed'].includes(o.adjudication)) continue;
-      if (!o.misconception_key) continue;
-      const key = `${o.misconception_key}|${o.verdict}`;
-      let item = byKey.get(key);
-      if (!item) {
-        item = {
-          misconceptionKey: o.misconception_key,
-          verdict: o.verdict,
-          severity: o.severity,
-          exampleStatement: o.statement,
-          canonicalClaimId: o.canonical_claim_id ?? null,
-          defectRuns: 0,
-          providers: [],
-          clusterIds: [],
-          adjudicated: false,
-          providerSet: new Set<string>(),
-          clusterSet: new Set<string>(),
+  type Accumulator = { value: RollupItem; runs: Set<string>; providers: Set<string>; clusters: Set<string> };
+  const groups = new Map<string, Accumulator>();
+  for (const run of snap.runs) {
+    for (const claim of snap.observedByRun.get(run.id) ?? []) {
+      if (
+        !['CONTRADICTED', 'STALE'].includes(claim.verdict) ||
+        !['agreed', 'not_required'].includes(claim.adjudication) ||
+        !claim.misconception_key
+      )
+        continue;
+      const key = JSON.stringify([claim.misconception_key, claim.verdict]);
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          runs: new Set(),
+          providers: new Set(),
+          clusters: new Set(),
+          value: {
+            misconceptionKey: claim.misconception_key,
+            verdict: claim.verdict,
+            severity: claim.severity,
+            exampleStatement: claim.statement,
+            canonicalClaimId: claim.canonical_claim_id ?? null,
+            defectRuns: 0,
+            providers: [],
+            clusterIds: [],
+            adjudicated: false,
+          },
         };
-        byKey.set(key, item);
+        groups.set(key, group);
       }
-      if (SEVERITY_ORDER.indexOf(o.severity) > SEVERITY_ORDER.indexOf(item.severity)) item.severity = o.severity;
-      if (o.statement < item.exampleStatement) item.exampleStatement = o.statement;
-      if (!item.canonicalClaimId && o.canonical_claim_id) item.canonicalClaimId = o.canonical_claim_id;
-      if (o.adjudication === 'agreed') item.adjudicated = true;
-      item.providerSet.add(run.provider);
-      item.clusterSet.add(run.cluster_id);
+      const item = group.value;
+      group.runs.add(run.id);
+      group.providers.add(run.provider);
+      group.clusters.add(run.cluster_id);
+      if (SEVERITY_ORDER.indexOf(claim.severity) > SEVERITY_ORDER.indexOf(item.severity))
+        item.severity = claim.severity;
+      if (claim.statement < item.exampleStatement) item.exampleStatement = claim.statement;
+      item.canonicalClaimId ||= claim.canonical_claim_id ?? null;
+      item.adjudicated ||= claim.adjudication === 'agreed';
     }
   }
-  // defect_runs counts distinct runs per misconception+verdict.
-  const runsPerKey = new Map<string, Set<string>>();
-  for (const [runId, claims] of snap.observedByRun) {
-    for (const o of claims) {
-      if (o.verdict !== 'CONTRADICTED' && o.verdict !== 'STALE') continue;
-      if (!['not_required', 'agreed'].includes(o.adjudication)) continue;
-      if (!o.misconception_key) continue;
-      const key = `${o.misconception_key}|${o.verdict}`;
-      const set = runsPerKey.get(key) ?? new Set<string>();
-      set.add(runId);
-      runsPerKey.set(key, set);
-    }
-  }
-  const out: RollupItem[] = [];
-  for (const [key, item] of byKey) {
-    out.push({
-      misconceptionKey: item.misconceptionKey,
-      verdict: item.verdict,
-      severity: item.severity,
-      exampleStatement: item.exampleStatement,
-      canonicalClaimId: item.canonicalClaimId,
-      defectRuns: runsPerKey.get(key)?.size ?? 0,
-      providers: [...item.providerSet].sort(),
-      clusterIds: [...item.clusterSet].sort(),
-      adjudicated: item.adjudicated,
-    });
-  }
-  return out.sort((a, b) => b.defectRuns - a.defectRuns);
+  return [...groups.values()]
+    .map(({ value, runs, providers, clusters }) => ({
+      ...value,
+      defectRuns: runs.size,
+      providers: [...providers].sort(),
+      clusterIds: [...clusters].sort(),
+    }))
+    .sort((a, b) => b.defectRuns - a.defectRuns);
 }
 
 const SEVERITY_ORDER = ['low', 'medium', 'high', 'critical'];
 
 /** Runs in a window carrying a given misconception, from the prefetched snapshot. */
 function runsWithMisconceptionIn(snap: WindowSnapshot, misconceptionKey: string): string[] {
-  const out: string[] = [];
-  for (const [runId, claims] of snap.observedByRun) {
-    if (claims.some((o) => o.misconception_key === misconceptionKey)) out.push(runId);
-  }
-  return out;
+  return [...snap.observedByRun]
+    .filter(([, claims]) => claims.find((claim) => claim.misconception_key === misconceptionKey))
+    .map(([id]) => id);
 }
 
-export function buildDashboard(db: DB, tenantId: string, brandId: string, windowOverride?: string | null): DashboardData {
-  const brand = repo.getBrand(db, tenantId, brandId);
-  if (!brand) throw new Error('brand not found');
-  const auto = latestWindow(db, tenantId, brandId);
-  const windows = listWindows(db, tenantId, brandId);
-  const chosen = windowOverride && windows.some((w) => w.label === windowOverride) ? windowOverride : auto.current;
-  const current = chosen;
-  const baseline = chosen === auto.current
-    ? auto.baseline
-    : windows.filter((w) => w.label !== chosen)[0]?.label ?? null;
-  const clusters = repo.listClusters(db, tenantId, brandId);
-  const clusterById = new Map(clusters.map((c) => [c.id, c]));
-
-  const snap = loadWindow(db, tenantId, brandId, current);
-  const baseSnap = baseline ? loadWindow(db, tenantId, brandId, baseline) : null;
-  const allRuns = snap.runs;
-  const simulatedRuns = allRuns.filter((r) => r.simulated === 1).length;
-  const windowRow = repo.getWindowStatus(db, tenantId, brandId, current);
-
-  // ---------------------------------------------------------------- section 1
-  const rollup = rollupFrom(snap);
-  const rawDefects: DefectItem[] = [];
-  const pValues: number[] = [];
-
-  for (const row of rollup) {
-    const clusterIds = row.clusterIds;
-    const denomRuns = runsInClusters(snap, clusterIds);
-    const k = row.defectRuns;
-    const n = denomRuns.length;
-    const m = measure(k, n);
-    const cluster = clusterById.get(clusterIds[0]) ?? clusters[0];
+function defectsFor(
+  snap: WindowSnapshot,
+  baseline: WindowSnapshot | null,
+  clusters: repo.Row[],
+  canonical: repo.Row[],
+): DefectItem[] {
+  const clusterById = new Map(clusters.map((cluster) => [cluster.id, cluster]));
+  const claims = new Map(canonical.map((claim) => [claim.id, claim]));
+  const defects: DefectItem[] = [];
+  for (const aggregate of rollupFrom(snap)) {
+    const cluster = clusterById.get(aggregate.clusterIds[0]) ?? clusters[0];
     if (!cluster) continue;
-
-    const canonical = row.canonicalClaimId ? repo.getCanonicalClaim(db, tenantId, row.canonicalClaimId) : undefined;
-    const suggested: ActionType = row.verdict === 'STALE' ? 'fix_fact_inconsistency' : 'update_owned_page';
+    const measurement = measure(aggregate.defectRuns, runsInClusters(snap, aggregate.clusterIds).length);
+    const action: ActionType = aggregate.verdict === 'STALE' ? 'fix_fact_inconsistency' : 'update_owned_page';
     const priority = computePriority({
       demandWeight: cluster.demand_weight,
-      intentFamily: cluster.intent_family as IntentFamily,
+      intentFamily: cluster.intent_family,
       economicValue: cluster.economic_value,
-      defect: m,
-      actionType: suggested,
+      defect: measurement,
+      actionType: action,
     });
-
     let comparison: DefectItem['baselineComparison'] = null;
-    if (baseSnap) {
-      const baseRuns = runsInClusters(baseSnap, clusterIds);
-      const baseK = runsWithMisconceptionIn(baseSnap, row.misconceptionKey).length;
-      const t = twoProportionTest(baseK, baseRuns.length, k, n);
-      const basePoint = baseRuns.length > 0 ? baseK / baseRuns.length : 0;
-      const nowPoint = n > 0 ? k / n : 0;
-      comparison = { pValue: t.pValue, significant: t.significant, qValue: null, effect: nowPoint - basePoint };
-      pValues.push(t.pValue);
+    if (baseline) {
+      const previousN = runsInClusters(baseline, aggregate.clusterIds).length;
+      const previousK = runsWithMisconceptionIn(baseline, aggregate.misconceptionKey).length;
+      const test = twoProportionTest(previousK, previousN, aggregate.defectRuns, measurement.n);
+      comparison = {
+        pValue: test.pValue,
+        significant: test.significant,
+        qValue: null,
+        effect:
+          (measurement.n ? aggregate.defectRuns / measurement.n : 0) -
+          (previousN ? previousK / previousN : 0),
+      };
     }
-
-    const providers = row.providers;
-    rawDefects.push({
-      misconceptionKey: row.misconceptionKey,
-      headline: buildDefectHeadline(providers, row.verdict, m, predicateOf(row.misconceptionKey)),
-      verdict: row.verdict,
-      severity: row.severity,
-      exampleStatement: row.exampleStatement,
-      adjudicated: row.adjudicated,
-      measurement: m,
-      measurementText: formatMeasurement(m),
-      providers,
-      clusterIds,
-      clusterLabels: clusterIds.map((cid) => clusterById.get(cid)?.label ?? cid),
-      intentFamily: cluster.intent_family as IntentFamily,
-      canonicalClaimId: canonical?.id ?? null,
-      canonicalClaimText: canonical?.claim_text ?? null,
+    const claim = aggregate.canonicalClaimId ? claims.get(aggregate.canonicalClaimId) : undefined;
+    defects.push({
+      misconceptionKey: aggregate.misconceptionKey,
+      verdict: aggregate.verdict,
+      severity: aggregate.severity,
+      exampleStatement: aggregate.exampleStatement,
+      adjudicated: aggregate.adjudicated,
+      headline: buildDefectHeadline(
+        aggregate.providers,
+        aggregate.verdict,
+        measurement,
+        predicateOf(aggregate.misconceptionKey),
+      ),
+      measurement,
+      measurementText: formatMeasurement(measurement),
+      providers: aggregate.providers,
+      clusterIds: aggregate.clusterIds,
+      clusterLabels: aggregate.clusterIds.map((id) => clusterById.get(id)?.label ?? id),
+      intentFamily: cluster.intent_family,
+      canonicalClaimId: claim?.id ?? null,
+      canonicalClaimText: claim?.claim_text ?? null,
       priority: priority.score,
       priorityExplanation: priority.explanation,
-      suggestedActionType: suggested,
+      suggestedActionType: action,
       baselineComparison: comparison,
     });
   }
-
-  // Multiple comparisons: scanning every cluster every day manufactures false alerts unless
-  // the false discovery rate is controlled. BH at q=0.10 over this round's comparisons.
-  if (pValues.length > 0) {
-    const bh = benjaminiHochberg(pValues);
-    let i = 0;
-    for (const d of rawDefects) {
-      if (d.baselineComparison) {
-        d.baselineComparison.qValue = bh[i]?.qValue ?? null;
-        d.baselineComparison.significant = d.baselineComparison.significant && (bh[i]?.rejected ?? false);
-        i++;
-      }
-    }
-  }
-
-  const defects = rawDefects
-    .filter((d) => d.severity === 'critical' || d.severity === 'high' || d.measurement.sufficient)
+  const comparisons = defects.flatMap((defect) =>
+    defect.baselineComparison ? [defect.baselineComparison] : [],
+  );
+  const adjusted = benjaminiHochberg(comparisons.map((comparison) => comparison.pValue));
+  comparisons.forEach((comparison, index) => {
+    comparison.qValue = adjusted[index]?.qValue ?? null;
+    comparison.significant &&= adjusted[index]?.rejected ?? false;
+  });
+  return defects
+    .filter((defect) => ['critical', 'high'].includes(defect.severity) || defect.measurement.sufficient)
     .sort((a, b) => b.priority - a.priority);
+}
 
-  // ---------------------------------------------------------------- section 2
-  const HIGH_INTENT: IntentFamily[] = ['comparison', 'unaided_discovery', 'transactional'];
-  const missed: MissedDemandItem[] = [];
-  const totalDemandWeight = clusters.reduce((acc, c) => acc + c.demand_weight, 0) || 1;
-
-  for (const c of clusters) {
-    if (!HIGH_INTENT.includes(c.intent_family as IntentFamily)) continue;
-    const runs = snap.runsByCluster.get(c.id) ?? [];
-    if (runs.length === 0) continue;
-    let absent = 0;
-    const competitors = new Set<string>();
-    for (const r of runs) {
-      const obs = snap.observedByRun.get(r.id) ?? [];
-      const role = obs[0]?.brand_role ?? 'absent';
-      if (role === 'absent') absent++;
-      if (role === 'compared') competitors.add('competitor named alongside');
-    }
-    const m = measure(absent, runs.length);
-    // Only report absence we can actually defend: the interval's lower bound must clear half.
-    if (m.sufficient && (m.ciLow ?? 0) > 0.5) {
-      const priority = computePriority({
-        demandWeight: c.demand_weight,
-        intentFamily: c.intent_family as IntentFamily,
-        economicValue: c.economic_value,
-        defect: m,
-        actionType: c.intent_family === 'comparison' ? 'create_comparison_page' : 'create_evidence_page',
-      });
-      missed.push({
-        clusterId: c.id,
-        label: c.label,
-        intentFamily: c.intent_family as IntentFamily,
-        buyerStage: c.buyer_stage,
-        absence: m,
-        absenceText: formatMeasurement(m),
-        demandWeight: c.demand_weight,
-        demandVolume: c.demand_volume,
-        economicValue: c.economic_value,
-        competitorsPresent: [...competitors],
-        priority: priority.score,
-      });
-    }
-  }
-  missed.sort((a, b) => b.priority - a.priority);
-  const missedDemandShare = missed.reduce((acc, m) => acc + m.demandWeight, 0) / totalDemandWeight;
-
-  // ---------------------------------------------------------------- section 3
-  const confirmedWins: ConfirmedWinItem[] = [];
-  for (const e of repo.listExperiments(db, tenantId, brandId)) {
-    if (e.verdict !== 'confirmed') continue;
-    const action = repo.getAction(db, tenantId, e.action_id);
-    const analysis = analyzeExperiment(
-      {
-        baselineK: e.baseline_k ?? 0,
-        baselineN: e.baseline_n ?? 0,
-        postK: e.post_k ?? 0,
-        postN: e.post_n ?? 0,
-        controlBaselineK: e.control_baseline_k,
-        controlBaselineN: e.control_baseline_n,
-        controlPostK: e.control_post_k,
-        controlPostN: e.control_post_n,
-      },
-      Boolean(e.control_baseline_n),
-    );
-    confirmedWins.push({
-      experimentId: e.id,
-      actionId: e.action_id,
-      actionTitle: action?.title ?? 'Action',
-      metric: e.metric,
-      baseline: analysis.baseline,
-      post: analysis.post,
-      probabilityReal: analysis.probabilityReal,
-      didEffect: analysis.didEffect,
-      narrative: analysis.narrative,
-      alternativeExplanations: analysis.alternativeExplanations,
-      hasControl: Boolean(e.control_baseline_n),
+function missedFor(snap: WindowSnapshot, clusters: repo.Row[]): MissedDemandItem[] {
+  const result: MissedDemandItem[] = [];
+  for (const cluster of clusters) {
+    if (!['comparison', 'unaided_discovery', 'transactional'].includes(cluster.intent_family)) continue;
+    const runs = snap.runsByCluster.get(cluster.id) ?? [];
+    if (!runs.length) continue;
+    const roles = runs.map((run) => snap.observedByRun.get(run.id)?.[0]?.brand_role ?? 'absent');
+    const absence = measure(roles.filter((role) => role === 'absent').length, runs.length);
+    if (!absence.sufficient || (absence.ciLow ?? 0) <= 0.5) continue;
+    const priority = computePriority({
+      demandWeight: cluster.demand_weight,
+      intentFamily: cluster.intent_family,
+      economicValue: cluster.economic_value,
+      defect: absence,
+      actionType: cluster.intent_family === 'comparison' ? 'create_comparison_page' : 'create_evidence_page',
+    });
+    result.push({
+      clusterId: cluster.id,
+      label: cluster.label,
+      intentFamily: cluster.intent_family,
+      buyerStage: cluster.buyer_stage,
+      absence,
+      absenceText: formatMeasurement(absence),
+      demandWeight: cluster.demand_weight,
+      demandVolume: cluster.demand_volume,
+      economicValue: cluster.economic_value,
+      competitorsPresent: roles.includes('compared') ? ['competitor named alongside'] : [],
+      priority: priority.score,
     });
   }
+  return result.sort((a, b) => b.priority - a.priority);
+}
 
-  // -------------------------------------------------------- per-family summary
-  const familySummaries = summariseByFamily(snap, clusters);
+function winsFor(experiments: repo.Row[], actions: repo.Row[]): ConfirmedWinItem[] {
+  const titles = new Map(actions.map((action) => [action.id, action.title]));
+  return experiments
+    .filter((experiment) => experiment.verdict === 'confirmed')
+    .map((experiment) => {
+      const hasControl = Boolean(experiment.control_baseline_n);
+      const result = analyzeExperiment(
+        {
+          baselineK: experiment.baseline_k ?? 0,
+          baselineN: experiment.baseline_n ?? 0,
+          postK: experiment.post_k ?? 0,
+          postN: experiment.post_n ?? 0,
+          controlBaselineK: experiment.control_baseline_k,
+          controlBaselineN: experiment.control_baseline_n,
+          controlPostK: experiment.control_post_k,
+          controlPostN: experiment.control_post_n,
+        },
+        hasControl,
+      );
+      return {
+        experimentId: experiment.id,
+        actionId: experiment.action_id,
+        actionTitle: titles.get(experiment.action_id) ?? 'Action',
+        metric: experiment.metric,
+        baseline: result.baseline,
+        post: result.post,
+        probabilityReal: result.probabilityReal,
+        didEffect: result.didEffect,
+        narrative: result.narrative,
+        alternativeExplanations: result.alternativeExplanations,
+        hasControl,
+      };
+    });
+}
 
-  // Registry gaps: things a model asserted that the registry can neither confirm nor deny.
-  // Not defects, and not nothing — the registry decays unless someone is asked.
-  const gapSet = new Set<string>();
-  for (const claims of snap.observedByRun.values()) {
-    for (const o of claims) {
-      if (o.verdict === 'UNSUPPORTED' && o.predicate !== 'brand_presence') {
-        gapSet.add(`${o.subject} / ${o.predicate}`);
-      }
-    }
+function summariseByFamily(snap: WindowSnapshot, clusters: repo.Row[]): DashboardData['familySummaries'] {
+  const groups = new Map<IntentFamily, repo.Row[]>();
+  for (const cluster of clusters) {
+    const family = cluster.intent_family as IntentFamily;
+    const members = groups.get(family);
+    if (members) members.push(cluster);
+    else groups.set(family, [cluster]);
   }
+  return [...groups]
+    .map(([family, members]) => {
+      assertNoBlending(members.map((cluster) => cluster.intent_family));
+      const runs = runsInClusters(
+        snap,
+        members.map((cluster) => cluster.id),
+      );
+      const defects = runs.filter((run) =>
+        (snap.observedByRun.get(run.id) ?? []).some(
+          (claim) =>
+            ['CONTRADICTED', 'STALE'].includes(claim.verdict) &&
+            ['agreed', 'not_required'].includes(claim.adjudication),
+        ),
+      );
+      return {
+        family,
+        label: FAMILY_LABEL[family],
+        clusters: members.length,
+        runs: runs.length,
+        defectRate: measure(defects.length, runs.length),
+      };
+    })
+    .sort((a, b) => INTENT_WEIGHT[b.family] - INTENT_WEIGHT[a.family]);
+}
 
+export function buildDashboard(
+  db: DB,
+  tenantId: string,
+  brandId: string,
+  windowOverride?: string | null,
+): DashboardData {
+  const brand = repo.getBrand(db, tenantId, brandId);
+  if (!brand) throw new Error('brand not found');
+  const windows = listWindows(db, tenantId, brandId);
+  const comparable = windows.filter((window) => window.comparable);
+  const usable = comparable.length ? comparable : windows;
+  const defaultWindow = usable[0]?.label ?? 'baseline';
+  const current =
+    windowOverride && windows.some((window) => window.label === windowOverride)
+      ? windowOverride
+      : defaultWindow;
+  const baseline =
+    current === defaultWindow
+      ? (usable[1]?.label ?? null)
+      : (windows.find((window) => window.label !== current)?.label ?? null);
+  const clusters = repo.listClusters(db, tenantId, brandId);
+  const snapshot = loadWindow(db, tenantId, brandId, current);
+  const previous = baseline ? loadWindow(db, tenantId, brandId, baseline) : null;
+  const missedDemand = missedFor(snapshot, clusters);
+  const registryGaps = new Set<string>();
+  for (const claims of snapshot.observedByRun.values())
+    for (const claim of claims) {
+      if (claim.verdict === 'UNSUPPORTED' && claim.predicate !== 'brand_presence')
+        registryGaps.add(`${claim.subject} / ${claim.predicate}`);
+    }
   return {
     brand,
     window: current,
     baselineWindow: baseline,
-    totalRuns: allRuns.length,
-    simulatedRuns,
-    defects,
-    missedDemand: missed,
-    missedDemandShare,
-    confirmedWins,
-    familySummaries,
+    totalRuns: snapshot.runs.length,
+    simulatedRuns: snapshot.runs.filter((run) => run.simulated === 1).length,
+    defects: defectsFor(snapshot, previous, clusters, repo.listCanonicalClaims(db, tenantId, brandId)),
+    missedDemand,
+    missedDemandShare:
+      missedDemand.reduce((sum, item) => sum + item.demandWeight, 0) /
+      (clusters.reduce((sum, cluster) => sum + cluster.demand_weight, 0) || 1),
+    confirmedWins: winsFor(
+      repo.listExperiments(db, tenantId, brandId),
+      repo.listActions(db, tenantId, brandId),
+    ),
+    familySummaries: summariseByFamily(snapshot, clusters),
     coverage: {
       clusters: clusters.length,
-      sampledClusters: new Set(allRuns.map((r) => r.cluster_id)).size,
-      surfaces: new Set(allRuns.map((r) => `${r.provider}:${r.surface}:${r.grounding}`)).size,
+      sampledClusters: new Set(snapshot.runs.map((run) => run.cluster_id)).size,
+      surfaces: new Set(snapshot.runs.map((run) => `${run.provider}:${run.surface}:${run.grounding}`)).size,
     },
     windows,
-    registryGaps: [...gapSet].sort(),
-    windowStatus: (windowRow?.status as 'complete' | 'partial') ?? 'complete',
+    registryGaps: [...registryGaps].sort(),
+    windowStatus:
+      (repo.getWindowStatus(db, tenantId, brandId, current)?.status as 'complete' | 'partial') ?? 'complete',
   };
-}
-
-function summariseByFamily(snap: WindowSnapshot, clusters: repo.Row[]) {
-  const byFamily = new Map<IntentFamily, repo.Row[]>();
-  for (const c of clusters) {
-    const f = c.intent_family as IntentFamily;
-    byFamily.set(f, [...(byFamily.get(f) ?? []), c]);
-  }
-  const out: Array<{ family: IntentFamily; label: string; clusters: number; runs: number; defectRate: Measurement }> = [];
-  for (const [family, list] of byFamily) {
-    // Guard: this is the one place a caller could be tempted to average across families.
-    assertNoBlending(list.map((c) => c.intent_family as IntentFamily));
-    const runs = runsInClusters(snap, list.map((c) => c.id));
-    let defectRuns = 0;
-    for (const r of runs) {
-      const obs = snap.observedByRun.get(r.id) ?? [];
-      if (obs.some((o) => (o.verdict === 'CONTRADICTED' || o.verdict === 'STALE') && ['not_required', 'agreed'].includes(o.adjudication))) defectRuns++;
-    }
-    out.push({ family, label: FAMILY_LABEL[family], clusters: list.length, runs: runs.length, defectRate: measure(defectRuns, runs.length) });
-  }
-  return out.sort((a, b) => INTENT_WEIGHT[b.family] - INTENT_WEIGHT[a.family]);
 }
 
 /** The misconception key is `subject.predicate.polarity.object`. */
 function predicateOf(misconceptionKey: string): string {
-  return misconceptionKey.split('.')[1] ?? '';
+  return misconceptionKey.match(/^[^.]*\.([^.]*)/)?.[1] ?? '';
 }
 
-function buildDefectHeadline(providers: string[], verdict: string, m: Measurement, predicate: string): string {
-  const who = providers.length === 0 ? 'Sampled surfaces' : joinList(providers.map(titleProvider));
-  const subject = predicateLabel(predicate);
-  // One provider takes a singular verb. "Perplexity describe incorrectly your token supply" is
-  // the sort of sentence that makes a reader stop trusting the number next to it.
-  const singular = providers.length === 1;
-  const verb = verdict === 'STALE'
-    ? (singular ? 'repeats an out-of-date account of' : 'repeat an out-of-date account of')
-    : (singular ? 'describes' : 'describe');
-  const qualifier = verdict === 'STALE' ? '' : '';
-  const rate = m.sufficient && m.point !== null
-    ? `${Math.round(m.point * 100)}% of sampled answers (95% CI ${Math.round((m.ciLow ?? 0) * 100)}–${Math.round((m.ciHigh ?? 0) * 100)}%, n=${m.n})`
-    : `an unquantified share of answers (n=${m.n} — below the sample floor)`;
-  const wrongly = verdict === 'STALE' ? '' : ' incorrectly';
-  return `${who} ${verb} ${subject}${wrongly} in ${rate}.`;
+function buildDefectHeadline(
+  providers: string[],
+  verdict: string,
+  measurement: Measurement,
+  predicate: string,
+): string {
+  const names = providers.map(titleProvider);
+  const who = names.length ? joinList(names) : 'Sampled surfaces';
+  const stale = verdict === 'STALE';
+  const verbs = stale
+    ? ['repeats an out-of-date account of', 'repeat an out-of-date account of']
+    : ['describes', 'describe'];
+  const verb = verbs[providers.length === 1 ? 0 : 1];
+  const subject = predicateLabel(predicate) + (stale ? '' : ' incorrectly');
+  const percent = (value: number | null) => Math.round((value ?? 0) * 100);
+  const rate =
+    measurement.sufficient && measurement.point !== null
+      ? `${percent(measurement.point)}% of sampled answers (95% CI ${percent(measurement.ciLow)}–${percent(measurement.ciHigh)}%, n=${measurement.n})`
+      : `an unquantified share of answers (n=${measurement.n} — below the sample floor)`;
+  return `${who} ${verb} ${subject} in ${rate}.`;
 }
 
 function joinList(items: string[]): string {
-  if (items.length <= 1) return items[0] ?? '';
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+  const final = items.at(-1);
+  return items.length < 2 ? (final ?? '') : `${items.slice(0, -1).join(', ')} and ${final}`;
 }
 
-function titleProvider(p: string): string {
-  const map: Record<string, string> = { openai: 'OpenAI', anthropic: 'Claude', google: 'Gemini', perplexity: 'Perplexity', xai: 'Grok' };
-  return map[p] ?? p;
+const PROVIDER_TITLES: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Claude',
+  google: 'Gemini',
+  perplexity: 'Perplexity',
+  xai: 'Grok',
+};
+function titleProvider(provider: string): string {
+  return Object.hasOwn(PROVIDER_TITLES, provider) ? PROVIDER_TITLES[provider] : provider;
 }

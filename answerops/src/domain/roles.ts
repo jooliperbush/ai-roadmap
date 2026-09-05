@@ -12,11 +12,12 @@ export type Role = 'viewer' | 'editor' | 'owner';
 export const ROLE_RANK: Record<Role, number> = { viewer: 0, editor: 1, owner: 2 };
 
 export function rankOf(role: string): number {
-  return ROLE_RANK[(role as Role)] ?? -1;
+  const entry = Object.entries(ROLE_RANK).find(([name]) => name === role);
+  return entry?.[1] ?? -1;
 }
 
 export function allows(role: string, minimum: Role): boolean {
-  return rankOf(role) >= ROLE_RANK[minimum];
+  return rankOf(role) >= rankOf(minimum);
 }
 
 /**
@@ -58,5 +59,5 @@ export const PUBLIC_ROUTES = new Set(['POST /login', 'POST /audit-request', 'POS
 export const CSRF_EXEMPT = PUBLIC_ROUTES;
 
 export function routeKey(method: string, url: string): string {
-  return `${method.toUpperCase()} ${url}`;
+  return [method.toUpperCase(), url].join(' ');
 }

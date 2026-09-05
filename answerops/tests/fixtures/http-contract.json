@@ -1,0 +1,837 @@
+{
+  "reference": "8c114f6",
+  "routes": [
+    {
+      "method": "GET",
+      "url": "/"
+    },
+    {
+      "method": "GET",
+      "url": "/actions"
+    },
+    {
+      "method": "GET",
+      "url": "/actions/:id"
+    },
+    {
+      "method": "GET",
+      "url": "/alerts"
+    },
+    {
+      "method": "GET",
+      "url": "/api/actions/:id"
+    },
+    {
+      "method": "GET",
+      "url": "/api/audit"
+    },
+    {
+      "method": "GET",
+      "url": "/api/clusters"
+    },
+    {
+      "method": "GET",
+      "url": "/api/dashboard"
+    },
+    {
+      "method": "GET",
+      "url": "/api/experiments/:id"
+    },
+    {
+      "method": "GET",
+      "url": "/api/methodology"
+    },
+    {
+      "method": "GET",
+      "url": "/api/runs/:id"
+    },
+    {
+      "method": "GET",
+      "url": "/audit"
+    },
+    {
+      "method": "GET",
+      "url": "/audit/:token"
+    },
+    {
+      "method": "GET",
+      "url": "/audits"
+    },
+    {
+      "method": "GET",
+      "url": "/blog"
+    },
+    {
+      "method": "GET",
+      "url": "/blog/:slug"
+    },
+    {
+      "method": "GET",
+      "url": "/clusters"
+    },
+    {
+      "method": "GET",
+      "url": "/clusters/:id/markets"
+    },
+    {
+      "method": "GET",
+      "url": "/crawlers"
+    },
+    {
+      "method": "GET",
+      "url": "/defect/:key"
+    },
+    {
+      "method": "GET",
+      "url": "/demand/:id"
+    },
+    {
+      "method": "GET",
+      "url": "/entities"
+    },
+    {
+      "method": "GET",
+      "url": "/experiments"
+    },
+    {
+      "method": "GET",
+      "url": "/experiments/:id"
+    },
+    {
+      "method": "GET",
+      "url": "/favicon.svg"
+    },
+    {
+      "method": "GET",
+      "url": "/healthz"
+    },
+    {
+      "method": "GET",
+      "url": "/index"
+    },
+    {
+      "method": "GET",
+      "url": "/llms.txt"
+    },
+    {
+      "method": "GET",
+      "url": "/login"
+    },
+    {
+      "method": "GET",
+      "url": "/methodology"
+    },
+    {
+      "method": "GET",
+      "url": "/observatory"
+    },
+    {
+      "method": "GET",
+      "url": "/portfolio"
+    },
+    {
+      "method": "GET",
+      "url": "/robots.txt"
+    },
+    {
+      "method": "GET",
+      "url": "/runs/:id"
+    },
+    {
+      "method": "GET",
+      "url": "/schedules"
+    },
+    {
+      "method": "GET",
+      "url": "/sitemap.xml"
+    },
+    {
+      "method": "GET",
+      "url": "/snapshot/:sha"
+    },
+    {
+      "method": "GET",
+      "url": "/truth"
+    },
+    {
+      "method": "GET",
+      "url": "/truth/:id"
+    },
+    {
+      "method": "HEAD",
+      "url": "/"
+    },
+    {
+      "method": "HEAD",
+      "url": "/actions"
+    },
+    {
+      "method": "HEAD",
+      "url": "/actions/:id"
+    },
+    {
+      "method": "HEAD",
+      "url": "/alerts"
+    },
+    {
+      "method": "HEAD",
+      "url": "/api/actions/:id"
+    },
+    {
+      "method": "HEAD",
+      "url": "/api/audit"
+    },
+    {
+      "method": "HEAD",
+      "url": "/api/clusters"
+    },
+    {
+      "method": "HEAD",
+      "url": "/api/dashboard"
+    },
+    {
+      "method": "HEAD",
+      "url": "/api/experiments/:id"
+    },
+    {
+      "method": "HEAD",
+      "url": "/api/methodology"
+    },
+    {
+      "method": "HEAD",
+      "url": "/api/runs/:id"
+    },
+    {
+      "method": "HEAD",
+      "url": "/audit"
+    },
+    {
+      "method": "HEAD",
+      "url": "/audit/:token"
+    },
+    {
+      "method": "HEAD",
+      "url": "/audits"
+    },
+    {
+      "method": "HEAD",
+      "url": "/blog"
+    },
+    {
+      "method": "HEAD",
+      "url": "/blog/:slug"
+    },
+    {
+      "method": "HEAD",
+      "url": "/clusters"
+    },
+    {
+      "method": "HEAD",
+      "url": "/clusters/:id/markets"
+    },
+    {
+      "method": "HEAD",
+      "url": "/crawlers"
+    },
+    {
+      "method": "HEAD",
+      "url": "/defect/:key"
+    },
+    {
+      "method": "HEAD",
+      "url": "/demand/:id"
+    },
+    {
+      "method": "HEAD",
+      "url": "/entities"
+    },
+    {
+      "method": "HEAD",
+      "url": "/experiments"
+    },
+    {
+      "method": "HEAD",
+      "url": "/experiments/:id"
+    },
+    {
+      "method": "HEAD",
+      "url": "/favicon.svg"
+    },
+    {
+      "method": "HEAD",
+      "url": "/healthz"
+    },
+    {
+      "method": "HEAD",
+      "url": "/index"
+    },
+    {
+      "method": "HEAD",
+      "url": "/llms.txt"
+    },
+    {
+      "method": "HEAD",
+      "url": "/login"
+    },
+    {
+      "method": "HEAD",
+      "url": "/methodology"
+    },
+    {
+      "method": "HEAD",
+      "url": "/observatory"
+    },
+    {
+      "method": "HEAD",
+      "url": "/portfolio"
+    },
+    {
+      "method": "HEAD",
+      "url": "/robots.txt"
+    },
+    {
+      "method": "HEAD",
+      "url": "/runs/:id"
+    },
+    {
+      "method": "HEAD",
+      "url": "/schedules"
+    },
+    {
+      "method": "HEAD",
+      "url": "/sitemap.xml"
+    },
+    {
+      "method": "HEAD",
+      "url": "/snapshot/:sha"
+    },
+    {
+      "method": "HEAD",
+      "url": "/truth"
+    },
+    {
+      "method": "HEAD",
+      "url": "/truth/:id"
+    },
+    {
+      "method": "POST",
+      "url": "/actions"
+    },
+    {
+      "method": "POST",
+      "url": "/actions/:id/transition"
+    },
+    {
+      "method": "POST",
+      "url": "/alerts/:id/read"
+    },
+    {
+      "method": "POST",
+      "url": "/api/actions"
+    },
+    {
+      "method": "POST",
+      "url": "/api/actions/:id/transition"
+    },
+    {
+      "method": "POST",
+      "url": "/api/runs/sample"
+    },
+    {
+      "method": "POST",
+      "url": "/audit-request"
+    },
+    {
+      "method": "POST",
+      "url": "/audit/:token/start"
+    },
+    {
+      "method": "POST",
+      "url": "/brands/switch"
+    },
+    {
+      "method": "POST",
+      "url": "/channels"
+    },
+    {
+      "method": "POST",
+      "url": "/channels/:id/delete"
+    },
+    {
+      "method": "POST",
+      "url": "/channels/:id/test"
+    },
+    {
+      "method": "POST",
+      "url": "/citations/:id/recheck"
+    },
+    {
+      "method": "POST",
+      "url": "/clusters/:id/markets"
+    },
+    {
+      "method": "POST",
+      "url": "/demand/import"
+    },
+    {
+      "method": "POST",
+      "url": "/entities/:id/classify"
+    },
+    {
+      "method": "POST",
+      "url": "/experiments/:id/analyze"
+    },
+    {
+      "method": "POST",
+      "url": "/index-consent"
+    },
+    {
+      "method": "POST",
+      "url": "/login"
+    },
+    {
+      "method": "POST",
+      "url": "/logout"
+    },
+    {
+      "method": "POST",
+      "url": "/sampling/run"
+    },
+    {
+      "method": "POST",
+      "url": "/schedules"
+    },
+    {
+      "method": "POST",
+      "url": "/schedules/:id/run"
+    },
+    {
+      "method": "POST",
+      "url": "/schedules/:id/toggle"
+    },
+    {
+      "method": "POST",
+      "url": "/truth"
+    },
+    {
+      "method": "POST",
+      "url": "/truth/:id/approve"
+    }
+  ],
+  "pages": [
+    {
+      "path": "/",
+      "status": 200,
+      "headings": [
+        "Answer desk — Vanar",
+        "1 · Critical answer defects",
+        "2 · Missed commercial demand",
+        "3 · Confirmed wins",
+        "Coverage by intent family"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "get",
+          "action": "/"
+        }
+      ]
+    },
+    {
+      "path": "/clusters",
+      "status": 200,
+      "headings": [
+        "Demand graph",
+        "Import demand signals",
+        "Intent clusters",
+        "Family breakdown",
+        "Raw signals"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "post",
+          "action": "/demand/import"
+        }
+      ]
+    },
+    {
+      "path": "/truth",
+      "status": 200,
+      "headings": [
+        "Truth registry",
+        "Canonical facts",
+        "Add a canonical fact"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "post",
+          "action": "/truth"
+        }
+      ]
+    },
+    {
+      "path": "/observatory",
+      "status": 200,
+      "headings": [
+        "Observatory",
+        "Run a sampling round",
+        "Recent runs"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "post",
+          "action": "/sampling/run"
+        }
+      ]
+    },
+    {
+      "path": "/actions",
+      "status": 200,
+      "headings": [
+        "Actions"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        }
+      ]
+    },
+    {
+      "path": "/experiments",
+      "status": 200,
+      "headings": [
+        "Experiment ledger"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        }
+      ]
+    },
+    {
+      "path": "/crawlers",
+      "status": 200,
+      "headings": [
+        "Crawler access",
+        "Blocked retrieval",
+        "What each class can and cannot change"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        }
+      ]
+    },
+    {
+      "path": "/entities",
+      "status": 200,
+      "headings": [
+        "Entity relationships"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_ccc433561ba4450bbb87/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_2f4a2d4280474677a25b/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_ca32d1db121f41c2b3c0/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_424e81056fe948c8a5b7/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_b80f6a22a8e24c5db842/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_c46cae6d006a4fef8b1c/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_04e05737c43842eebd9b/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_af06373dace94f999334/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_f61bc07b94284c77b38b/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_ec2d318cf2ce428dbef3/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_a8f2d642305b42ff8217/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_87b342b04a914c97b5ad/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_f90bf6312ee74f0ebc81/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_d0d7c07de4a84ace9a1e/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_44e1806d79ea41c49fdf/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_917976c1ea754bc9a7b1/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_3405b44ba3a34f399ca3/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_4749e70b310542a48358/classify"
+        },
+        {
+          "method": "post",
+          "action": "/entities/ent_5ee796d1c6604bb58cf1/classify"
+        }
+      ]
+    },
+    {
+      "path": "/methodology",
+      "status": 200,
+      "headings": [
+        "Methodology &amp; limitations",
+        "Sampling design",
+        "Extractor accuracy",
+        "Evidence retention",
+        "What a measurement costs",
+        "What we do not claim",
+        "Unit economics",
+        "Action catalogue"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        }
+      ]
+    },
+    {
+      "path": "/audit",
+      "status": 200,
+      "headings": [
+        "Audit log"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        }
+      ]
+    },
+    {
+      "path": "/schedules",
+      "status": 200,
+      "headings": [
+        "Schedules",
+        "Month to date",
+        "Active schedules",
+        "Add a schedule",
+        "Window ledger"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "post",
+          "action": "/schedules/sch_767c36a7a3b142dfa79b/toggle"
+        },
+        {
+          "method": "post",
+          "action": "/schedules/sch_767c36a7a3b142dfa79b/run"
+        },
+        {
+          "method": "post",
+          "action": "/schedules"
+        }
+      ]
+    },
+    {
+      "path": "/alerts",
+      "status": 200,
+      "headings": [
+        "Alerts",
+        "Recent alerts",
+        "Delivery channels",
+        "Delivery attempts"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "post",
+          "action": "/channels/chn_81dba881fe324f6d85c4/test"
+        },
+        {
+          "method": "post",
+          "action": "/channels/chn_81dba881fe324f6d85c4/delete"
+        },
+        {
+          "method": "post",
+          "action": "/channels"
+        }
+      ]
+    },
+    {
+      "path": "/portfolio",
+      "status": 200,
+      "headings": [
+        "Portfolio"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        }
+      ]
+    },
+    {
+      "path": "/index",
+      "status": 200,
+      "headings": [
+        "AI Brand Accuracy Index",
+        "Your participation",
+        "2026-Q3",
+        "Methodology"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        },
+        {
+          "method": "post",
+          "action": "/index-consent"
+        }
+      ]
+    },
+    {
+      "path": "/audits",
+      "status": 200,
+      "headings": [
+        "Audit requests"
+      ],
+      "forms": [
+        {
+          "method": "post",
+          "action": "/brands/switch"
+        },
+        {
+          "method": "post",
+          "action": "/logout"
+        }
+      ]
+    }
+  ]
+}

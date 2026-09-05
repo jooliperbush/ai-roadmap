@@ -11,7 +11,12 @@
  * Meta" from a sentence that does not say so produces a defect report about nothing.
  */
 
-import { extractClaims, PREDICATE_PATTERNS, NEGATION_RE as CANONICAL_NEGATION, type ExtractedClaim } from './verifier.js';
+import {
+  extractClaims,
+  PREDICATE_PATTERNS,
+  NEGATION_RE as CANONICAL_NEGATION,
+  type ExtractedClaim,
+} from './verifier.js';
 import { normalizeKey } from './truth.js';
 
 export const EXTRACTOR_VERSION = 'v2-pattern+heuristic';
@@ -36,7 +41,14 @@ export interface ProposedClaim {
 
 /** The closed vocabulary a proposer may use. Anything outside it is dropped. */
 export const PREDICATE_VOCAB: string[] = [
-  ...new Set([...PREDICATE_PATTERNS.map((p) => p.predicate), 'funding', 'employee_count', 'founded_year', 'certification', 'partnership']),
+  ...new Set([
+    ...PREDICATE_PATTERNS.map((p) => p.predicate),
+    'funding',
+    'employee_count',
+    'founded_year',
+    'certification',
+    'partnership',
+  ]),
 ];
 
 export interface ClaimProposer {
@@ -51,20 +63,20 @@ export interface ClaimProposer {
 export function levenshtein(a: string, b: string, max = 2): number {
   if (a === b) return 0;
   if (Math.abs(a.length - b.length) > max) return max + 1;
-  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i++) {
-    const curr = [i];
-    let rowMin = i;
+  let row = Array.from({ length: b.length + 1 }, (_, column) => column);
+  for (let i = 0; i < a.length; i++) {
+    let diagonal = row[0];
+    row[0] = i + 1;
+    let best = row[0];
     for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      const v = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
-      curr.push(v);
-      if (v < rowMin) rowMin = v;
+      const previous = row[j];
+      row[j] = Math.min(previous + 1, row[j - 1] + 1, diagonal + Number(a[i] !== b[j - 1]));
+      diagonal = previous;
+      best = Math.min(best, row[j]);
     }
-    if (rowMin > max) return max + 1;
-    prev = curr;
+    if (best > max) return max + 1;
   }
-  return prev[b.length];
+  return row[b.length];
 }
 
 /**
@@ -72,17 +84,16 @@ export function levenshtein(a: string, b: string, max = 2): number {
  * edit distance 2, which tolerates a stray comma or a plural but not an invention.
  */
 export function isGrounded(object: string, text: string, maxDistance = 2): boolean {
-  const needle = object.trim().toLowerCase();
-  if (needle.length === 0) return false;
-  const hay = text.toLowerCase();
-  if (hay.includes(needle)) return true;
+  const needle = object.trim().toLowerCase(),
+    haystack = text.toLowerCase();
+  if (!needle) return false;
+  if (haystack.includes(needle)) return true;
   if (needle.length <= 3) return false;
-  const window = needle.length;
-  for (let i = 0; i + window - maxDistance <= hay.length; i++) {
-    for (const w of [window - 1, window, window + 1]) {
-      const slice = hay.slice(i, i + w);
-      if (slice.length === 0) continue;
-      if (levenshtein(needle, slice, maxDistance) <= maxDistance) return true;
+  const finalStart = haystack.length - needle.length + maxDistance;
+  for (let start = 0; start <= finalStart; start++) {
+    for (let length = needle.length - 1; length <= needle.length + 1; length++) {
+      const candidate = haystack.substring(start, start + length);
+      if (candidate.length && levenshtein(needle, candidate, maxDistance) <= maxDistance) return true;
     }
   }
   return false;
@@ -114,69 +125,117 @@ interface HeuristicRule {
  * have no SSO". Still auditable, still explainable to a customer, just less brittle.
  */
 export const HEURISTIC_RULES: HeuristicRule[] = [
-  { predicate: 'acquired_by', patterns: [
+  {
+    predicate: 'acquired_by',
+    patterns: [
       /\b(?:bought(?: out)?|snapped up|taken over|picked up|absorbed) by ([A-Z][\w&.'\- ]+?)(?=[,.;)]|\s+in\b|\s+back\b|\s+a few\b|$)/,
       /\b(?:part of|a subsidiary of|under the (?:umbrella|ownership) of) ([A-Z][\w&.'\- ]+?)(?=[,.;)]|$)/,
       /\b([A-Z][\w&.'\- ]+?) (?:acquired|bought|purchased) (?:them|it|the company)\b/,
-  ] },
-  { predicate: 'ceo', patterns: [
+    ],
+  },
+  {
+    predicate: 'ceo',
+    patterns: [
       /\b(?:run|headed|founded and led|currently led) by ([A-Z][\w.'\- ]+?)(?=[,.;)]|\s+since\b|$)/,
       /\b(?:their|its|the) (?:chief exec(?:utive)?|boss|founder and ceo) (?:is )?([A-Z][\w.'\- ]+?)(?=[,.;)]|$)/,
-  ] },
-  { predicate: 'fees', patterns: [
+    ],
+  },
+  {
+    predicate: 'fees',
+    patterns: [
       /\b(?:charges?|charging|you(?:'ll| will) pay|works out (?:at|to)) (?:around |about |roughly |approximately |~)?(\$?[\d.,]+\s?(?:%|usd|cents?|per (?:transaction|tx))?)/i,
       /\b(?:gas|network|transaction) costs? (?:of |around |about )?(\$?[\d.,]+)/i,
-  ] },
-  { predicate: 'pricing', patterns: [
+    ],
+  },
+  {
+    predicate: 'pricing',
+    patterns: [
       /\b(?:plans? (?:start|begin)|entry tier is|cheapest plan is) (?:from |at )?(\$[\d,.]+(?:\s?(?:per|\/)\s?\w+)?)/i,
       /\b(?:it(?:'s| is)|they(?:'re| are)) (free|paid[- ]only|freemium)\b/i,
-  ] },
-  { predicate: 'feature_support', negatable: true, patterns: [
+    ],
+  },
+  {
+    predicate: 'feature_support',
+    negatable: true,
+    patterns: [
       /\b(?:no|without|missing|lacking|lacks|there(?:'s| is) no) ((?:sso|single sign-on|saml|scim|api access|webhooks|audit logs|two-factor authentication|mfa|staking|bridging|smart contracts)\b)/i,
       /\b(?:you (?:can|do) get|ships? with|comes? with|built[- ]in) ((?:sso|single sign-on|saml|scim|api access|webhooks|audit logs|two-factor authentication|mfa|staking|bridging|smart contracts)\b)/i,
-  ] },
-  { predicate: 'integration', negatable: true, patterns: [
+    ],
+  },
+  {
+    predicate: 'integration',
+    negatable: true,
+    patterns: [
       /\b(?:connects?|hooks?) (?:up )?(?:to|with) ([A-Z][\w&.'\- ]+?)(?=[,.;)]|\s+and\b|$)/,
       /\b(?:there(?:'s| is) )?no (?:native |direct |official )?integration with ([A-Z][\w&.'\- ]+?)(?=[,.;)]|$)/i,
       /\b[Ii]ntegration(?:s)? (?:with|for) ([A-Z][\w&.'\- ]+?)(?=[,.;)]|\s+and\b|\s+is\b|$)/,
       /\b(?:native |first[- ]class )?integration(?:s)? (?:with|for) ([A-Z][\w&.'\- ]+?)(?=[,.;)]|\s+and\b|$)/,
-  ] },
-  { predicate: 'product_status', patterns: [
+    ],
+  },
+  {
+    predicate: 'product_status',
+    patterns: [
       /\b(?:they|it|the (?:product|project|chain)) (?:has|have)? ?(?:since )?(shut down|wound down|gone quiet|been mothballed)\b/i,
       /\b(?:still|very much) (going|active|alive|shipping)\b/i,
-  ] },
-  { predicate: 'availability', negatable: true, patterns: [
+    ],
+  },
+  {
+    predicate: 'availability',
+    negatable: true,
+    patterns: [
       /\b[Yy]ou can (?:buy|trade|get) it on ([A-Z][\w&.'\- ]+?)(?=[,.;)]|\s+and\b|$)/,
       /\b(?:trades on|can be bought on|is tradable on) ([A-Z][\w&.'\- ]+?)(?=[,.;)]|\s+and\b|$)/,
       /\b(?:is(?:n't| not) (?:on|listed on)|was delisted from) ([A-Z][\w&.'\- ]+?)(?=[,.;)]|$)/,
-  ] },
-  { predicate: 'headquarters', patterns: [
+    ],
+  },
+  {
+    predicate: 'headquarters',
+    patterns: [
       /\b(?:out of|operates? from|offices? in|team (?:is )?in) ([A-Z][\w.'\- ]+?(?:, ?[A-Z][\w.'\- ]+)?)(?=[,.;)]|$)/,
-  ] },
-  { predicate: 'compliance', patterns: [
+    ],
+  },
+  {
+    predicate: 'compliance',
+    patterns: [
       /\b(?:certified|audited|attested) (?:for |to |against )?(soc ?2(?: type ?(?:i{1,2}|\d))?|iso ?27001|pci[- ]dss)\b/i,
-  ] },
+    ],
+  },
   // Predicates the pattern layer never had at all.
-  { predicate: 'funding', patterns: [
+  {
+    predicate: 'funding',
+    patterns: [
       /\b(?:raised|closed|secured|landed) (?:a )?(\$[\d.,]+ ?(?:billion|million|bn|m|k)?)/i,
       /\b(?:series [a-e]|seed) round of (\$[\d.,]+ ?(?:billion|million|bn|m|k)?)/i,
-  ] },
-  { predicate: 'employee_count', patterns: [
+    ],
+  },
+  {
+    predicate: 'employee_count',
+    patterns: [
       /\b(?:employs|has|around|about|roughly) ([\d,]+(?:\+|\s?\+)?) (?:employees|staff|people)\b/i,
       /\bteam of (?:around |about |roughly )?([\d,]+)\b/i,
-  ] },
-  { predicate: 'founded_year', patterns: [
+    ],
+  },
+  {
+    predicate: 'founded_year',
+    patterns: [
       /\b(?:founded|started|launched|established|incorporated) in ((?:19|20)\d{2})\b/i,
       /\b(?:has been (?:around|operating)) since ((?:19|20)\d{2})\b/i,
-  ] },
-  { predicate: 'certification', patterns: [
+    ],
+  },
+  {
+    predicate: 'certification',
+    patterns: [
       /\b(?:holds?|carries|has) (?:an? )?([A-Z]{2,6}(?:[- ]\d{3,5})?) (?:licen[cs]e|registration|certification)\b/,
       /\b(?:licen[cs]ed|registered) (?:by|with) (?:the )?([A-Z][\w&.\- ]{2,40}?)(?=[,.;)]|$)/,
-  ] },
-  { predicate: 'partnership', patterns: [
+    ],
+  },
+  {
+    predicate: 'partnership',
+    patterns: [
       /\b(?:partnered|partners|has a partnership) with ([A-Z][\w&.'\- ]+?)(?=[,.;)]|\s+and\b|$)/,
       /\b(?:works|working) (?:closely )?with ([A-Z][\w&.'\- ]+?)(?=[,.;)]|\s+and\b|$)/,
-  ] },
+    ],
+  },
 ];
 
 /**
@@ -190,7 +249,8 @@ function isNegated(text: string): boolean {
   return CANONICAL_NEGATION.test(text) || EXTRA_NEGATION.test(text);
 }
 const YEAR_RE = /\b(19|20)\d{2}\b/;
-const RELATIVE_TIME_RE = /\b(?:last year|this year|recently|a few years back|back in \d{4}|as of \w+ (?:19|20)\d{2}|since (?:19|20)\d{2})\b/i;
+const RELATIVE_TIME_RE =
+  /\b(?:last year|this year|recently|a few years back|back in \d{4}|as of \w+ (?:19|20)\d{2}|since (?:19|20)\d{2})\b/i;
 
 export const heuristicProposer: ClaimProposer = {
   key: 'heuristic',
@@ -247,29 +307,33 @@ export class ModelProposer {
   key = 'model';
   stage: ExtractorStage = 'model_proposed';
   constructor(private call: ModelProposalFn) {}
-
   async proposeAsync(text: string, brand: string): Promise<ExtractedClaim[]> {
-    let raw: Array<Partial<ExtractedClaim>>;
+    let payload: unknown;
     try {
-      raw = await this.call(text, PREDICATE_VOCAB, brand);
+      payload = await this.call(text, PREDICATE_VOCAB, brand);
     } catch {
       return [];
     }
-    const out: ExtractedClaim[] = [];
-    for (const r of raw) {
-      if (!r.predicate || !r.object) continue;
+    if (!Array.isArray(payload)) return [];
+    return payload.flatMap((row: Partial<ExtractedClaim> | null) => {
+      if (
+        !row ||
+        typeof row !== 'object' ||
+        typeof row.predicate !== 'string' ||
+        !row.predicate ||
+        !row.object
+      )
+        return [];
       const claim: ExtractedClaim = {
-        statement: r.statement ?? text.slice(0, 300),
-        subject: r.subject ?? brand,
-        predicate: r.predicate,
-        object: String(r.object).trim(),
-        polarity: r.polarity === 'negate' ? 'negate' : 'affirm',
-        temporalMarker: r.temporalMarker ?? null,
+        statement: typeof row.statement === 'string' ? row.statement : text.slice(0, 300),
+        subject: typeof row.subject === 'string' ? row.subject : brand,
+        predicate: row.predicate,
+        object: String(row.object).trim(),
+        polarity: row.polarity === 'negate' ? 'negate' : 'affirm',
+        temporalMarker: typeof row.temporalMarker === 'string' ? row.temporalMarker : null,
       };
-      if (!groundProposal(claim, text)) continue;
-      out.push(claim);
-    }
-    return out;
+      return groundProposal(claim, text) ? [claim] : [];
+    });
   }
 }
 
@@ -287,27 +351,27 @@ export interface ProposeOptions {
  * attributed to the more conservative one.
  */
 export function proposeClaims(text: string, brand: string, opts: ProposeOptions = {}): ProposedClaim[] {
-  const proposers = opts.proposers ?? [patternProposer, heuristicProposer];
-  const seen = new Map<string, ProposedClaim>();
-  for (const p of proposers) {
-    for (const claim of p.propose(text, brand)) {
-      if (!groundProposal(claim, text)) continue;
-      const key = `${normalizeKey(claim.subject)}|${claim.predicate}|${normalizeKey(claim.object)}|${claim.polarity}`;
-      if (seen.has(key)) continue;
-      seen.set(key, { claim, stage: p.stage, proposer: p.key });
-    }
-  }
-  return [...seen.values()];
+  const proposals = (opts.proposers ?? [patternProposer, heuristicProposer]).flatMap((proposer) =>
+    proposer
+      .propose(text, brand)
+      .filter((claim) => groundProposal(claim, text))
+      .map((claim) => ({ claim, stage: proposer.stage, proposer: proposer.key })),
+  );
+  return mergeProposals(proposals);
 }
 
 export function mergeProposals(...lists: ProposedClaim[][]): ProposedClaim[] {
-  const seen = new Map<string, ProposedClaim>();
-  for (const list of lists) {
-    for (const p of list) {
-      const key = `${normalizeKey(p.claim.subject)}|${p.claim.predicate}|${normalizeKey(p.claim.object)}|${p.claim.polarity}`;
-      if (seen.has(key)) continue;
-      seen.set(key, p);
-    }
-  }
-  return [...seen.values()];
+  const keys = new Set<string>();
+  return lists.flat().filter((proposal) => {
+    const claim = proposal.claim;
+    const key = [
+      normalizeKey(claim.subject),
+      claim.predicate,
+      normalizeKey(claim.object),
+      claim.polarity,
+    ].join('|');
+    if (keys.has(key)) return false;
+    keys.add(key);
+    return true;
+  });
 }

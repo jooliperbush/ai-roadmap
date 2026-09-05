@@ -37,3 +37,7 @@ After the user added credits, the deployed Railway key successfully authenticate
 ## Documented brand example
 
 Commit `07fea29` deployed as `2dcd6006-9578-4540-8ebe-54a45d164df4` (SUCCESS). Homepage now uses a sourced historical Air Canada reconstruction in a familiar neutral chat UI, with explicit provenance and no invented sampling statistics. Typecheck, 1,038 application tests and 31 browser journeys passed. Live mobile Chromium confirmed the updated case, replay completion under reduced motion, zero horizontal overflow, no page errors and HTTP 200 health. Screenshot: ignored `artifacts/launch/brand-case-live-mobile.png`.
+
+## Readability update
+
+Commit `e88e3d8` deployed as `468e9d82-981f-4227-ad7c-ab6a5cacaadb`. Raised small landing typography to at least 14px, with 16px primary explanations; replaced the compact contradiction badge with explicit chatbot/policy comparison and consequence text. Typecheck, 1,038 application tests and 31 browser journeys passed. Live mobile Chromium confirmed 14px captions, 16px policy text, zero horizontal overflow, no page errors and HTTP 200 health.

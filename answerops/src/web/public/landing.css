@@ -1447,6 +1447,7 @@ details[open] > summary span {
   .lp-footer nav a { display: inline-flex; align-items: center; min-height: 44px; }
   .footer-top { flex-direction: column; align-items: flex-start; gap: 20px; }
   .footer-top p { text-align: left; }
+  .footer-bottom { flex-direction: column; gap: 10px; }
   .footer-top .lp-brand { font-size: 44px; }
   .footer-top .brand-logo { width: 48px; height: 36px; }
 }

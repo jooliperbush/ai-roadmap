@@ -26,7 +26,7 @@ test('launch site has working navigation, readable FAQs and responsive evidence'
   await expect(page.locator('#faq details[open]')).toContainText('scoped individually');
   await expect(page.getByTestId('rehearsal-notice')).toBeVisible();
   mkdirSync(folder, { recursive: true });
-  for (const width of [390, 768, 1440]) {
+  for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.evaluate(() => window.scrollTo(0, 0));
     expect(
@@ -58,4 +58,25 @@ test('audit failure preserves inputs and retry returns a report link', async ({ 
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByTestId('audit-report-url')).toHaveAttribute('href', '/audit/' + 'a'.repeat(32));
   expect(attempts).toBe(2);
+});
+
+
+test('mobile navigation opens, closes on selection and supports Escape', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const menu = page.getByRole('button', { name: 'Menu' });
+  const nav = page.getByRole('navigation', { name: 'Sections', exact: true });
+  await expect(nav).toBeHidden();
+  await menu.click();
+  await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  await nav.getByRole('link', { name: 'Who it’s for' }).click();
+  await expect(page).toHaveURL(/#teams$/);
+  await expect(nav).toBeHidden();
+  await menu.click();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeFocused();
+  await expect(nav).toBeHidden();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(nav).toBeVisible();
+  await expect(menu).toBeHidden();
 });

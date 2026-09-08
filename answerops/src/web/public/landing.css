@@ -1395,3 +1395,56 @@ details[open] > summary span {
  .who { font-size: 14px; }
  .case-impact strong { font-size: 32px; }
 }
+
+/* A quiet masthead, with a collapsible navigation on smaller screens. */
+.lp-nav { min-height: 88px; gap: 24px; }
+.lp-nav .lp-brand { font-family: var(--serif); font-weight: 500; font-size: 31px; letter-spacing: -1.2px; gap: 9px; }
+.lp-nav .brand-logo { width: 36px; height: 29px; }
+.lp-nav-links { gap: 24px; }
+.lp-nav-links a, .signin { display: inline-flex; align-items: center; min-height: 44px; }
+.signin { border: 1px solid var(--line); border-radius: 6px; padding: 0 16px; gap: 12px; white-space: nowrap; }
+.nav-toggle { display: none; }
+.announcement-detail { display: inline-flex; gap: 12px; }
+@media (max-width: 900px) {
+  .lp-nav { flex-wrap: wrap; gap: 12px; padding-block: 14px; min-height: 76px; }
+  .lp-nav .lp-brand { margin-right: auto; font-size: 28px; }
+  .lp-nav .signin { order: 2; }
+  .nav-toggle:not([hidden]) { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); font: 15px var(--sans); cursor: pointer; order: 3; }
+  .lp-nav-links { order: 4; width: 100%; margin: 0; padding-top: 12px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 16px; }
+  .lp-nav.has-menu .lp-nav-links { display: none; }
+  .nav-toggle[aria-expanded="true"] + .lp-nav-links { display: grid; }
+  .lp-nav-links a { padding: 6px 8px; }
+}
+@media (max-width: 600px) {
+  .announcement { min-height: 32px; padding-block: 6px; font-size: 13px; }
+  .announcement-detail { display: none; }
+  .shell { width: calc(100% - 36px); }
+  .lp-nav { gap: 8px; }
+  .lp-nav .lp-brand { font-size: 26px; gap: 6px; }
+  .lp-nav .brand-logo { width: 30px; height: 26px; }
+  .signin { padding-inline: 10px; font-size: 14px; }
+  .signin span { display: none; }
+  .nav-toggle:not([hidden]) { padding-inline: 10px; }
+  .hero { padding-top: 32px; gap: 32px; }
+  h1 { font-size: clamp(42px, 10.7vw, 61px); }
+  .hero-copy > .label { margin-bottom: 20px; line-height: 1.6; }
+  .hero-actions { align-items: stretch; }
+  .hero-actions .btn, .audit-form .btn { width: 100%; justify-content: center; white-space: normal; text-align: center; }
+  .hero-actions .text-link { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .hero-evidence { padding-right: 0; }
+  .exhibit-head { flex-wrap: wrap; }
+  .replay { min-height: 44px; }
+  .chat-window { padding-inline: 14px; }
+  .turn.is-bot { gap: 8px; }
+  .annotations { padding: 16px 14px; }
+  .error-card p, .principles p, .footer-top p, .team-grid p { font-size: 16px; line-height: 1.65; }
+  .evidence-section h2 { font-size: clamp(40px, 11vw, 61px); }
+  .audit-copy h2 { font-size: clamp(38px, 10.5vw, 49px); }
+  .audit-form { padding: 22px 16px; }
+  .audit-form input, .audit-form select, .audit-form textarea { font-size: 16px; min-height: 48px; }
+  .faq summary { font-size: 16px; line-height: 1.5; min-height: 48px; }
+  .lp-footer nav { flex-wrap: wrap; gap: 8px 22px; }
+  .lp-footer nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .footer-top .lp-brand { font-size: 44px; }
+  .footer-top .brand-logo { width: 48px; height: 36px; }
+}

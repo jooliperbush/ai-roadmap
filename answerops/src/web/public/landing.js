@@ -1,5 +1,28 @@
 /** The complete document is usable before this progressive enhancement runs. */
 (() => {
+  const menu = document.querySelector('.nav-toggle');
+  const navigation = document.querySelector('#site-navigation');
+  if (menu && navigation) {
+    menu.hidden = false;
+    document.querySelector('.lp-nav').classList.add('has-menu');
+    const closeMenu = () => menu.setAttribute('aria-expanded', 'false');
+    menu.addEventListener('click', () => {
+      menu.setAttribute('aria-expanded', String(menu.getAttribute('aria-expanded') !== 'true'));
+    });
+    navigation.addEventListener('click', (event) => {
+      if (event.target.closest('a')) closeMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && menu.getAttribute('aria-expanded') === 'true') {
+        closeMenu();
+        menu.focus();
+      }
+    });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.lp-nav')) closeMenu();
+    });
+    window.matchMedia('(max-width: 900px)').addEventListener('change', closeMenu);
+  }
   const source = new URLSearchParams(location.search).get('utm_source') || 'public_site';
   const eventSource = source.length <= 30 ? source : 'public_site';
   const emit = (event) => {

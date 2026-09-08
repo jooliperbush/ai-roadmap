@@ -109,10 +109,11 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   const count = opts.liveProviders ?? 0;
   return html`
     <a class="skip" href="#main">Skip to content</a>
-    <div class="announcement"><span class="status-dot" aria-hidden="true"></span> Early access <span class="announcement-divider">/</span> A clearer picture of what AI says about you. <a href="#audit">Explore your answers <span aria-hidden="true">↗</span></a></div>
+    <div class="announcement"><span class="status-dot" aria-hidden="true"></span> Early access <span class="announcement-detail"><span class="announcement-divider">/</span> A clearer picture of what AI says about you.</span> <a href="#audit">Explore your answers <span aria-hidden="true">↗</span></a></div>
     <header class="lp-nav shell">
       <a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30">miscited</a>
-      <nav class="lp-nav-links" aria-label="Sections"><a href="#loop">How it works</a><a href="#teams">Who it’s for</a><a href="#design">The evidence</a><a href="#plans">Early access</a></nav>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation" hidden>Menu <span aria-hidden="true">☰</span></button>
+      <nav id="site-navigation" class="lp-nav-links" aria-label="Sections"><a href="#loop">How it works</a><a href="#teams">Who it’s for</a><a href="#design">The evidence</a><a href="#plans">Early access</a></nav>
       <a class="signin" href="/login" data-testid="nav-signin">Sign in <span aria-hidden="true">↗</span></a>
     </header>
     <main id="main">

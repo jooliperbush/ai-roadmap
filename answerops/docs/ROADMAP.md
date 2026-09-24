@@ -20,7 +20,7 @@ Verified by reading the code, not the spec.
 | Experiments | Real. Difference-in-differences with matched controls, `inconclusive` when underpowered. |
 | Providers | Simulated adapter is real and deterministic. Four live adapters exist and are half-wired. |
 | Web | Server-rendered, three-section dashboard, nine secondary pages, public marketing page. |
-| Deployment | Railway, manual `railway up`, no volume. |
+| Deployment | Railway, manual `railway up` from `answerops/`. SQLite lives on the `answerops-volume` volume at `/data`, so it survives deploys. |
 
 ## 1. The four holes that cap what this is worth today
 

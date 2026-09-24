@@ -696,7 +696,7 @@ export function methodologyView(v: {
         ),
       )} </div> <p class="section-note" data-testid="extractor-caveat"> <b>How to read this.</b> ${x.caveat} </p>`
     : html`<p class="section-note" data-testid="extractor-missing"> No evaluation has been run. Until one has, the precision of every defect on the answer desk is unmeasured, and this page will keep saying so. </p>`;
-  const retention = html`<p class="section-note"> Every cited page is fetched at sampling time and stored by the hash of its bytes, so "the cited page does not contain the claim" is still checkable after the page changes. We honour robots.txt, cap concurrency at two requests per host, and identify ourselves. A snapshot an open defect or a confirmed experiment depends on is kept indefinitely; anything else is pruned after ${v.retentionDays} days. </p>`;
+  const retention = html`<p class="section-note"> Every cited page is fetched at sampling time and stored by the hash of its bytes, so "the cited page does not contain the claim" is still checkable after the page changes. We honour robots.txt, cap concurrency at two requests per host, and identify ourselves. A snapshot is kept for as long as a checked citation or a confirmed experiment relies on it as evidence; one nothing relies on is pruned after ${v.retentionDays} days. </p>`;
   const costs = html`<p class="section-note"> A run whose provider returned no usage block is recorded as unpriced rather than as free, and is excluded from spend totals. Budgets are enforced before a round spends, by dropping whole clusters rather than thinning every one of them below the point where a rate can be shown. </p> ${table(
     ["Model", "Input / Mtok", "Output / Mtok", "Per search call"],
     Object.entries(v.prices.table).map(

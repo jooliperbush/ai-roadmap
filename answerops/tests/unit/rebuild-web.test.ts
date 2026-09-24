@@ -72,7 +72,7 @@ describe('presentation compatibility at the rendering boundary', () => {
   it('keeps public discovery and JSON-LD safe', () => {
     expect(canonical('/blog/')).toBe('https://miscited.com/blog');
     const entries = sitemapEntries([{ slug: 'first', updated: '2026-01-02' }]);
-    expect(entries.map((x) => x.path)).toEqual(['/', '/blog', '/blog/first']);
+    expect(entries.map((x) => x.path)).toEqual(['/', '/blog', '/blog/first', '/privacy', '/terms']);
     expect(renderSitemap(entries)).toContain('<lastmod>2026-01-02</lastmod>');
     expect(faqLd([{ q: '</script>', a: 'x' }]).value).toContain('\\u003c/script>');
   });

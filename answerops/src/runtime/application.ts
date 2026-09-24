@@ -13,7 +13,7 @@ import type { RuntimeConfig } from './config.js';
 export async function createApplication(config: RuntimeConfig) {
   const db = openDb(config.dbPath);
   try {
-    const seed = await ensureSeed(db);
+    const seed = await ensureSeed(db, { production: config.production, demoPassword: config.demoPassword });
     const fetcher =
       config.fetchMode === 'off'
         ? null
@@ -30,7 +30,7 @@ export async function createApplication(config: RuntimeConfig) {
       beliefsFor,
       clock: systemClock,
       logger: config.logger,
-      demoHint: seed ? `Demo workspace: ${seed.email} / ${seed.password}` : null,
+      demoHint: seed && config.showDemoHint ? `Demo workspace: ${seed.email} / ${seed.password}` : null,
     });
     const scheduler = new Scheduler(
       db,

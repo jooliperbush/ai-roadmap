@@ -1,4 +1,5 @@
 import { html, raw, type Raw, escapeHtml } from './html.js';
+import { LEGAL_UPDATED, OPERATOR } from '../content/operator.js';
 export const SITE_URL = 'https://miscited.com';
 export const CANONICAL_HOST = 'miscited.com';
 export const SITE_NAME = 'Miscited';
@@ -28,6 +29,8 @@ export function sitemapEntries(posts: Array<{ slug: string; updated: string }>):
       priority: '0.7',
       lastmod: post.updated,
     });
+  for (const path of ['/privacy', '/terms'])
+    index.push({ path, changefreq: 'yearly', priority: '0.3', lastmod: LEGAL_UPDATED });
   return index;
 }
 export function renderSitemap(entries: SitemapEntry[]): string {
@@ -127,7 +130,7 @@ ${posts.map((p) => `- [${p.title}](${canonical(`/blog/${p.slug}`)}): ${p.summary
 
 ## Contact
 
-hello@miscited.com
+${OPERATOR.email}
 `;
 }
 
@@ -146,7 +149,7 @@ export function organizationLd(): Raw {
     '@id': `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: SITE_URL,
-    email: 'hello@miscited.com',
+    email: OPERATOR.email,
     description:
       'Miscited measures whether AI assistants state true things about a company, corrects the source pages those answers came from, and tests whether the answers changed.',
   });

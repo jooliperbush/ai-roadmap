@@ -21,7 +21,7 @@ export const HOME_FAQ = [
   },
   {
     q: 'What happens when I submit my domain?',
-    a: 'The audit starts automatically and a report link appears on this page. It reads your public site and uses provisional site-derived facts for comparison. Those facts need human review; running an audit does not make them independently verified truth. Your email, domain and report are stored to operate the audit.',
+    a: 'The audit starts automatically when a slot is free; we run a limited number each day, so at busy times it is queued and starts when a slot opens. A domain audited in the last 7 days is not audited again. A report link appears on this page. It reads your public site and uses provisional site-derived facts for comparison. Those facts need human review; running an audit does not make them independently verified truth. Your email, domain and report are stored to operate the audit.',
   },
   {
     q: 'How much does it cost?',

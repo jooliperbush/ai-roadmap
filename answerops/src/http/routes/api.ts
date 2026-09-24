@@ -89,7 +89,8 @@ export function apiRoutes(r: Runtime): void {
       tenantId: c.a.tenantId,
       brandId: c.brand.id,
       windowLabel: c.body.window ?? 'post',
-      budget: c.body.budget ?? 60,
+      // Every run is a paid sample: the same bounds as the /sampling/run form.
+      budget: Math.max(5, Math.min(600, Number(c.body.budget) || 60)),
       actor: c.a.email,
       beliefs: r.options.beliefsFor?.(c.body.window ?? 'post') ?? null,
       seedOffset: c.body.seedOffset ?? 0,

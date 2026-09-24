@@ -81,7 +81,7 @@ export function page(title: string, ctx: NavContext, body: Raw): string {
         ([key, href, label]) =>
           html`<a href="${href}" class="navlink ${key === ctx.active ? "active" : ""}" data-testid="nav-${key}" ${key === ctx.active ? raw('aria-current="page"') : ""} >${label}</a >`,
       )} </nav> <main id="main-content">${body}</main> <footer class="footer"> <span>${POSITION}</span ><a href="/methodology">Sampling methodology &amp; limitations</a> </footer>`
-    : html`<main id="main-content">${body}</main>`;
+    : html`<main id="main-content">${body}</main> <footer class="footer"> <span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></span> </footer>`;
   return document(
     `${title} · Miscited`,
     raw(""),
@@ -106,7 +106,7 @@ export function reportPage(
   return document(
     title,
     html`<meta name="description" content="${description}"><meta name="robots" content="noindex, nofollow"><meta name="color-scheme" content="light">`,
-    html`<main class="report-wrap"> <div class="report-mark">Miscited · answer risk audit</div> ${body} <footer class="report-foot"> ${POSITION} · <a href="/">miscited</a> </footer> </main>`,
+    html`<main class="report-wrap"> <div class="report-mark">Miscited · answer risk audit</div> ${body} <footer class="report-foot"> ${POSITION} · <a href="/">miscited</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> </footer> </main>`,
     "/static/report.css",
     null,
   );

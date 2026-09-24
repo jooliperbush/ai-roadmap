@@ -10,12 +10,20 @@
  */
 
 import { createHash } from 'node:crypto';
+import type { LookupAddress } from 'node:dns';
+import { lookup } from 'node:dns/promises';
+import { get as httpGet } from 'node:http';
+import { get as httpsGet } from 'node:https';
+import { isIP, type LookupFunction } from 'node:net';
+import { pipeline, Readable, type Transform } from 'node:stream';
+import { createBrotliDecompress, createGunzip, createInflate } from 'node:zlib';
 
-export const USER_AGENT = 'Miscited/1.0 (+https://miscited.example/bot)';
+export const USER_AGENT = 'Miscited/1.0 (+https://miscited.com)';
 export const MAX_BYTES = 2 * 1024 * 1024;
 export const TIMEOUT_MS = 8000;
 export const MAX_ATTEMPTS = 3;
 export const PER_HOST_CONCURRENCY = 2;
+export const MAX_REDIRECTS = 5;
 export const SNAPSHOT_RETENTION_DAYS = 180;
 
 /** Closed set. "unreachable" without a cause is not a finding, it is a shrug. */
@@ -75,16 +83,183 @@ export function sha256Of(s: string): string {
   return createHash('sha256').update(s).digest('hex');
 }
 
-/** Hosts we never fetch: loopback and private ranges, so a citation cannot point us inward. */
+/** Hosts we never fetch by name or by literal address, so a citation cannot point us inward. */
 export function isBlockedHost(host: string): boolean {
-  if (!host) return true;
-  const h = host.toLowerCase();
+  const h = host
+    .toLowerCase()
+    .replace(/^\[(.*)\]$/, '$1')
+    .replace(/\.$/, '');
+  if (!h) return true;
   if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.internal') || h.endsWith('.local'))
     return true;
-  if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(h)) return true;
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
-  if (h === '::1' || h === '[::1]') return true;
-  return false;
+  return isIP(h) !== 0 && !isPublicAddress(h);
+}
+
+/** IPv4 ranges that are not the public internet: [first address, prefix length]. */
+const NON_PUBLIC_V4: Array<[string, number]> = [
+  ['0.0.0.0', 8], // "this network"
+  ['10.0.0.0', 8], // private
+  ['100.64.0.0', 10], // carrier-grade NAT
+  ['127.0.0.0', 8], // loopback
+  ['169.254.0.0', 16], // link-local, including the 169.254.169.254 metadata service
+  ['172.16.0.0', 12], // private
+  ['192.0.0.0', 24], // protocol assignments
+  ['192.0.2.0', 24], // documentation
+  ['192.88.99.0', 24], // 6to4 relay
+  ['192.168.0.0', 16], // private
+  ['198.18.0.0', 15], // benchmarking
+  ['198.51.100.0', 24], // documentation
+  ['203.0.113.0', 24], // documentation
+  ['224.0.0.0', 4], // multicast
+  ['240.0.0.0', 4], // reserved, including broadcast
+];
+
+function ipv4Value(address: string): number {
+  return address.split('.').reduce((value, octet) => value * 256 + Number(octet), 0);
+}
+
+function isPublicV4(value: number): boolean {
+  return NON_PUBLIC_V4.every(([first, bits]) => {
+    const size = 2 ** (32 - bits);
+    return Math.floor(value / size) !== Math.floor(ipv4Value(first) / size);
+  });
+}
+
+/** The eight 16-bit groups of a valid IPv6 address, including one written with a dotted IPv4 tail. */
+function ipv6Groups(address: string): number[] {
+  let text = address.toLowerCase();
+  const tail: number[] = [];
+  const dotted = /:(\d+\.\d+\.\d+\.\d+)$/.exec(text);
+  if (dotted) {
+    const value = ipv4Value(dotted[1]);
+    tail.push(Math.floor(value / 65536), value % 65536);
+    text = text.slice(0, dotted.index + 1);
+    if (!text.endsWith('::')) text = text.slice(0, -1);
+  }
+  const [head, rest] = text
+    .split('::')
+    .map((part) => (part ? part.split(':').map((group) => parseInt(group, 16)) : []));
+  const zeros = rest ? 8 - tail.length - head.length - rest.length : 0;
+  return [...head, ...Array<number>(zeros).fill(0), ...(rest ?? []), ...tail];
+}
+
+/**
+ * Whether an address is on the public internet. IPv6 must be global unicast, and the forms that carry an IPv4
+ * address (mapped, NAT64, 6to4) are judged by that address, so ::ffff:127.0.0.1 is loopback like 127.0.0.1.
+ */
+export function isPublicAddress(address: string): boolean {
+  const family = isIP(address);
+  if (family === 4) return isPublicV4(ipv4Value(address));
+  if (family !== 6) return false;
+  const g = ipv6Groups(address);
+  const embedded = (high: number, low: number) => isPublicV4(high * 65536 + low);
+  if (g.slice(0, 5).every((x) => x === 0) && g[5] === 0xffff) return embedded(g[6], g[7]); // IPv4-mapped
+  if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) return embedded(g[6], g[7]); // NAT64
+  if (g[0] === 0x2002) return embedded(g[1], g[2]); // 6to4
+  if ((g[0] & 0xe000) !== 0x2000) return false; // loopback, unspecified, unique-local, link-local, multicast, ...
+  if (g[0] === 0x2001 && (g[1] < 0x200 || g[1] === 0xdb8)) return false; // Teredo and other protocol use; documentation
+  return !(g[0] === 0x3fff && g[1] < 0x1000); // 3fff::/20 documentation
+}
+
+/** One GET that leaves redirects to the caller and connects only to `addresses`, which the caller has checked. */
+export type Transport = (
+  url: string,
+  init: { headers: Record<string, string>; signal: AbortSignal; redirect: 'manual' },
+  addresses: LookupAddress[],
+) => Promise<Response>;
+
+/** Content codings we ask for, as fetch() did, and so must undo ourselves. */
+const DECODERS: Record<string, (() => Transform) | undefined> = {
+  gzip: createGunzip,
+  'x-gzip': createGunzip,
+  deflate: createInflate,
+  br: createBrotliDecompress,
+};
+
+/**
+ * The production transport. The socket is pinned to the checked addresses through `lookup`, so the name cannot
+ * resolve somewhere else between the check and the connection; TLS still verifies the certificate for the name.
+ */
+export const pinnedTransport: Transport = (url, init, addresses) =>
+  new Promise((resolve, reject) => {
+    const target = new URL(url);
+    const pinned: LookupFunction = (_host, options, callback) =>
+      options.all ? callback(null, addresses) : callback(null, addresses[0].address, addresses[0].family);
+    const request = (target.protocol === 'https:' ? httpsGet : httpGet)(
+      target,
+      {
+        headers: { ...init.headers, 'accept-encoding': 'gzip, deflate, br' },
+        signal: init.signal,
+        agent: false,
+        lookup: pinned,
+      },
+      (res) => {
+        try {
+          const headers = new Headers();
+          for (const [name, value] of Object.entries(res.headers))
+            for (const item of [value ?? []].flat())
+              try {
+                headers.append(name, item);
+              } catch {
+                /* A value the Fetch API cannot represent is one we never read. */
+              }
+          const status = res.statusCode ?? 0;
+          const decoder = DECODERS[String(res.headers['content-encoding'] ?? '').trim().toLowerCase()];
+          let body: ReadableStream | null = null;
+          if ([204, 205, 304].includes(status)) res.resume();
+          else body = Readable.toWeb(decoder ? pipeline(res, decoder(), () => undefined) : res) as ReadableStream;
+          resolve(new Response(body, { status, headers }));
+        } catch (error) {
+          res.destroy();
+          reject(error);
+        }
+      },
+    );
+    request.on('error', reject);
+  });
+
+const REDIRECT_STATUSES = [301, 302, 303, 307, 308];
+
+/** A request we will not make. Asking again cannot change that, so it is never retried. */
+class Refused extends Error {
+  constructor(readonly kind: FetchErrorKind) {
+    super(`refused: ${kind}`);
+  }
+}
+
+/** Settles with `promise`, or rejects as soon as `signal` aborts. */
+function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(signal.reason);
+    if (signal.aborted) return abort();
+    signal.addEventListener('abort', abort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
+/** The body as text, refusing it once it passes `limit` bytes rather than holding all of it. */
+async function readCapped(response: Response, limit: number, signal: AbortSignal): Promise<string> {
+  const reader = response.body?.getReader();
+  if (!reader) return '';
+  const cancel = () => void reader.cancel().catch(() => undefined);
+  signal.addEventListener('abort', cancel, { once: true });
+  try {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      signal.throwIfAborted();
+      if (done) return new TextDecoder().decode(Buffer.concat(chunks));
+      size += value.byteLength;
+      if (size > limit) {
+        cancel();
+        throw new Refused('too_large');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    signal.removeEventListener('abort', cancel);
+  }
 }
 
 export function statusToError(status: number): FetchErrorKind {
@@ -157,7 +332,9 @@ export function textOf(html: string): string {
 }
 
 interface HttpFetcherOptions {
-  fetchImpl?: typeof fetch;
+  fetchImpl?: Transport;
+  /** Every address a host name resolves to. Each must be public before we connect. */
+  resolve?: (host: string) => Promise<LookupAddress[]>;
   now?: () => Date;
   maxBytes?: number;
   timeoutMs?: number;
@@ -176,7 +353,8 @@ export class HttpFetcher implements Fetcher {
   private slots = new Map<string, { active: number; waiting: Array<() => void> }>();
   constructor(opts: HttpFetcherOptions = {}) {
     this.settings = {
-      fetchImpl: opts.fetchImpl ?? fetch,
+      fetchImpl: opts.fetchImpl ?? pinnedTransport,
+      resolve: opts.resolve ?? ((host) => lookup(host, { all: true })),
       now: opts.now ?? (() => new Date()),
       maxBytes: opts.maxBytes ?? MAX_BYTES,
       timeoutMs: opts.timeoutMs ?? TIMEOUT_MS,
@@ -194,7 +372,7 @@ export class HttpFetcher implements Fetcher {
     } catch {
       return fail(url, 'invalid_url', fetchedAt);
     }
-    if (isBlockedHost(parsed.hostname)) return fail(url, 'blocked', fetchedAt);
+    if (parsed.port || isBlockedHost(parsed.hostname)) return fail(url, 'blocked', fetchedAt);
     if (this.settings.respectRobots && !robotsAllows(await this.rulesFor(parsed), parsed.pathname))
       return fail(url, 'robots_disallowed', fetchedAt);
     const release = await this.acquire(parsed.host);
@@ -216,15 +394,56 @@ export class HttpFetcher implements Fetcher {
       else state.active--;
     };
   }
-  private async request(url: string): Promise<Response> {
+  /** The addresses `target` may be fetched from: every one its host resolves to, and all of them public. */
+  private async admit(target: URL, signal: AbortSignal): Promise<LookupAddress[]> {
+    if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password)
+      throw new Refused('invalid_url');
+    if (target.port || isBlockedHost(target.hostname)) throw new Refused('blocked');
+    const host = target.hostname.replace(/^\[(.*)\]$/, '$1');
+    const family = isIP(host);
+    const addresses = family ? [{ address: host, family }] : await abortable(this.settings.resolve(host), signal);
+    if (!addresses.length || addresses.some(({ address }) => !isPublicAddress(address)))
+      throw new Refused('blocked');
+    return addresses;
+  }
+  /**
+   * One GET under one deadline covering DNS, redirects and the body. Redirects are followed by hand so each hop
+   * is admitted like the first URL, and a body is read, up to a hard cap, only when it is the answer.
+   */
+  private async request(url: string): Promise<{ status: number; ok: boolean; contentType: string; text: string }> {
     const abort = new AbortController();
     const timeout = setTimeout(() => abort.abort(), this.settings.timeoutMs);
     try {
-      return await this.settings.fetchImpl(url, {
-        headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/xhtml+xml' },
-        signal: abort.signal,
-        redirect: 'follow',
-      });
+      let target = new URL(url);
+      for (let redirects = 0; ; redirects++) {
+        const addresses = await this.admit(target, abort.signal);
+        const response = await abortable(
+          this.settings.fetchImpl(
+            target.toString(),
+            {
+              headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/xhtml+xml' },
+              signal: abort.signal,
+              redirect: 'manual',
+            },
+            addresses,
+          ),
+          abort.signal,
+        );
+        const location = REDIRECT_STATUSES.includes(response.status) ? response.headers.get('location') : null;
+        if (location === null) {
+          const text = response.ok ? await readCapped(response, this.settings.maxBytes * 4, abort.signal) : '';
+          if (!response.ok) void response.body?.cancel().catch(() => undefined);
+          const contentType = response.headers.get('content-type') ?? '';
+          return { status: response.status, ok: response.ok, contentType, text };
+        }
+        void response.body?.cancel().catch(() => undefined);
+        if (redirects === MAX_REDIRECTS) throw new Refused('invalid_url');
+        try {
+          target = new URL(location, target);
+        } catch {
+          throw new Refused('invalid_url');
+        }
+      }
     } finally {
       clearTimeout(timeout);
     }
@@ -235,7 +454,7 @@ export class HttpFetcher implements Fetcher {
     rules = { disallow: [], allow: [] };
     try {
       const response = await this.request(url.protocol + '//' + url.host + '/robots.txt');
-      if (response.ok) rules = parseRobots(await response.text());
+      if (response.ok) rules = parseRobots(response.text);
     } catch {
       /* An unreachable robots file states no restrictions. */
     }
@@ -248,14 +467,14 @@ export class HttpFetcher implements Fetcher {
       try {
         const response = await this.request(url);
         if (response.ok) {
-          const raw = await response.text();
+          const raw = response.text;
           return {
             url,
             ok: true,
             sha256: sha256Of(raw),
             body: raw.slice(0, this.settings.maxBytes),
             bytes: raw.length,
-            contentType: response.headers.get('content-type') ?? '',
+            contentType: response.contentType,
             truncated: raw.length > this.settings.maxBytes,
             status: response.status,
             error: null,
@@ -265,6 +484,7 @@ export class HttpFetcher implements Fetcher {
         outcome = { ...fail(url, statusToError(response.status), fetchedAt), status: response.status };
         if (response.status < 500 && response.status !== 429) return outcome;
       } catch (error) {
+        if (error instanceof Refused) return fail(url, error.kind, fetchedAt);
         outcome = fail(url, classifyError(error), fetchedAt);
       }
       if (index + 1 < this.settings.maxAttempts) await this.settings.sleep(200 * (index + 1));

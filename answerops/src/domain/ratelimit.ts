@@ -38,14 +38,23 @@ export interface LimitResult {
   retryAfterSec: number;
 }
 
+/** How often expired windows are swept, so memory follows recent callers rather than every caller ever. */
+const SWEEP_MS = 60_000;
+
 export class RateLimiter {
   private windows = new Map<string, { used: number; expires: number }>();
+  private nextSweep = 0;
   constructor(private clock: Clock) {}
+  /** Windows held in memory, expired or not. */
+  get size(): number {
+    return this.windows.size;
+  }
   check(routeKey: string, ip: string): LimitResult {
     const policy = LIMITS[routeKey];
     if (!policy) return { ok: true, remaining: Infinity, retryAfterSec: 0 };
     const key = routeKey + '|' + ip,
       now = +this.clock.now();
+    this.sweep(now);
     const previous = this.windows.get(key);
     const window =
       previous && previous.expires > now ? previous : { used: 0, expires: now + policy.windowMs };
@@ -74,5 +83,10 @@ export class RateLimiter {
   }
   reset(): void {
     this.windows.clear();
+  }
+  private sweep(now: number): void {
+    if (now < this.nextSweep) return;
+    this.nextSweep = now + SWEEP_MS;
+    for (const [key, window] of this.windows) if (window.expires <= now) this.windows.delete(key);
   }
 }

@@ -112,6 +112,7 @@
   if (!form) return;
   const email = form.querySelector('#audit-email');
   const domain = form.querySelector('#audit-domain');
+  const trap = form.querySelector('#audit-company_fax');
   const button = form.querySelector('[data-submit]');
   const status = form.querySelector('[data-outcome]');
   let pending = false;
@@ -120,7 +121,7 @@
       [
         email,
         /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.value.trim()),
-        'Enter a work email we can send the audit to.',
+        'Enter a work email so we can contact you about the audit.',
       ],
       [
         domain,
@@ -172,19 +173,27 @@
           email: email.value.trim(),
           domain: domain.value.trim(),
           source: eventSource,
+          company_fax: trap ? trap.value : '',
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error('request failed');
       form.reset();
       status.dataset.kind = 'ok';
-      status.textContent = `Running now. We are reading ${result.domain}, taking what it says about itself as the comparison, and sampling the surfaces. `;
+      if (result.duplicate) {
+        status.textContent = `${result.domain} was audited in the last 7 days, so we have not started another audit. We have recorded your request.`;
+        return;
+      }
+      status.textContent = result.queued
+        ? `Received. We run a limited number of audits each day, so the audit of ${result.domain} is queued and will start automatically when a slot opens. `
+        : `Running now. We are reading ${result.domain}, taking what it says about itself as the comparison, and sampling the surfaces. `;
       if (/^\/audit\/[a-f0-9]{32}$/.test(result.reportUrl)) {
         const link = document.createElement('a');
         link.href = result.reportUrl;
         link.dataset.testid = 'audit-report-url';
         link.textContent = result.reportUrl;
-        status.append('Your report: ', link, '. It fills in as the sample completes.');
+        if (result.queued) status.append('Keep this link to check its progress: ', link, '.');
+        else status.append('Your report: ', link, '. It fills in as the sample completes.');
       } else
         status.append(
           'The request was accepted but no valid report link was returned. Keep this page open and contact the operator.',

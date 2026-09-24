@@ -253,7 +253,7 @@ export function snapshotView(v: { snapshot: any; citation: any | null }): Raw {
     ["Bytes", html`${s.bytes}${s.truncated === 1 ? " (truncated)" : ""}`],
     [
       "Retention",
-      html`Kept indefinitely while an open defect or a confirmed experiment refers to it, otherwise pruned after ${SNAPSHOT_RETENTION_DAYS} days.`,
+      html`Kept for as long as a checked citation or a confirmed experiment relies on it as evidence; a snapshot nothing relies on is pruned after ${SNAPSHOT_RETENTION_DAYS} days.`,
     ],
   ];
   return html`<div class="snapshot-banner" data-testid="snapshot-banner"> This is a snapshot captured on <b>${when(s.fetched_at)}</b>. It is not the live page, and the live page may since have changed. That is the reason it is kept. </div> <h1>Snapshot ${s.sha256.slice(0, 12)}</h1> <div class="table-wrap"> <table> <tbody> ${values.map(

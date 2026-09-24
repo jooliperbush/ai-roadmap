@@ -102,7 +102,23 @@ function auditForm(rehearsal: boolean): Raw {
   ].map(
     (field) =>
       html`<div class="field"> <label for="audit-${field.id}">${field.label}</label ><input id="audit-${field.id}" name="${field.id}" type="${field.type}" autocomplete="${field.auto}" spellcheck="false" placeholder="${field.hint}" aria-describedby="err-audit-${field.id}" data-testid="audit-${field.id}"><span class="err" id="err-audit-${field.id}" data-err-for="audit-${field.id}" role="alert" ></span> </div>`,
-  )}<button type="submit" class="btn btn-primary" data-submit data-testid="audit-submit" >${rehearsal ? 'Run the demo audit' : 'Request the audit'} <span aria-hidden="true">↗</span></button> <div class="outcome" data-outcome role="status" aria-live="polite"></div> <p class="fineprint"> Submitting starts the audit automatically. We store your email, domain and report to operate the audit. Site-derived facts are provisional until reviewed; the report link appears here. </p> </form>`;
+  )}<div class="trap" aria-hidden="true"><label for="audit-company_fax">Leave this empty</label><input id="audit-company_fax" name="company_fax" type="text" tabindex="-1" autocomplete="off" data-testid="audit-trap"></div><button type="submit" class="btn btn-primary" data-submit data-testid="audit-submit" >${rehearsal ? 'Run the demo audit' : 'Request the audit'} <span aria-hidden="true">↗</span></button> <p class="fineprint consent" data-testid="audit-consent">By requesting an audit you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.</p> <div class="outcome" data-outcome role="status" aria-live="polite"></div> <p class="fineprint" data-testid="audit-fineprint"> Submitting starts the audit right away if a slot is free. We run a limited number of audits each day, so otherwise it is queued and starts automatically when a slot opens. Either way the report link appears here. A domain audited in the last 7 days is not audited again. We store your email, domain and report to operate the audit. Site-derived facts are provisional until reviewed. </p> </form>`;
+}
+
+/**
+ * The public masthead and footer, shared with the other pages that use landing.css. `base` is ''
+ * on the landing page, where the section links are in-page anchors, and '/' everywhere else.
+ */
+export function siteHeader(base = ''): Raw {
+  return html`<header class="lp-nav shell">
+      <a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30">miscited</a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation" hidden>Menu <span aria-hidden="true">☰</span></button>
+      <nav id="site-navigation" class="lp-nav-links" aria-label="Sections"><a href="${base}#loop">How it works</a><a href="${base}#teams">Who it’s for</a><a href="${base}#design">The evidence</a><a href="${base}#plans">Early access</a></nav>
+      <a class="signin" href="/login" data-testid="nav-signin">Sign in <span aria-hidden="true">↗</span></a>
+    </header>`;
+}
+export function siteFooter(base = ''): Raw {
+  return html`<footer class="shell lp-footer"><div class="footer-top"><a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30">miscited</a><p>A better record.<br>A more accountable answer.</p></div><nav aria-label="Footer"><a href="/blog">Writing</a><a href="${base}#design">Measurement</a><a href="https://github.com/jooliperbush/ai-roadmap">GitHub ↗</a><a href="/login">Sign in</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav><div class="footer-bottom"><span>Miscited / Answer accuracy</span><span>Measured, not controlled.</span></div><p class="hero-note">We count page views and example interactions by broad referral source without visitor IDs or cookies. Optional event counting respects Do Not Track.</p></footer>`;
 }
 
 export function landingView(opts: { liveProviders?: number } = {}): Raw {
@@ -110,12 +126,7 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
   return html`
     <a class="skip" href="#main">Skip to content</a>
     <div class="announcement"><span class="status-dot" aria-hidden="true"></span> Early access <span class="announcement-detail"><span class="announcement-divider">/</span> A clearer picture of what AI says about you.</span> <a href="#audit">Explore your answers <span aria-hidden="true">↗</span></a></div>
-    <header class="lp-nav shell">
-      <a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30">miscited</a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation" hidden>Menu <span aria-hidden="true">☰</span></button>
-      <nav id="site-navigation" class="lp-nav-links" aria-label="Sections"><a href="#loop">How it works</a><a href="#teams">Who it’s for</a><a href="#design">The evidence</a><a href="#plans">Early access</a></nav>
-      <a class="signin" href="/login" data-testid="nav-signin">Sign in <span aria-hidden="true">↗</span></a>
-    </header>
+    ${siteHeader()}
     <main id="main">
       <section class="shell hero">
         <div class="hero-copy"><p class="label"><span class="cross" aria-hidden="true">+</span> AI answer accuracy for B2B SaaS</p>
@@ -137,6 +148,6 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
       <section class="shell faq-section" id="faq"><div><p class="label">A few fair questions</p><h2>Before you begin.</h2></div><div class="faq-list">${HOME_FAQ.map(({ q, a }) => html`<details><summary>${q}<span aria-hidden="true">+</span></summary><p>${a}</p></details>`)}</div></section>
       <section class="audit-section" id="audit"><div class="shell audit-grid"><div class="audit-copy"><p class="label">Your domain. The actual record.</p><h2>See what the answers say.</h2><p class="lede">A concrete place to start the conversation.</p><ul><li>A dated report you can inspect.</li><li>Extracted claims and the sources behind them.</li><li>Clear labels for simulated results and missing coverage.</li></ul><p class="coverage-note">${count >= 4 ? 'We sample your questions across all four assistants through their configured APIs.' : 'We sample your questions on the configured API surfaces.'} Results depend on the model, access mode, region and date.</p></div>${auditForm(count === 0)}</div></section>
     </main>
-    <footer class="shell lp-footer"><div class="footer-top"><a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30">miscited</a><p>A better record.<br>A more accountable answer.</p></div><nav aria-label="Footer"><a href="/blog">Writing</a><a href="#design">Measurement</a><a href="https://github.com/jooliperbush/ai-roadmap">GitHub ↗</a><a href="/login">Sign in</a></nav><div class="footer-bottom"><span>Miscited / Answer accuracy</span><span>Measured, not controlled.</span></div><p class="hero-note">We count page views and example interactions by broad referral source without visitor IDs or cookies. Optional event counting respects Do Not Track.</p></footer>
+    ${siteFooter()}
   `;
 }

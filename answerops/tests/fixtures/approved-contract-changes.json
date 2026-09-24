@@ -18,5 +18,10 @@
     "referenceSha256": "f0c0b545d318541483e2963c747c3269fe7548ad72958a1615df96307bc9d9c4",
     "sha256": "33c06cfca39386a2b5c20b99a16cae49697ab740f6fea25abc8858cb7c237831",
     "reason": "User approved Monday plan-check-report workflow. Newly converted audit accounts now receive a weekly briefing schedule instead of a daily schedule. Existing generic schedules remain unchanged."
+  },
+  "tests/unit/fetcher.test.ts": {
+    "referenceSha256": "12964181149e4d96062528d5e0b613d7ae046a01ea224b8504ad539195dd5bc8",
+    "sha256": "ca5bdf09e8c9a0aabf243e64e5c89277eaace42d3a4d6436293390401ac84f1c",
+    "reason": "2026-09-24 SSRF fix: HttpFetcher now resolves every host itself and connects only to checked public addresses. Each HttpFetcher test injects a public resolver next to its fake transport so it stays offline. No assertion changes; the SSRF coverage lives in fetcher-ssrf.test.ts."
   }
 }

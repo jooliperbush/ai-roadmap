@@ -6,7 +6,14 @@ import { postBySlug, postsNewestFirst } from '../../content/posts.js';
 import { jsonParse, id as newId, nowIso, verifyPassword } from '../../db/index.js';
 import * as repo from '../../db/repo/index.js';
 import { liveProviderCount } from '../../providers/registry.js';
-import { createAuditReport, getAuditReportByToken, runAudit, startMonitoring } from '../../services/audit.js';
+import {
+  createAuditReport,
+  getAuditReport,
+  getAuditReportByToken,
+  newAuditToken,
+  startMonitoring,
+} from '../../services/audit.js';
+import { auditedThisWeek, markDuplicate, startQueuedAudits } from '../../services/auditQueue.js';
 import { buildDashboard } from '../../services/dashboard.js';
 import { countLaunchEvent, LAUNCH_EVENTS, trafficSource } from '../../services/traffic.js';
 import {
@@ -38,7 +45,13 @@ export function publicRoutes(r: Runtime): void {
   const credentials = (reply: FastifyReply, tenantId: string, userId: string) => {
     const sid = randomBytes(32).toString('hex');
     repo.createSession(db, tenantId, userId, sid, 24, randomBytes(24).toString('hex'));
-    reply.setCookie('aops', sid, { path: '/', httpOnly: true, sameSite: 'lax' });
+    // Secure in production, where the site is served over HTTPS; local development and the tests use plain HTTP.
+    reply.setCookie('aops', sid, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
   };
   app.get('/login', async (req, reply) => {
     if (r.auth(req)) return reply.redirect('/');
@@ -125,7 +138,9 @@ export function publicRoutes(r: Runtime): void {
   });
   const auditRequest = z.object({
     source: z.unknown().optional(),
-    email: z.string().trim().email('Enter a work email we can send the audit to.'),
+    // Honeypot: the form hides this input from people, so any value in it came from a bot.
+    company_fax: z.unknown().optional(),
+    email: z.string().trim().email('Enter a work email so we can contact you about the audit.'),
     domain: z
       .string()
       .trim()
@@ -141,24 +156,33 @@ export function publicRoutes(r: Runtime): void {
         .replace(/^https?:\/\//, '')
         .replace(/\/.*$/, ''),
       requestId = newId('req');
+    if (String(parsed.data.company_fax ?? '').trim())
+      return reply.code(201).send({ ok: true, domain, reportUrl: `/audit/${newAuditToken()}` });
     const report = db.transaction(() => {
       db.prepare(
         'INSERT INTO audit_requests (id, email, domain, source, created_at) VALUES (?, ?, ?, ?, ?)',
       ).run(requestId, parsed.data.email.toLowerCase(), domain, trafficSource(parsed.data.source), nowIso());
-      return createAuditReport(db, requestId, domain);
+      const report = createAuditReport(db, requestId, domain);
+      // Each audit is a paid sample, so a domain gets one a week. A repeat is recorded and never runs.
+      if (auditedThisWeek(db, domain, clock)) markDuplicate(db, report.id);
+      return report;
     })();
+    // The daily cap: queued audits start oldest first, this one last, while slots are open. Whatever is still
+    // queued, the scheduler starts as slots open.
     if (r.fetcher)
-      void r.tasks
-        .track(
-          runAudit(db, report.id, {
-            fetcher: r.fetcher,
-            clock,
-            beliefs: r.options.beliefsFor?.('audit') ?? null,
-            budgetRuns: Number(process.env.MISCITED_AUDIT_RUNS ?? 40),
-          }),
-        )
-        .catch((error) => app.log.error({ err: error, reportId: report.id }, 'audit failed'));
-    return reply.code(201).send({ ok: true, domain, reportUrl: `/audit/${report.token}` });
+      for (const audit of startQueuedAudits(db, {
+        fetcher: r.fetcher,
+        clock,
+        beliefs: r.options.beliefsFor?.('audit') ?? null,
+      }))
+        void r.tasks.track(audit).catch((error) => app.log.error({ err: error }, 'audit failed'));
+    const { status } = getAuditReport(db, report.id)!;
+    return reply.code(201).send({
+      ok: true,
+      domain,
+      reportUrl: `/audit/${report.token}`,
+      ...(status === 'queued' ? { queued: true } : status === 'duplicate' ? { duplicate: true } : {}),
+    });
   });
   app.get('/audit/:token', async (req, reply) => {
     const query = req.query as Record<string, string>;
@@ -181,18 +205,32 @@ export function publicRoutes(r: Runtime): void {
               <p class="lede">No audit exists at this address.</p>`,
           ),
         );
+    if (report.status === 'duplicate')
+      return reply.type('text/html; charset=utf-8').send(
+        renderReport(
+          `Audit of ${report.domain}`,
+          `${report.domain} was audited in the last 7 days.`,
+          html`<h1>Audit of ${report.domain}</h1>
+            <p class="lede" data-testid="audit-status">
+              ${`${report.domain} was audited in the last 7 days, so we have not started another audit. We have recorded your request.`}
+            </p>`,
+        ),
+      );
     if (report.status !== 'complete')
       return reply.type('text/html; charset=utf-8').send(
         renderReport(
           `Audit of ${report.domain}`,
-          'Your answer risk audit is running.',
+          report.status === 'queued' ? 'Your answer risk audit is queued.' : 'Your answer risk audit is running.',
           html`<h1>Auditing ${report.domain}</h1>
             <p class="lede" data-testid="audit-status">
-              Status:
-              ${report.status}.${
-                report.error
-                  ? ` ${report.error}`
-                  : ' Reload in a minute; this page fills in when the sample completes.'
+              ${
+                report.status === 'queued'
+                  ? 'Received. We run a limited number of audits each day, so this one is queued and will start automatically when a slot opens. Keep this link to check its progress; this page fills in when the audit completes.'
+                  : `Status: ${report.status}.${
+                      report.error
+                        ? ` ${report.error}`
+                        : ' Reload in a minute; this page fills in when the sample completes.'
+                    }`
               }
             </p>`,
         ),

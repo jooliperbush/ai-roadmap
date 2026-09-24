@@ -211,6 +211,27 @@ h2 {
   letter-spacing: 0.09em;
   color: var(--accent);
 }
+.blog-foot {
+  max-width: 790px;
+  margin: auto;
+  padding: 0 28px 48px;
+}
+.blog-foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font: 12px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.blog-foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted);
+}
 @media (max-width: 560px) {
   body {
     font-size: 17px;
@@ -225,10 +246,14 @@ h2 {
   .post-head h1 {
     font-size: 35px;
   }
+  .blog-foot {
+    padding-inline: 18px;
+  }
 }
 @media print {
   .post-cta,
-  .post-more {
+  .post-more,
+  .blog-foot {
     display: none;
   }
   .post {

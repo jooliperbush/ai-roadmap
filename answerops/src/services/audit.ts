@@ -163,7 +163,10 @@ export async function runAudit(db: DB, reportId: string, opts: AuditOptions): Pr
   const report = getAuditReport(db, reportId);
   if (!report) throw new Error('audit report not found');
   const clock = opts.clock ?? systemClock;
-  db.prepare("UPDATE audit_reports SET status = 'running' WHERE id = ?").run(reportId);
+  db.prepare("UPDATE audit_reports SET status = 'running', started_at = ? WHERE id = ?").run(
+    clock.now().toISOString(),
+    reportId,
+  );
   try {
     const crawl = await crawlSite(report.domain, opts.fetcher);
     if (!crawl.pages.length)

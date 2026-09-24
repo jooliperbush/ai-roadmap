@@ -19,10 +19,13 @@ import { runSamplingRound, type SampleRoundResult } from './observatory.js';
 import { buildDashboard } from './dashboard.js';
 import { generateAlerts } from './alerts.js';
 import { dispatchAlerts, sendDigest, type Transport } from './delivery.js';
+import { pruneOldSnapshots } from './recheck.js';
+import { startQueuedAudits } from './auditQueue.js';
+import { BackgroundTasks } from '../runtime/tasks.js';
 import { computeNextRun, windowLabelFor, LEASE_MS, type Cadence } from '../domain/scheduler.js';
 import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
-import type { Fetcher } from '../domain/fetcher.js';
+import { SNAPSHOT_RETENTION_DAYS, type Fetcher } from '../domain/fetcher.js';
 import type { BeliefProfile, ProviderAdapter } from '../providers/types.js';
 
 export interface SchedulerOptions {
@@ -186,6 +189,10 @@ export class Scheduler {
   private timer: NodeJS.Timeout | null = null;
   private inFlight: Promise<TickResult | null> | null = null;
   private closing = false;
+  /** The UTC day of the last snapshot retention sweep. */
+  private prunedOn: string | null = null;
+  /** Queued public audits this worker started; shutdown waits for them. */
+  private audits = new BackgroundTasks();
 
   constructor(
     private db: DB,
@@ -210,16 +217,54 @@ export class Scheduler {
     this.closing = true;
     this.stop();
     await this.inFlight;
+    await this.audits.drain();
   }
 
   runOnce(): Promise<TickResult | null> {
     if (this.inFlight || this.closing) return Promise.resolve(null);
+    this.pruneDaily();
+    this.startQueuedAudits();
     this.inFlight = tick(this.db, this.opts)
       .catch(() => null)
       .finally(() => {
         this.inFlight = null;
       });
     return this.inFlight;
+  }
+
+  /**
+   * Snapshot retention, on the first pass of each UTC day. It runs here rather than in `tick`
+   * because the sweep covers every tenant, and `tick` also serves scoped manual runs.
+   */
+  private pruneDaily(): void {
+    const now = (this.opts.clock ?? systemClock).now();
+    const day = windowLabelFor('daily', now);
+    if (day === this.prunedOn) return;
+    try {
+      pruneOldSnapshots(this.db, new Date(+now - SNAPSHOT_RETENTION_DAYS * 86_400_000).toISOString());
+      this.prunedOn = day;
+    } catch {
+      // Left unmarked so the next pass tries again; a failed sweep must never cost a sampling round.
+    }
+  }
+
+  /**
+   * Public audits the daily cap held, oldest first, as slots open. Like the sweep this covers every tenant,
+   * so it runs here rather than in `tick`. Each audit records its own failure on its report.
+   */
+  private startQueuedAudits(): void {
+    if (!this.opts.fetcher) return;
+    try {
+      const started = startQueuedAudits(this.db, {
+        fetcher: this.opts.fetcher,
+        providers: this.opts.providers,
+        beliefs: this.opts.beliefsFor?.('audit') ?? null,
+        clock: this.opts.clock,
+      });
+      for (const audit of started) void this.audits.track(audit).catch(() => undefined);
+    } catch {
+      // The requests stay queued for the next pass; a failed start must never cost a sampling round.
+    }
   }
 }
 

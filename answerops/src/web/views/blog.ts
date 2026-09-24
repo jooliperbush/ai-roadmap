@@ -11,6 +11,9 @@ const date = (iso: string): string =>
 function invitation(title: string, description: string): Raw {
   return html`<aside class="post-cta"> <h3>${title}</h3> <p>${description}</p> <a class="btn" href="/#audit">Request an answer audit</a> </aside>`;
 }
+function footer(): Raw {
+  return html`<footer class="blog-foot"> <nav aria-label="Footer"> <a href="/">Miscited</a> <a href="/blog">Writing</a> <a href="/privacy">Privacy</a> <a href="/terms">Terms</a> </nav> </footer>`;
+}
 function card(post: Post): Raw {
   return html`<li> <a class="post-card" href="/blog/${post.slug}" ><span class="dateline" >${date(post.published)} · ${post.readingMinutes} min read</span > <h2>${post.title}</h2> <p>${post.summary}</p> <span class="more">Read this <span aria-hidden="true">↗</span></span></a > </li>`;
 }
@@ -18,7 +21,7 @@ export function blogIndexView(posts: Post[]): Raw {
   return html`<main> <article class="post-index"> <header class="post-head"> <p class="kicker"><a href="/">Miscited</a> · Writing</p> <h1>Writing</h1> <p class="lede"> How to measure what AI assistants say about a company without fooling yourself. Arithmetic where the arithmetic matters, and the sample size on every number. </p> </header> <ul class="post-list"> ${posts.map(card)} </ul> ${invitation(
     "See what the assistants are telling your buyers",
     "The free Answer Risk Audit runs the whole pipeline against your domain and hands back every wrong answer it can evidence, with transcripts, setups and citations.",
-  )} </article> </main>`;
+  )} </article> </main>${footer()}`;
 }
 export function postView(post: Post, others: Post[]): Raw {
   return html`<main> <article class="post"> <header class="post-head"> <p class="kicker"> <a href="/">Miscited</a> · <a href="/blog">Writing</a> </p> <h1>${post.title}</h1> <p class="dateline"> Published ${date(post.published)}${
@@ -42,5 +45,5 @@ export function postView(post: Post, others: Post[]): Raw {
             html`<li><a href="/blog/${item.slug}">${item.title}</a></li>`,
         )} </ul> </nav>`
       : null
-  } </article> </main>`;
+  } </article> </main>${footer()}`;
 }

@@ -6,8 +6,9 @@
  * sample again, and let the experiment analysis reach whatever verdict the numbers support.
  */
 
+import { randomBytes } from 'node:crypto';
 import type { DB } from './db/index.js';
-import { hashPassword } from './db/index.js';
+import { hashPassword, verifyPassword } from './db/index.js';
 import * as repo from './db/repo/index.js';
 import { importDemand, parseDemandCsv } from './services/demand.js';
 import { runSamplingRound } from './services/observatory.js';
@@ -36,20 +37,44 @@ export interface SeedInfo {
   otherTenantId: string;
 }
 
-export async function ensureSeed(db: DB): Promise<SeedInfo | null> {
+export interface SeedPolicy {
+  production?: boolean;
+  /** The demo owner's password in production. */
+  demoPassword?: string | null;
+}
+
+/**
+ * The passwords above are public, so production never seeds and never accepts them. On an existing production
+ * database every seeded login gets a new password, which also ends its sessions: the demo owner takes
+ * `demoPassword`, and the other logins (and the owner, without one) a random secret nobody holds.
+ */
+export async function ensureSeed(db: DB, policy: SeedPolicy = {}): Promise<SeedInfo | null> {
   const existing = repo.findUserByEmail(db, DEMO_EMAIL);
-  if (existing) {
-    const brand = repo.primaryBrand(db, existing.tenant_id);
-    const other = repo.findUserByEmail(db, OTHER_EMAIL);
-    return {
-      tenantId: existing.tenant_id,
-      brandId: brand?.id ?? '',
-      email: DEMO_EMAIL,
-      password: DEMO_PASSWORD,
-      otherTenantId: other?.tenant_id ?? '',
-    };
+  if (!existing) return policy.production ? null : seed(db);
+  let password = DEMO_PASSWORD;
+  if (policy.production) {
+    for (const email of [DEMO_EMAIL, VIEWER_EMAIL, OTHER_EMAIL]) {
+      const user = repo.findUserByEmail(db, email);
+      const wanted = email === DEMO_EMAIL ? policy.demoPassword : null;
+      if (!user || (wanted && verifyPassword(wanted, user.password_hash, user.password_salt))) continue;
+      const pw = hashPassword(wanted ?? randomBytes(32).toString('hex'));
+      db.transaction(() => {
+        db.prepare('UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?').run(pw.hash, pw.salt, user.id);
+        db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
+      })();
+    }
+    if (!policy.demoPassword) return null;
+    password = policy.demoPassword;
   }
-  return seed(db);
+  const brand = repo.primaryBrand(db, existing.tenant_id);
+  const other = repo.findUserByEmail(db, OTHER_EMAIL);
+  return {
+    tenantId: existing.tenant_id,
+    brandId: brand?.id ?? '',
+    email: DEMO_EMAIL,
+    password,
+    otherTenantId: other?.tenant_id ?? '',
+  };
 }
 
 export async function seed(db: DB): Promise<SeedInfo> {

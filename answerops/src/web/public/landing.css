@@ -890,6 +890,14 @@ details[open] > summary span {
   color: var(--red);
   margin-top: 4px;
 }
+/* Honeypot: off-screen and out of the tab order, so only a bot filling every input finds it. */
+.audit-form .trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
 .audit-form .btn {
   width: 100%;
   justify-content: space-between;
@@ -1450,4 +1458,27 @@ details[open] > summary span {
   .footer-bottom { flex-direction: column; gap: 10px; }
   .footer-top .lp-brand { font-size: 44px; }
   .footer-top .brand-logo { width: 48px; height: 36px; }
+}
+
+/* Legal pages: the public masthead and footer around a plain reading column. */
+.consent { margin-top: 12px; }
+.lp-footer nav { flex-wrap: wrap; row-gap: 8px; }
+.legal { padding-block: 64px 96px; }
+.legal-head { max-width: 760px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.legal h1 { max-width: none; font-size: clamp(42px, 5vw, 64px); margin-bottom: 14px; }
+.legal-updated { font: 14px/1.5 var(--mono); color: var(--muted); }
+.legal-head .lede { max-width: 58ch; margin-bottom: 0; }
+.legal section { max-width: 760px; }
+.legal h2 { max-width: none; font-size: clamp(27px, 2.6vw, 34px); letter-spacing: -0.03em; margin: 44px 0 14px; }
+.legal ul { padding-left: 22px; margin: 0 0 18px; }
+.legal li { margin-bottom: 8px; }
+.legal code { font: 0.9em var(--mono); }
+.legal-contact { display: grid; grid-template-columns: max-content 1fr; gap: 4px 20px; margin: 0 0 18px; }
+.legal-contact dt { font: 14px/1.65 var(--mono); color: var(--muted); padding-top: 2px; }
+.legal-contact dd { margin: 0; }
+@media (max-width: 600px) {
+  .legal { padding-block: 36px 64px; }
+  .legal-head .lede { font-size: 19px; }
+  .legal-contact { grid-template-columns: 1fr; gap: 0; }
+  .legal-contact dd { margin-bottom: 10px; }
 }

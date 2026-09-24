@@ -64,10 +64,13 @@ describe('error classification', () => {
 
 describe('HttpFetcher', () => {
   const okRobots = () => response('User-agent: *\nDisallow:\n');
+  /** DNS is injected like the transport, so these tests never touch the network. */
+  const publicDns = async () => [{ address: '93.184.215.14', family: 4 }];
 
   it('fetches a page, hashes it, and identifies itself', async () => {
     const seen: Array<{ url: string; ua: string }> = [];
     const fetcher = new HttpFetcher({
+      resolve: publicDns,
       fetchImpl: (async (url: any, init: any) => {
         seen.push({ url: String(url), ua: String(init?.headers?.['user-agent'] ?? '') });
         return String(url).endsWith('/robots.txt') ? okRobots() : response('<p>Northwind supports SSO.</p>');
@@ -83,6 +86,7 @@ describe('HttpFetcher', () => {
   it('refuses a path robots.txt disallows, without requesting it', async () => {
     const requested: string[] = [];
     const fetcher = new HttpFetcher({
+      resolve: publicDns,
       fetchImpl: (async (url: any) => {
         requested.push(String(url));
         return String(url).endsWith('/robots.txt')
@@ -99,6 +103,7 @@ describe('HttpFetcher', () => {
   it('names 404 as 404 rather than as a generic failure, and does not retry it', async () => {
     let calls = 0;
     const fetcher = new HttpFetcher({
+      resolve: publicDns,
       fetchImpl: (async (url: any) => {
         if (String(url).endsWith('/robots.txt')) return okRobots();
         calls++;
@@ -114,6 +119,7 @@ describe('HttpFetcher', () => {
   it('retries a 500 and gives up with http_5xx', async () => {
     let calls = 0;
     const fetcher = new HttpFetcher({
+      resolve: publicDns,
       sleep: async () => undefined,
       fetchImpl: (async (url: any) => {
         if (String(url).endsWith('/robots.txt')) return okRobots();
@@ -138,6 +144,7 @@ describe('HttpFetcher', () => {
   it('truncates an oversized page but hashes the whole thing', async () => {
     const big = 'x'.repeat(MAX_BYTES + 500);
     const fetcher = new HttpFetcher({
+      resolve: publicDns,
       fetchImpl: (async (url: any) => (String(url).endsWith('/robots.txt') ? okRobots() : response(big))) as any,
     });
     const out = await fetcher.fetch('https://example.com/huge');
@@ -149,6 +156,7 @@ describe('HttpFetcher', () => {
   it('caches robots.txt per host instead of refetching it for every page', async () => {
     let robotsCalls = 0;
     const fetcher = new HttpFetcher({
+      resolve: publicDns,
       fetchImpl: (async (url: any) => {
         if (String(url).endsWith('/robots.txt')) { robotsCalls++; return okRobots(); }
         return response('page');

@@ -316,7 +316,12 @@ export function operationRoutes(r: Runtime): void {
       c.req.cookies.aops,
       c.a.tenantId,
     );
-    c.reply.setCookie('brand', brand.id, { path: '/', httpOnly: true, sameSite: 'lax' });
+    c.reply.setCookie('brand', brand.id, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
     return c.redirect('/', `Now showing ${brand.name}.`);
   });
   r.get('/portfolio', (c) => {

@@ -12,6 +12,7 @@
  */
 
 import {
+  claimTemporalMarker,
   extractClaims,
   PREDICATE_PATTERNS,
   NEGATION_RE as CANONICAL_NEGATION,
@@ -31,7 +32,8 @@ export const EXTRACTOR_VERSION = 'v2-pattern+heuristic';
 export const PRECISION_GATE = 0.9;
 export const RECALL_LIFT_GATE = 0.25;
 
-export type ExtractorStage = 'pattern' | 'heuristic' | 'model_proposed';
+/** `model_check`: a registry fact the Jev model check found misstated where no proposer did. */
+export type ExtractorStage = 'pattern' | 'heuristic' | 'model_proposed' | 'model_check';
 
 export interface ProposedClaim {
   claim: ExtractedClaim;
@@ -248,9 +250,6 @@ const EXTRA_NEGATION = /\b(?:lacking|without|isn't|is not|aren't|are not|missing
 function isNegated(text: string): boolean {
   return CANONICAL_NEGATION.test(text) || EXTRA_NEGATION.test(text);
 }
-const YEAR_RE = /\b(19|20)\d{2}\b/;
-const RELATIVE_TIME_RE =
-  /\b(?:last year|this year|recently|a few years back|back in \d{4}|as of \w+ (?:19|20)\d{2}|since (?:19|20)\d{2})\b/i;
 
 export const heuristicProposer: ClaimProposer = {
   key: 'heuristic',
@@ -265,7 +264,7 @@ export const heuristicProposer: ClaimProposer = {
           const object = (m[1] ?? m[0]).trim().replace(/[.,;:]+$/, '');
           if (!object) continue;
           const negated = rule.negatable ? isNegated(sentence) : false;
-          const temporal = sentence.match(YEAR_RE)?.[0] ?? sentence.match(RELATIVE_TIME_RE)?.[0] ?? null;
+          const temporal = claimTemporalMarker(sentence, m.index!, m.index! + m[0].length);
           out.push({
             statement: sentence.trim(),
             subject: brand,

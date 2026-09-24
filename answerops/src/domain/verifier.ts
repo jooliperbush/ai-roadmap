@@ -6,7 +6,7 @@
  * defect report; the other is decoration.
  */
 
-import { CanonicalClaim, objectMatches, resolveTruth, truthHistory, normalizeKey } from './truth.js';
+import { CanonicalClaim, currentTruths, objectMatches, truthHistory, normalizeKey } from './truth.js';
 
 export type Verdict =
   | 'SUPPORTED'
@@ -46,8 +46,8 @@ interface PredicatePattern {
 
 /**
  * Pattern-driven extraction. Deterministic and auditable by design: a customer can read
- * exactly why we decided their answer asserted something. Model-based extraction is layered
- * on top in production (see `evaluatorVotes`), never underneath it.
+ * exactly why we decided their answer asserted something. A model check (Jev, see `jev.ts`) is
+ * layered on top in production as a second vote, never underneath it.
  */
 export const PREDICATE_PATTERNS: PredicatePattern[] = [
   {
@@ -131,9 +131,60 @@ export const PREDICATE_PATTERNS: PredicatePattern[] = [
 // a bare negative particle floating in a sentence flips claims it was never about.
 export const NEGATION_RE =
   /\b(?:does not|doesn't|do not|don't|cannot|can't|lacks|has no|have no|there is no|there's no|no longer|without (?:any )?(?:native |direct |official )?(?:support|integration|listing)|no (?:native |direct |official )?(?:support|integration|listing|access)|not (?:available|listed|supported|offered|integrated))\b/i;
-const YEAR_RE = /\b(19|20)\d{2}\b/;
-const RELATIVE_TIME_RE =
-  /\b(?:last year|this year|recently|as of \w+ (?:19|20)\d{2}|since (?:19|20)\d{2})\b/i;
+
+// A year dates a claim only when a preposition ties it to the claim: "in 2019", "until 2023",
+// "as of May 2022", "since 2020", or a bare "(2021)" after it.
+const GOVERNED_YEAR =
+  '\\b(?:in|since|until|till|through|as of|by|from|back in|during)\\s+(?:(?:early|mid|late)[\\s-]+)?' +
+  '(?:(?:q[1-4]|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|' +
+  'oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?\\s+(?:\\d{1,2},?\\s+)?)?((?:19|20)\\d{2})\\b|\\(((?:19|20)\\d{2})\\)';
+const GOVERNED_YEAR_RE = new RegExp(GOVERNED_YEAR, 'gi');
+const TEMPORAL_INTRO_RE = new RegExp(`^\\s*(?:${GOVERNED_YEAR})\\s*$`, 'i');
+const FOUNDING_RE = /\b(?:founded|established|incorporated|formed|founding|inception)\b/i;
+const RELATIVE_TIME_RE = /\b(?:last year|this year|recently|a few years back)\b/i;
+// Where one statement ends and the next begins: sentence ends, markdown bold, table cells,
+// dashes and bullets, semicolons.
+const STATEMENT_BOUNDARY_RE = /[.!?](?=\s|$)|\*\*|\||\s[-–—•]\s|;/g;
+
+/**
+ * The date an answer attaches to the claim matched at [start, end) of `text`, or null. Only a
+ * year governed by a preposition in the claim's own clause counts (or a clause that is nothing
+ * but such a phrase, as in "In 2019, ..."). A founding year in the next bolded item or another
+ * table cell is not the date of this claim, and treating it as one manufactures STALE verdicts.
+ */
+export function claimTemporalMarker(text: string, start: number, end: number): string | null {
+  const around = (pattern: RegExp, from: number, to: number) => {
+    let left = from,
+      right = to;
+    for (const boundary of text.slice(from, to).matchAll(pattern)) {
+      const at = from + boundary.index!;
+      if (at + boundary[0].length <= start) left = at + boundary[0].length;
+      else if (at >= end) {
+        right = at;
+        break;
+      }
+    }
+    return [left, right];
+  };
+  const [segmentFrom, segmentTo] = around(STATEMENT_BOUNDARY_RE, 0, text.length);
+  const [clauseFrom, clauseTo] = around(/,(?!\d{3}\b)/g, segmentFrom, segmentTo);
+  const ranges = [[clauseFrom, clauseTo]];
+  const before = text.slice(segmentFrom, Math.max(segmentFrom, clauseFrom - 1)).split(',').pop() ?? '';
+  if (TEMPORAL_INTRO_RE.test(before)) ranges.push([clauseFrom - 1 - before.length, clauseFrom - 1]);
+  const after = text.slice(Math.min(segmentTo, clauseTo + 1), segmentTo).split(',')[0];
+  if (clauseTo < segmentTo && TEMPORAL_INTRO_RE.test(after)) ranges.push([clauseTo + 1, clauseTo + 1 + after.length]);
+  let best: { year: string; distance: number } | null = null;
+  for (const [from, to] of ranges)
+    for (const match of text.slice(from, to).matchAll(GOVERNED_YEAR_RE)) {
+      const at = from + match.index!,
+        until = at + match[0].length;
+      if (until > start && at < end) continue;
+      if (FOUNDING_RE.test(text.slice(Math.max(from, at - 40), at))) continue;
+      const distance = at >= end ? at - end : start - until;
+      if (!best || distance < best.distance) best = { year: match[1] ?? match[2], distance };
+    }
+  return best?.year ?? text.slice(clauseFrom, clauseTo).match(RELATIVE_TIME_RE)?.[0] ?? null;
+}
 
 export function splitSentences(text: string): string[] {
   return text
@@ -157,7 +208,6 @@ export function extractClaims(answerText: string, subjectHint: string): Extracte
   const proposals = splitSentences(answerText)
     .flatMap((sentence) => splitClauses(sentence))
     .flatMap((clause) => {
-      const temporalMarker = clause.match(YEAR_RE)?.[0] ?? clause.match(RELATIVE_TIME_RE)?.[0] ?? null;
       return PREDICATE_PATTERNS.flatMap((rule) => {
         for (const expression of rule.patterns) {
           const match = clause.match(expression);
@@ -170,7 +220,7 @@ export function extractClaims(answerText: string, subjectHint: string): Extracte
             predicate: rule.predicate,
             object,
             polarity: rule.negatable && NEGATION_RE.test(clause) ? 'negate' : 'affirm',
-            temporalMarker,
+            temporalMarker: claimTemporalMarker(clause, match.index!, match.index! + match[0].length),
           };
           return [claim];
         }
@@ -247,9 +297,15 @@ export interface VerificationResult {
   requiresAdjudication: boolean;
 }
 
+/** Predicates where several values are true at once: a brand has more than one integration. */
+export const MULTI_VALUED_PREDICATES = ['integration', 'feature_support'];
+
 export function verifyClaim(input: VerificationInput): VerificationResult {
   const { claim, asOf, canonicalClaims } = input;
-  const current = resolveTruth(canonicalClaims, claim.subject, claim.predicate, asOf);
+  // Every row in force stays true; the claim is judged against the row for its own entity,
+  // not against whichever row happens to be newest.
+  const inForce = currentTruths(canonicalClaims, claim.subject, claim.predicate, asOf);
+  const current = inForce.find((row) => objectMatches(row.object, claim.object)) ?? inForce[0] ?? null;
   const history = truthHistory(canonicalClaims, claim.subject, claim.predicate);
   const unverifiable = (canonicalClaimId: string | null, explanation: string): VerificationResult => ({
     verdict: 'UNVERIFIABLE',
@@ -259,27 +315,50 @@ export function verifyClaim(input: VerificationInput): VerificationResult {
     explanation,
     requiresAdjudication: false,
   });
+  const supported = (canonical: CanonicalClaim, explanation: string): VerificationResult => ({
+    verdict: 'SUPPORTED',
+    canonicalClaimId: canonical.id,
+    severity: 'low',
+    misconceptionKey: null,
+    explanation,
+    requiresAdjudication: false,
+  });
+  const gap = (what: string): VerificationResult => ({
+    verdict: 'UNSUPPORTED',
+    canonicalClaimId: null,
+    severity: 'medium',
+    misconceptionKey: misconception(claim),
+    explanation:
+      'No approved canonical fact exists for ' +
+      what +
+      '. The model is asserting something the truth registry cannot confirm or deny — a registry gap, not yet a defect.',
+    requiresAdjudication: false,
+  });
   if (!current) {
-    if (!history.length)
-      return {
-        verdict: 'UNSUPPORTED',
-        canonicalClaimId: null,
-        severity: 'medium',
-        misconceptionKey: misconception(claim),
-        explanation:
-          'No approved canonical fact exists for ' +
-          claim.subject +
-          ' / ' +
-          claim.predicate +
-          '. The model is asserting something the truth registry cannot confirm or deny — a registry gap, not yet a defect.',
-        requiresAdjudication: false,
-      };
+    if (!history.length) return gap(claim.subject + ' / ' + claim.predicate);
     const expired = history.find((row) => objectMatches(row.object, claim.object));
     return expired
       ? staleResult(expired, claim, 'the fact it states expired and has no current successor')
       : unverifiable(null, 'No canonical fact is in force for this subject/predicate at the sampled time.');
   }
   const same = objectMatches(current.object, claim.object);
+  if (!same && (inForce.length > 1 || MULTI_VALUED_PREDICATES.includes(claim.predicate))) {
+    // A multi-valued fact lists what is true, not everything that is false: an entity the
+    // registry never names is a gap, and one whose row has ended is stale.
+    const ended = history.find(
+      (row) =>
+        row.effectiveTo !== null &&
+        Date.parse(row.effectiveTo) <= +asOf &&
+        objectMatches(row.object, claim.object),
+    );
+    if (ended)
+      return claim.polarity === 'negate'
+        ? supported(ended, 'Matches the canonical record: this ended on ' + ended.effectiveTo + '.')
+        : staleResult(ended, claim, 'the registry records that it ended on ' + ended.effectiveTo);
+    return claim.polarity === 'negate'
+      ? unverifiable(null, 'Negative statement about something outside the canonical record.')
+      : gap(claim.subject + ' / ' + claim.predicate + ' / "' + claim.object + '"');
+  }
   if (claim.polarity === 'negate')
     return same
       ? contradiction(
@@ -309,14 +388,7 @@ export function verifyClaim(input: VerificationInput): VerificationResult {
       claim,
       'the answer dates the fact to ' + Number(claim.temporalMarker) + ', but it took effect in ' + year,
     );
-  return {
-    verdict: 'SUPPORTED',
-    canonicalClaimId: current.id,
-    severity: 'low',
-    misconceptionKey: null,
-    explanation: 'Matches the canonical fact in force since ' + current.effectiveFrom + '.',
-    requiresAdjudication: false,
-  };
+  return supported(current, 'Matches the canonical fact in force since ' + current.effectiveFrom + '.');
 }
 
 function contradiction(canonical: CanonicalClaim, claim: ExtractedClaim, why: string): VerificationResult {
@@ -344,6 +416,43 @@ function staleResult(canonical: CanonicalClaim, claim: ExtractedClaim, why: stri
     severity,
     misconceptionKey: misconception(claim),
     explanation: `The answer repeats a fact that was once true — ${why}. Sourced is not the same as current.`,
+    requiresAdjudication: false,
+  };
+}
+
+/** What the Jev model check read in the answer for one registry fact. */
+export type ModelCheckOutcome = 'ok' | 'wrong' | 'stale' | 'not_stated';
+
+/**
+ * The model check's reading of a registry fact, as a verdict. The mapping lives here, beside the
+ * rules, so every verdict is still decided in this one module.
+ */
+export function verdictFromModelCheck(
+  claim: ExtractedClaim,
+  outcome: ModelCheckOutcome,
+  canonical: CanonicalClaim | null,
+  why: string,
+): VerificationResult {
+  if (canonical && outcome === 'wrong') return contradiction(canonical, claim, why);
+  if (canonical && outcome === 'stale') return staleResult(canonical, claim, why);
+  if (canonical && outcome === 'ok')
+    return {
+      verdict: 'SUPPORTED',
+      canonicalClaimId: canonical.id,
+      severity: 'low',
+      misconceptionKey: null,
+      explanation: `The model check (Jev) read that ${why}.`,
+      requiresAdjudication: false,
+    };
+  return {
+    verdict: 'NOT_APPLICABLE',
+    canonicalClaimId: null,
+    severity: 'low',
+    misconceptionKey: null,
+    explanation:
+      'The model check (Jev) read the answer as not stating this about ' +
+      claim.subject +
+      ': the sentence may describe another company or a past state.',
     requiresAdjudication: false,
   };
 }
@@ -457,8 +566,8 @@ export function checkCitation(input: CitationCheckInput): CitationCheckResult {
 }
 
 /**
- * Dual adjudication for high-risk verdicts: two independent evaluators must agree before a
- * material/regulated contradiction is allowed to alert a customer.
+ * Agreement between two verdicts on one claim. Production no longer calls this: the rules and
+ * the Jev model check are combined by `decide` in `jev.ts`, which records which of them ran.
  */
 export function adjudicate(votes: Verdict[]): 'not_required' | 'pending' | 'agreed' | 'disputed' {
   if (votes.length < 2) return 'pending';

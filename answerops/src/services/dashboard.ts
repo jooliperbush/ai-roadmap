@@ -17,6 +17,7 @@ import { IntentFamily, INTENT_WEIGHT, FAMILY_LABEL, assertNoBlending } from '../
 import { computePriority, ActionType } from '../domain/priority.js';
 import { analyzeExperiment } from '../domain/experiments.js';
 import { predicateLabel } from '../domain/verifier.js';
+import { SETTLED_ADJUDICATIONS, checkProvenance, emptyTally, type CheckTally } from '../domain/jev.js';
 
 export interface DefectItem {
   misconceptionKey: string;
@@ -36,8 +37,10 @@ export interface DefectItem {
   priorityExplanation: string;
   suggestedActionType: ActionType;
   baselineComparison: { pValue: number; significant: boolean; qValue: number | null; effect: number } | null;
-  /** two independent evaluators agreed on this verdict; required before a critical alert */
+  /** the registry rules and the Jev model check agreed on at least one of these statements */
   adjudicated: boolean;
+  /** which checks stand behind these statements, so no copy claims a check that did not run */
+  checks: CheckTally;
 }
 
 export interface MissedDemandItem {
@@ -173,6 +176,7 @@ export interface RollupItem {
   providers: string[];
   clusterIds: string[];
   adjudicated: boolean;
+  checks: CheckTally;
 }
 
 /**
@@ -189,7 +193,7 @@ export function rollupFrom(snap: WindowSnapshot): RollupItem[] {
     for (const claim of snap.observedByRun.get(run.id) ?? []) {
       if (
         !['CONTRADICTED', 'STALE'].includes(claim.verdict) ||
-        !['agreed', 'not_required'].includes(claim.adjudication) ||
+        !SETTLED_ADJUDICATIONS.includes(claim.adjudication) ||
         !claim.misconception_key
       )
         continue;
@@ -210,6 +214,7 @@ export function rollupFrom(snap: WindowSnapshot): RollupItem[] {
             providers: [],
             clusterIds: [],
             adjudicated: false,
+            checks: emptyTally(),
           },
         };
         groups.set(key, group);
@@ -223,6 +228,7 @@ export function rollupFrom(snap: WindowSnapshot): RollupItem[] {
       if (claim.statement < item.exampleStatement) item.exampleStatement = claim.statement;
       item.canonicalClaimId ||= claim.canonical_claim_id ?? null;
       item.adjudicated ||= claim.adjudication === 'agreed';
+      item.checks[checkProvenance(claim)]++;
     }
   }
   return [...groups.values()]
@@ -286,6 +292,7 @@ function defectsFor(
       severity: aggregate.severity,
       exampleStatement: aggregate.exampleStatement,
       adjudicated: aggregate.adjudicated,
+      checks: aggregate.checks,
       headline: buildDefectHeadline(
         aggregate.providers,
         aggregate.verdict,
@@ -406,7 +413,7 @@ function summariseByFamily(snap: WindowSnapshot, clusters: repo.Row[]): Dashboar
         (snap.observedByRun.get(run.id) ?? []).some(
           (claim) =>
             ['CONTRADICTED', 'STALE'].includes(claim.verdict) &&
-            ['agreed', 'not_required'].includes(claim.adjudication),
+            SETTLED_ADJUDICATIONS.includes(claim.adjudication),
         ),
       );
       return {

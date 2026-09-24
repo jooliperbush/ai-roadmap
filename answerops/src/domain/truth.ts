@@ -55,6 +55,23 @@ export function resolveTruth(
   return selected;
 }
 
+/**
+ * Every claim for (subject, predicate) in force at `asOf`, newest first. A multi-valued fact
+ * (integrations, features) has several rows in force at once, and each of them is true.
+ */
+export function currentTruths(
+  claims: CanonicalClaim[],
+  subject: string,
+  predicate: string,
+  asOf: Date,
+): CanonicalClaim[] {
+  return truthHistory(claims, subject, predicate).filter(
+    (claim) =>
+      Date.parse(claim.effectiveFrom) <= +asOf &&
+      (claim.effectiveTo === null || Date.parse(claim.effectiveTo) > +asOf),
+  );
+}
+
 /** Every claim ever recorded for (subject, predicate), newest first — the history view. */
 export function truthHistory(claims: CanonicalClaim[], subject: string, predicate: string): CanonicalClaim[] {
   const matches = claims.reduce<CanonicalClaim[]>((rows, claim) => {
@@ -93,12 +110,23 @@ export function expiringClaims(claims: CanonicalClaim[], asOf: Date, horizonDays
 
 /** Object equality with tolerance for phrasing and numbers, but not for meaning. */
 export function objectMatches(a: string, b: string): boolean {
+  a = canonicalGrades(a);
+  b = canonicalGrades(b);
   const left = normalizeObject(a),
     right = normalizeObject(b);
   if (left === right) return true;
-  const first = extractNumber(a),
-    second = extractNumber(b);
-  if (first !== null && second !== null) return Math.abs(first - second) < 1e-9;
+  // Every distinguishing token must agree: "SOC 2 Type I" is not "SOC 2 Type II" and "$48
+  // million" is not "$48 billion". A grade or magnitude one side leaves unstated is compatible.
+  const grades = [a, b].map((s) => s.match(GRADE_RE)?.[0].replace(/\D+/g, '') ?? null);
+  if (grades[0] !== null && grades[1] !== null && grades[0] !== grades[1]) return false;
+  const [first, second] = [quantities(a), quantities(b)].sort((x, y) => x.length - y.length);
+  if (first.length) {
+    const pool = [...second];
+    return first.every((quantity) => {
+      const index = pool.findIndex((other) => sameQuantity(quantity, other));
+      return index >= 0 && pool.splice(index, 1).length === 1;
+    });
+  }
   const words = [new Set(left.split('_').filter(Boolean)), new Set(right.split('_').filter(Boolean))];
   const size = Math.min(words[0].size, words[1].size);
   return size > 0 && [...words[0]].filter((word) => words[1].has(word)).length / size >= 0.8;
@@ -116,4 +144,35 @@ export function normalizeObject(s: string): string {
 export function extractNumber(s: string): number | null {
   const m = s.replace(/,/g, '').match(/-?\d+(\.\d+)?/);
   return m ? Number(m[0]) : null;
+}
+
+const GRADE_RE = /\b(?:type|tier|level|phase|class|stage|gen(?:eration)?|version)[\s-]*(?:\d+|[ivx]+)\b/i;
+const SCALE: Record<string, number> = { thousand: 1e3, k: 1e3, million: 1e6, mn: 1e6, m: 1e6, billion: 1e9, bn: 1e9, b: 1e9 };
+const ROMAN: Record<string, number> = { i: 1, v: 5, x: 10 };
+
+/** "Type II" and "type 2" are one grade: rewrite roman numerals so grades compare as numbers. */
+function canonicalGrades(s: string): string {
+  return s.replace(new RegExp(GRADE_RE.source, 'gi'), (grade) =>
+    grade.replace(/[ivx]+$/i, (numeral) => {
+      const values = [...numeral.toLowerCase()].map((letter) => ROMAN[letter]);
+      return String(values.reduce((sum, value, i) => sum + (value < (values[i + 1] ?? 0) ? -value : value), 0));
+    }),
+  );
+}
+
+interface Quantity {
+  value: number;
+  scale: number | null;
+}
+
+function quantities(s: string): Quantity[] {
+  return [
+    ...s.replace(/,(?=\d{3}\b)/g, '').matchAll(/(\d+(?:\.\d+)?)(?:\s?(thousand|million|billion|mn|bn|k|m|b)\b)?/gi),
+  ].map((m) => ({ value: Number(m[1]), scale: m[2] ? SCALE[m[2].toLowerCase()] : null }));
+}
+
+function sameQuantity(x: Quantity, y: Quantity): boolean {
+  const close = (p: number, q: number) => Math.abs(p - q) <= 1e-9 * Math.max(1, Math.abs(p), Math.abs(q));
+  if (close(x.value * (x.scale ?? 1), y.value * (y.scale ?? 1))) return true;
+  return (x.scale === null || y.scale === null) && close(x.value, y.value);
 }

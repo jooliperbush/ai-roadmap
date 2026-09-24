@@ -195,9 +195,13 @@ For each answer:
 8. **Misconception**: named, reusable misconception records so repetition across surfaces is
    countable ("models keep saying we lack SSO").
 
-High-risk verdicts (material/regulated + CONTRADICTED) require **dual adjudication**:
-two independent evaluators must agree, else the defect is queued for human review and is
-excluded from alerting until adjudicated.
+Every checkable claim gets two votes when both checks run: the registry rules, and a **Jev model
+check** (TypeSafe) that reads the answer one registry fact at a time, only for the brand. A model
+verdict at or above `MISCITED_JEV_MIN_CONFIDENCE` (0.8) is final, and the record keeps whether the
+rules agreed. Below it the rules verdict stands, but a defect the model disagreed with is
+`disputed`: held for human review and excluded from rollups and alerting. When the model check is
+off or fails, the rules decide alone and every defect says so (`rules_only`); no copy claims two
+checks when one ran.
 
 ---
 

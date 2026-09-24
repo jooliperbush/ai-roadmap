@@ -4,7 +4,8 @@
  * The `alerts` table existed from day one and nothing ever wrote to it, which meant every
  * finding waited for someone to open a browser. These are the rules for what is worth
  * interrupting a person about, and they are deliberately narrow: statistical movement that
- * survives the existing gates, or a critical contradiction that two evaluators agree on.
+ * survives the existing gates, or a critical contradiction the model check did not dispute. The
+ * alert says which checks stand behind it, and never claims two when only the rules ran.
  *
  * Every alert body carries its sample size and interval. A lint test rejects a bare
  * percentage, because an alert is the one place a number is read fastest and questioned least.
@@ -15,6 +16,7 @@ import * as sched from '../db/repo/unattended.js';
 import type { DashboardData } from './dashboard.js';
 import { formatMeasurement } from '../domain/stats.js';
 import { predicateLabel } from '../domain/verifier.js';
+import { describeChecks } from '../domain/jev.js';
 import type { Clock } from '../domain/clock.js';
 import { systemClock } from '../domain/clock.js';
 
@@ -80,7 +82,8 @@ export function generateAlerts(
         effect: comparison.effect,
         q_value: comparison.qValue,
       });
-    if (defect.severity === 'critical' && defect.adjudicated)
+    // A verdict the model check disputed never reaches the rollup, so it cannot page anyone.
+    if (defect.severity === 'critical')
       candidates.push({
         ...base,
         kind: 'critical_defect',
@@ -88,7 +91,7 @@ export function generateAlerts(
         headline: `Critical: ${surfaces} contradict your registry on ${subject} in ${measured} of sampled answers.`,
         detail:
           `The registry records "${defect.canonicalClaimText ?? 'an approved fact'}". ` +
-          `The answer states "${defect.exampleStatement}". Two independent evaluators agreed on this verdict. ` +
+          `The answer states "${defect.exampleStatement}". ${describeChecks(defect.checks)} ` +
           `Measured across ${defect.clusterLabels.join(', ') || 'the sampled clusters'}.`,
       });
   }

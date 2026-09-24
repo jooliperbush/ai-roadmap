@@ -206,10 +206,10 @@ describe('alerts', () => {
     }
   });
 
-  it('only raises a critical alert once two evaluators agree', async () => {
+  it('raises no critical alert for a verdict the model check disputed', async () => {
     await twoWindows();
-    // Force every high-risk verdict into disagreement and the critical alerts must vanish.
-    db.prepare("UPDATE observed_claims SET adjudication = 'disputed' WHERE adjudication = 'agreed'").run();
+    // Mark every decided verdict as disputed by the model check and the critical alerts must vanish.
+    db.prepare("UPDATE observed_claims SET adjudication = 'disputed' WHERE adjudication IN ('agreed','model_decided','rules_only')").run();
     db.prepare('DELETE FROM alerts').run();
     const data = buildDashboard(db, info.tenantId, info.brandId, 'w-post');
     generateAlerts(db, info.tenantId, info.brandId, 'w-post', data, clock);

@@ -79,6 +79,8 @@ describe('service contract characterization', () => {
         providers: ['a,b'],
         clusterIds: ['c,d'],
         adjudicated: true,
+        // No stored votes: the label alone says both checks agreed, and the disputed copy is left out.
+        checks: { agreed: 2, model_decided: 0, model_found: 0, rules_only: 0 },
       },
     ]);
   });

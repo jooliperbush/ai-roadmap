@@ -169,7 +169,7 @@ export function alertsView(v: {
   );
   return html`${heading(
     "Alerts",
-    "Only two things reach this page: movement that survived the two-proportion test, the minimum effect and the Benjamini-Hochberg correction, and a critical contradiction two evaluators agreed on. Every body carries its sample size, because an alert is read fastest and questioned least.",
+    "Only two things reach this page: movement that survived the two-proportion test, the minimum effect and the Benjamini-Hochberg correction, and a critical contradiction the model check did not dispute. Each alert says which checks stood behind it and carries its sample size, because an alert is read fastest and questioned least.",
   )}${section(
     "Recent alerts",
     grid(

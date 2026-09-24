@@ -23,5 +23,15 @@
     "referenceSha256": "12964181149e4d96062528d5e0b613d7ae046a01ea224b8504ad539195dd5bc8",
     "sha256": "ca5bdf09e8c9a0aabf243e64e5c89277eaace42d3a4d6436293390401ac84f1c",
     "reason": "2026-09-24 SSRF fix: HttpFetcher now resolves every host itself and connects only to checked public addresses. Each HttpFetcher test injects a public resolver next to its fake transport so it stays offline. No assertion changes; the SSRF coverage lives in fetcher-ssrf.test.ts."
+  },
+  "tests/integration/pipeline.test.ts": {
+    "referenceSha256": "ae404f8dfdcf0305c628302724a0e1d347da528c009e948fad128ef83ba7f989",
+    "sha256": "2e3b19b23e0be0703772c990c1627641438837e6822d8481e539a391111edfda",
+    "reason": "2026-09-24 Jev model check: the duplicate rules run that was recorded as \"dual adjudication\" is gone. Each verdict now records which checks decided it (agreed, model_decided, rules_only, disputed); simulated answers never reach the model check, so the test asserts every defect is labelled rules_only with a single rules vote."
+  },
+  "tests/integration/unattended.test.ts": {
+    "referenceSha256": "2a9be6127396bcd5b3e8210b37842911895da4c73dbd0a55f500c0f96f4aab05",
+    "sha256": "be1bfd2004dda0153e9fee960df4b3d80c542cdc1c467a045fb43bd7e91fc932",
+    "reason": "2026-09-24 Jev model check: critical alerts are now withheld when the model check disputes a verdict rather than gated on the old \"agreed\" label, which only ever meant the same rules ran twice. The test disputes every decided verdict (agreed, model_decided, rules_only) and still expects no critical alert."
   }
 }

@@ -6,7 +6,9 @@ import type { CanonicalClaim } from '../domain/truth.js';
 import type { Clock } from '../domain/clock.js';
 import { textOf, sha256Of, type Fetcher } from '../domain/fetcher.js';
 import { proposeClaims, EXTRACTOR_VERSION } from '../domain/extractor.js';
-import { classifyBrandRole, verifyClaim, adjudicate, checkCitation } from '../domain/verifier.js';
+import { classifyBrandRole, checkCitation } from '../domain/verifier.js';
+import { buildJevPlan, checkClaims, interpretJev, type ModelCheck, type JevUsage } from '../domain/jev.js';
+import { jevCheckerFromEnv, type JevChecker } from '../providers/typesafe.js';
 
 interface Context {
   brand: repo.Row;
@@ -15,39 +17,49 @@ interface Context {
   competitorDomains: string[];
   clock: Clock;
   fetcher?: Fetcher | null;
+  /** the model check: omitted means whatever the environment configures, null means rules only */
+  jev?: JevChecker | null;
+}
+
+/** What the model check did for one answer: its cost, and what it read for each registry fact. */
+export interface ModelCheckRecord {
+  model: string;
+  usage: JevUsage;
+  findings: Array<{ fact: string; choice: string; outcome: string; confidence: number }>;
 }
 
 /** Network work finishes before the short evidence transaction begins. */
 export async function prepareEvidence(answer: RunResult, context: Context) {
   const { brand, clock } = context;
+  const asOf = clock.now();
   const role = classifyBrandRole(answer.answerText, brand.name, context.competitors);
   const proposals = proposeClaims(answer.answerText, brand.name);
-  const observations: repo.Row[] = proposals.map(({ claim, stage }) => {
-    const verification = verifyClaim({ claim, canonicalClaims: context.canonical, asOf: clock.now() });
-    const votes = verification.requiresAdjudication
-      ? [
-          verification.verdict,
-          verifyClaim({ claim, canonicalClaims: context.canonical, asOf: clock.now() }).verdict,
-        ]
-      : [];
-    return {
-      statement: claim.statement,
-      subject: claim.subject,
-      predicate: claim.predicate,
-      object: claim.object,
-      polarity: claim.polarity,
-      temporal_marker: claim.temporalMarker,
-      brand_role: role,
-      verdict: verification.verdict,
-      canonical_claim_id: verification.canonicalClaimId,
-      severity: verification.severity,
-      misconception_key: verification.misconceptionKey,
-      adjudication: verification.requiresAdjudication ? adjudicate(votes) : 'not_required',
-      evaluator_votes: JSON.stringify(votes),
-      extractor_stage: stage,
-      extractor_version: EXTRACTOR_VERSION,
-    };
+  const { modelCheck, record } = await runModelCheck(answer, context, asOf);
+  const checked = checkClaims({
+    proposals,
+    canonical: context.canonical,
+    asOf,
+    brand: brand.name,
+    answer: answer.answerText,
+    modelCheck,
   });
+  const observations: repo.Row[] = checked.map(({ claim, stage, decision }) => ({
+    statement: claim.statement,
+    subject: claim.subject,
+    predicate: claim.predicate,
+    object: claim.object,
+    polarity: claim.polarity,
+    temporal_marker: claim.temporalMarker,
+    brand_role: role,
+    verdict: decision.result.verdict,
+    canonical_claim_id: decision.result.canonicalClaimId,
+    severity: decision.result.severity,
+    misconception_key: decision.result.misconceptionKey,
+    adjudication: decision.adjudication,
+    evaluator_votes: JSON.stringify(decision.votes),
+    extractor_stage: stage,
+    extractor_version: EXTRACTOR_VERSION,
+  }));
   if (!observations.length)
     observations.push({
       statement: answer.answerText.length <= 400 ? answer.answerText : `${answer.answerText.slice(0, 399)}…`,
@@ -140,7 +152,46 @@ export async function prepareEvidence(answer: RunResult, context: Context) {
       reason: error ? `${best.result.reason} (${error})` : best.result.reason,
     });
   }
-  return { observations, citations, pages, fetched };
+  return { observations, citations, pages, fetched, modelCheck: record };
+}
+
+/**
+ * One request to the model check per answer. The stand-in upstream's answers are reproducible
+ * fixtures and are never sent. Any failure leaves the rules to decide alone, and every verdict
+ * then says that only the rules ran.
+ */
+async function runModelCheck(
+  answer: RunResult,
+  context: Context,
+  asOf: Date,
+): Promise<{ modelCheck: ModelCheck | null; record: ModelCheckRecord | null }> {
+  const checker = context.jev === undefined ? jevCheckerFromEnv() : context.jev;
+  if (!checker || answer.simulated) return { modelCheck: null, record: null };
+  const plan = buildJevPlan({
+    brand: context.brand.name,
+    competitors: context.competitors,
+    answer: answer.answerText,
+    canonical: context.canonical,
+    asOf,
+  });
+  if (!Object.keys(plan.questions).length) return { modelCheck: null, record: null };
+  try {
+    const response = await checker.evaluate({ state: plan.state, questions: plan.questions });
+    const findings = interpretJev(plan, response.answers);
+    return {
+      modelCheck: { findings, model: response.model, minConfidence: checker.minConfidence },
+      record: {
+        model: response.model,
+        usage: response.usage,
+        findings: findings.map((f) => ({ fact: f.fact.key, choice: f.choice, outcome: f.outcome, confidence: f.confidence })),
+      },
+    };
+  } catch (error) {
+    console.warn(
+      `[jev] model check unavailable, rules only: ${error instanceof Error ? `${error.name}: ${error.message.slice(0, 120)}` : 'unknown'}`,
+    );
+    return { modelCheck: null, record: null };
+  }
 }
 
 export function persistAnswer(

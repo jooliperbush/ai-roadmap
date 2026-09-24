@@ -209,7 +209,7 @@ The table already exists. Nothing writes to it.
   BH `q <= 0.10`) inserts exactly one alert per misconception per window; re-running the same round
   inserts none.
 - **AC:** a `critical` contradiction on a `material` or `regulated` claim alerts on first observation
-  regardless of movement, but only once `adjudication = 'agreed'`.
+  regardless of movement, unless the model check disputed it (`adjudication = 'disputed'`).
 - **AC:** every alert body names the surface, the cluster, the measurement with `n` and interval, and a
   link to the drill-down; a test asserts no alert body contains a bare percentage.
 

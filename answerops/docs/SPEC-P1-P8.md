@@ -88,7 +88,8 @@ started_at, finished_at, planned_runs, actual_runs, cost_usd, gaps (json)`.
   `registry_gap`.
 - Dedupe key `(tenant, brand, window_label, kind, subject_key)` is unique; re-running a round
   inserts nothing new.
-- `critical_defect` requires `adjudication = 'agreed'`.
+- `critical_defect` requires a critical defect the model check did not dispute (`adjudication` is not
+  `disputed`), and its body says which checks ran: both, the model check alone, or the rules alone.
 - Alert bodies must contain `n=` and an interval. A lint test rejects a bare percentage.
 
 ### P1.7 Delivery

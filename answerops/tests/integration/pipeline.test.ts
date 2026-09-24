@@ -85,11 +85,16 @@ describe('sampling and verification', () => {
     expect(critical.length).toBeGreaterThan(0);
   });
 
-  it('routes high-risk verdicts through dual adjudication', () => {
-    const adjudicated = db
-      .prepare("SELECT * FROM observed_claims WHERE tenant_id = ? AND adjudication IN ('agreed','disputed','pending')")
+  it('records which checks decided each high-risk verdict', () => {
+    const defects = db
+      .prepare("SELECT verdict, adjudication, evaluator_votes FROM observed_claims WHERE tenant_id = ? AND verdict IN ('CONTRADICTED','STALE')")
       .all(tenantId) as any[];
-    expect(adjudicated.length).toBeGreaterThan(0);
+    expect(defects.length).toBeGreaterThan(0);
+    // The stand-in upstream's answers never reach the model check, so the rules decided alone and say so.
+    for (const defect of defects) {
+      expect(defect.adjudication).toBe('rules_only');
+      expect(JSON.parse(defect.evaluator_votes)).toEqual([{ evaluator: 'rules', verdict: defect.verdict }]);
+    }
   });
 
   it('checks whether each cited page actually contains the claim', () => {

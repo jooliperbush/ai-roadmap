@@ -1408,6 +1408,19 @@ details[open] > summary span {
 .lp-nav { min-height: 88px; gap: 24px; }
 .lp-nav .lp-brand { font-family: var(--serif); font-weight: 500; font-size: 31px; letter-spacing: -1.2px; gap: 9px; }
 .lp-nav .brand-logo { width: 36px; height: 29px; }
+/* The logo's red-pencil underline: one stroke a little wider than the word. The box keeps the SVG's
+   1000:60 ratio so the stroke never distorts; 50% + 0.38em puts it just under the serif's baseline. */
+.wordmark { position: relative; display: inline-block; }
+.wordmark::after {
+  content: '';
+  position: absolute;
+  left: -2%;
+  top: calc(50% + 0.38em);
+  width: 104%;
+  aspect-ratio: 1000 / 60;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 60' fill='none' stroke='%23b63724' stroke-width='20' stroke-linecap='round'><path d='M10 34 C 220 50, 500 18, 740 36 S 940 46, 990 26'/></svg>") 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
 .lp-nav-links { gap: 24px; }
 .lp-nav-links a, .signin { display: inline-flex; align-items: center; min-height: 44px; }
 .signin { border: 1px solid var(--line); border-radius: 6px; padding: 0 16px; gap: 12px; white-space: nowrap; }

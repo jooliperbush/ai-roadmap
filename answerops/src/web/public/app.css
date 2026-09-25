@@ -134,8 +134,22 @@ pre {
   flex-shrink: 0;
 }
 .wordmark {
+  position: relative;
+  display: inline-block;
   font-family: Georgia, serif;
   font-size: 23px;
+}
+/* The logo's red-pencil underline: one stroke a little wider than the word. The box keeps the SVG's
+   1000:60 ratio so the stroke never distorts; 50% + 0.38em puts it just under the serif's baseline. */
+.wordmark::after {
+  content: "";
+  position: absolute;
+  left: -2%;
+  top: calc(50% + 0.38em);
+  width: 104%;
+  aspect-ratio: 1000 / 60;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 60' fill='none' stroke='%23b63724' stroke-width='20' stroke-linecap='round'><path d='M10 34 C 220 50, 500 18, 740 36 S 940 46, 990 26'/></svg>") 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
 }
 .promise {
   flex: 1;

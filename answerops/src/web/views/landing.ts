@@ -111,14 +111,14 @@ function auditForm(rehearsal: boolean): Raw {
  */
 export function siteHeader(base = ''): Raw {
   return html`<header class="lp-nav shell">
-      <a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30">miscited</a>
+      <a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30"><span class="wordmark">miscited</span></a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation" hidden>Menu <span aria-hidden="true">☰</span></button>
       <nav id="site-navigation" class="lp-nav-links" aria-label="Sections"><a href="${base}#loop">How it works</a><a href="${base}#teams">Who it’s for</a><a href="${base}#design">The evidence</a><a href="${base}#plans">Early access</a></nav>
       <a class="signin" href="/login" data-testid="nav-signin">Sign in <span aria-hidden="true">↗</span></a>
     </header>`;
 }
 export function siteFooter(base = ''): Raw {
-  return html`<footer class="shell lp-footer"><div class="footer-top"><a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30">miscited</a><p>A better record.<br>A more accountable answer.</p></div><nav aria-label="Footer"><a href="/blog">Writing</a><a href="${base}#design">Measurement</a><a href="https://github.com/jooliperbush/ai-roadmap">GitHub ↗</a><a href="/login">Sign in</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav><div class="footer-bottom"><span>Miscited / Answer accuracy</span><span>Measured, not controlled.</span></div><p class="hero-note">We count page views and example interactions by broad referral source without visitor IDs or cookies. Optional event counting respects Do Not Track.</p></footer>`;
+  return html`<footer class="shell lp-footer"><div class="footer-top"><a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30"><span class="wordmark">miscited</span></a><p>A better record.<br>A more accountable answer.</p></div><nav aria-label="Footer"><a href="/blog">Writing</a><a href="${base}#design">Measurement</a><a href="https://github.com/jooliperbush/ai-roadmap">GitHub ↗</a><a href="/login">Sign in</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav><div class="footer-bottom"><span>Miscited / Answer accuracy</span><span>Measured, not controlled.</span></div><p class="hero-note">We count page views and example interactions by broad referral source without visitor IDs or cookies. Optional event counting respects Do Not Track.</p></footer>`;
 }
 
 export function landingView(opts: { liveProviders?: number } = {}): Raw {

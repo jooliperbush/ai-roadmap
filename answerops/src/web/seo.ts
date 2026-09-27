@@ -1,16 +1,47 @@
 import { html, raw, type Raw, escapeHtml } from './html.js';
 import { LEGAL_UPDATED, OPERATOR } from '../content/operator.js';
+import { asset, hasAsset } from './assets.js';
+import { LOGO_MARK } from './logo-mark.js';
 export const SITE_URL = 'https://miscited.com';
 export const CANONICAL_HOST = 'miscited.com';
 export const SITE_NAME = 'Miscited';
 export const SITE_TAGLINE = 'Quality control for what AI says about your company';
+export const SITE_LANGUAGE = 'en-GB';
+/** The first mark; kept because it is a published export. The mark is now the ’m logo in LOGO_MARK. */
 export const BRAND_MARK = '◧';
-export const BRAND_INK = '#16150f';
-export const BRAND_PAPER = '#f7f6f3';
+/** --ink, --paper and --red from landing.css. */
+export const BRAND_INK = '#252820';
+export const BRAND_PAPER = '#f7f4ed';
+export const BRAND_RED = '#b63724';
+/** The first accent; kept because it is a published export. */
 export const BRAND_CLAY = '#9c6f4a';
+export const BLOG_DESCRIPTION =
+  'How to measure what AI assistants say about a company without fooling yourself: sample sizes, intervals, and what separates a wrong answer from a missing one.';
+export const FEED_PATH = '/blog/feed.xml';
 export function canonical(path: string): string {
   return SITE_URL + (path === '/' ? '/' : path.replace(/\/+$/, ''));
 }
+export interface SocialImage {
+  url: string;
+  width: number;
+  height: number;
+  alt: string;
+}
+export const DEFAULT_SOCIAL_IMAGE: SocialImage = {
+  url: canonical('/static/launch-card.png'),
+  width: 1270,
+  height: 760,
+  alt: 'Miscited: your product changed, the answer did not. AI answer accuracy for B2B SaaS.',
+};
+/** The post's own 1200 × 630 card from `npm run og`, or the launch card until one has been rendered. */
+export function postSocialImage(post: { slug: string; title: string }): SocialImage {
+  const path = `/static/og/${post.slug}.png`;
+  return hasAsset(path)
+    ? { url: canonical(path), width: 1200, height: 630, alt: `${SITE_NAME}: ${post.title}` }
+    : DEFAULT_SOCIAL_IMAGE;
+}
+const newest = (posts: Array<{ updated: string }>) =>
+  posts.reduce<string | null>((latest, post) => (latest && latest > post.updated ? latest : post.updated), null);
 export interface SitemapEntry {
   path: string;
   changefreq: 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -18,9 +49,10 @@ export interface SitemapEntry {
   lastmod?: string | null;
 }
 export function sitemapEntries(posts: Array<{ slug: string; updated: string }>): SitemapEntry[] {
+  // Neither the home page nor the index has a date of its own, so both carry the newest post's.
   const index: SitemapEntry[] = [
-    { path: '/', changefreq: 'weekly', priority: '1.0' },
-    { path: '/blog', changefreq: 'weekly', priority: '0.8' },
+    { path: '/', changefreq: 'weekly', priority: '1.0', lastmod: newest(posts) },
+    { path: '/blog', changefreq: 'weekly', priority: '0.8', lastmod: newest(posts) },
   ];
   for (const post of posts)
     index.push({
@@ -46,6 +78,22 @@ export function renderSitemap(entries: SitemapEntry[]): string {
       xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
       >${urls}</urlset
     >`.value;
+}
+/** RSS dates are RFC 822; a post's date is a day, so it is stamped at midnight UTC. */
+const rfc822 = (date: string) => new Date(`${date}T00:00:00Z`).toUTCString();
+export function renderFeed(
+  posts: Array<{ slug: string; title: string; summary: string; published: string; updated: string }>,
+): string {
+  const built = newest(posts);
+  const items = posts.map((post) => {
+    const url = canonical(`/blog/${post.slug}`);
+    return html`<item><title>${post.title}</title><link>${url}</link><guid isPermaLink="true">${url}</guid><pubDate>${rfc822(post.published)}</pubDate><description>${post.summary}</description></item>`;
+  });
+  const channel = html`<title>${SITE_NAME} · Writing</title><link>${canonical('/blog')}</link><description>${BLOG_DESCRIPTION}</description><language>en-gb</language>${
+    built ? html`<lastBuildDate>${rfc822(built)}</lastBuildDate>` : null
+  }<atom:link href="${canonical(FEED_PATH)}" rel="self" type="application/rss+xml"/>`;
+  return html`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>${channel}${items}</channel></rss>`
+    .value;
 }
 export const AI_CRAWLERS = [
   'GPTBot',
@@ -77,8 +125,24 @@ export function renderRobots(): string {
   ];
   return groups.map((lines) => lines.join('\n')).join('\n\n') + '\n';
 }
+export const EXPLAINER = {
+  path: '/static/video/miscited-explainer.mp4',
+  poster: '/static/video/miscited-explainer-poster.jpg',
+  name: 'Miscited in 69 seconds',
+  description:
+    'Why AI answers about your company go wrong, a real case (Moffatt v. Air Canada), and how Miscited finds, traces, corrects and tests them.',
+  uploadDate: '2026-09-27',
+  duration: 'PT1M9S',
+};
 // Public product brief, preserved as editorial copy.
 export function renderLlmsTxt(posts: Array<{ slug: string; title: string; summary: string }>): string {
+  const film = hasAsset(EXPLAINER.path)
+    ? `## Video
+
+- [${EXPLAINER.name}](${canonical(EXPLAINER.path)}): ${EXPLAINER.description}
+
+`
+    : '';
   return `# ${SITE_NAME}
 
 > ${SITE_TAGLINE}. Miscited measures whether AI assistants state true things about a company,
@@ -124,7 +188,7 @@ Each refusal is enforced by a failing test in the codebase, not by editorial dis
 The one-time Answer Risk Audit is free. Ongoing monitoring and correction pilots are scoped
 individually during early access; usage, responsibilities and price are agreed before a paid engagement.
 
-## Writing
+${film}## Writing
 
 ${posts.map((p) => `- [${p.title}](${canonical(`/blog/${p.slug}`)}): ${p.summary}`).join('\n')}
 
@@ -132,6 +196,27 @@ ${posts.map((p) => `- [${p.title}](${canonical(`/blog/${p.slug}`)}): ${p.summary
 
 ${OPERATOR.email}
 `;
+}
+
+/** The web app manifest. Paper for both colours, so the browser's chrome matches the page rather than framing it. */
+export function webManifest(): string {
+  return JSON.stringify({
+    name: SITE_NAME,
+    short_name: SITE_NAME,
+    description: `${SITE_TAGLINE}.`,
+    lang: SITE_LANGUAGE,
+    start_url: '/',
+    scope: '/',
+    display: 'browser',
+    theme_color: BRAND_PAPER,
+    background_color: BRAND_PAPER,
+    icons: [
+      { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+      { src: asset('/static/icons/icon-192.png'), sizes: '192x192', type: 'image/png' },
+      { src: asset('/static/icons/icon-512.png'), sizes: '512x512', type: 'image/png' },
+      { src: asset('/static/icons/icon-512.png'), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+  });
 }
 
 type Schema = Record<string, unknown>;
@@ -143,15 +228,42 @@ function linkedData(type: string, properties: Schema): Raw {
   }).replace(/</g, '\\u003c');
   return raw(`<script type="application/ld+json">${serialized}</script>`);
 }
-const organizationRef = () => ({ '@id': `${SITE_URL}/#organization` });
+const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+const organizationRef = () => ({ '@id': ORGANIZATION_ID });
+const LOGO = { '@type': 'ImageObject', url: canonical('/static/icons/icon-512.png'), width: 512, height: 512 };
 export function organizationLd(): Raw {
   return linkedData('Organization', {
-    '@id': `${SITE_URL}/#organization`,
+    '@id': ORGANIZATION_ID,
     name: SITE_NAME,
     url: SITE_URL,
+    logo: LOGO,
     email: OPERATOR.email,
     description:
       'Miscited measures whether AI assistants state true things about a company, corrects the source pages those answers came from, and tests whether the answers changed.',
+  });
+}
+export function websiteLd(): Raw {
+  return linkedData('WebSite', {
+    '@id': `${SITE_URL}/#website`,
+    name: SITE_NAME,
+    url: canonical('/'),
+    inLanguage: SITE_LANGUAGE,
+    publisher: organizationRef(),
+  });
+}
+/** Empty until the film is deployed, so the markup never points at a file that is not there. */
+export function videoLd(): Raw {
+  if (!hasAsset(EXPLAINER.path)) return raw('');
+  return linkedData('VideoObject', {
+    '@id': `${SITE_URL}/#explainer`,
+    name: EXPLAINER.name,
+    description: EXPLAINER.description,
+    contentUrl: canonical(EXPLAINER.path),
+    thumbnailUrl: canonical(EXPLAINER.poster),
+    uploadDate: EXPLAINER.uploadDate,
+    duration: EXPLAINER.duration,
+    inLanguage: SITE_LANGUAGE,
+    publisher: organizationRef(),
   });
 }
 export function softwareLd(): Raw {
@@ -186,6 +298,24 @@ export function faqLd(items: FaqItem[]): Raw {
     })),
   });
 }
+export function blogLd(posts: Array<{ slug: string; title: string; published: string }>): Raw {
+  const url = canonical('/blog');
+  return linkedData('Blog', {
+    '@id': `${url}#blog`,
+    name: `${SITE_NAME} · Writing`,
+    description: BLOG_DESCRIPTION,
+    url,
+    inLanguage: SITE_LANGUAGE,
+    publisher: organizationRef(),
+    blogPost: posts.map((post) => ({
+      '@type': 'BlogPosting',
+      '@id': `${canonical(`/blog/${post.slug}`)}#post`,
+      headline: post.title,
+      url: canonical(`/blog/${post.slug}`),
+      datePublished: post.published,
+    })),
+  });
+}
 export function blogPostingLd(post: {
   slug: string;
   title: string;
@@ -194,14 +324,18 @@ export function blogPostingLd(post: {
   updated: string;
 }): Raw {
   const url = canonical(`/blog/${post.slug}`);
+  const image = postSocialImage(post);
   return linkedData('BlogPosting', {
     '@id': `${url}#post`,
     headline: post.title,
     description: post.summary,
+    image: { '@type': 'ImageObject', url: image.url, width: image.width, height: image.height },
     datePublished: post.published,
     dateModified: post.updated,
-    mainEntityOfPage: url,
-    publisher: organizationRef(),
+    inLanguage: SITE_LANGUAGE,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    isPartOf: { '@id': `${canonical('/blog')}#blog` },
+    publisher: { '@type': 'Organization', '@id': ORGANIZATION_ID, name: SITE_NAME, url: SITE_URL, logo: LOGO },
     author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
   });
 }
@@ -215,18 +349,17 @@ export function breadcrumbLd(trail: Array<{ name: string; path: string }>): Raw 
     })),
   });
 }
+/**
+ * The ’m mark in brand red on a square paper tile. `span` is the share of the tile's width the mark covers and
+ * `radius` rounds the corners, both relative to a 1024-unit tile.
+ */
+export function iconSvg({ span, radius }: { span: number; radius: number }): string {
+  const tile = 1024;
+  const scale = (tile * span) / LOGO_MARK.width;
+  const x = (tile - LOGO_MARK.width * scale) / 2;
+  const y = (tile - LOGO_MARK.height * scale) / 2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${tile} ${tile}"><rect width="${tile}" height="${tile}" rx="${radius}" fill="${BRAND_PAPER}"/><path fill="${BRAND_RED}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${scale.toFixed(4)})" d="${LOGO_MARK.path}"/></svg>`;
+}
 export function faviconSvg(): string {
-  return html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-    <rect width="64" height="64" rx="12" fill="${BRAND_INK}">
-    <text
-      x="32"
-      y="45"
-      font-family="Georgia,serif"
-      font-size="40"
-      fill="${BRAND_PAPER}"
-      text-anchor="middle"
-    >
-      ${BRAND_MARK}
-    </text>
-  </svg>`.value;
+  return iconSvg({ span: 0.9, radius: 180 });
 }

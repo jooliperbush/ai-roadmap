@@ -40,6 +40,13 @@
   font: 12px/1.8 var(--mono);
   color: var(--text-dim);
 }
+.report-foot a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
 .disclosure {
   padding: 22px;
   margin: 25px 0;

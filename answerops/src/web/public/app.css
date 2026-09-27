@@ -72,6 +72,7 @@ h1 {
   line-height: 1.15;
   letter-spacing: -0.035em;
   margin-bottom: 12px;
+  overflow-wrap: anywhere;
 }
 h2 {
   font-size: 19px;
@@ -124,6 +125,7 @@ pre {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
   text-decoration: none;
 }
 .brand-logo {
@@ -224,6 +226,13 @@ main {
 }
 .footer span {
   max-width: 75ch;
+}
+.footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
 }
 .section {
   margin-bottom: 36px;
@@ -465,6 +474,7 @@ button.secondary:hover {
   background: none;
   text-decoration: underline;
   padding: 4px;
+  min-width: 44px;
   min-height: 44px;
 }
 .danger {
@@ -480,15 +490,18 @@ legend {
   font-size: 12px;
   padding: 0 6px;
 }
-.check {
+.check,
+label:has(> input[type="checkbox"]) {
   display: flex;
   align-items: center;
   gap: 9px;
-  min-height: 36px;
+  min-height: 44px;
 }
-.check input {
+.check input,
+label > input[type="checkbox"] {
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
 }
 .brandswitch select {
   max-width: 180px;
@@ -677,6 +690,10 @@ legend {
   .whoami {
     margin-left: auto;
   }
+  /* Tables scroll inside .table-wrap here; keep mono columns from collapsing to a character wide. */
+  td.mono {
+    min-width: 14ch;
+  }
 }
 @media (max-width: 560px) {
   main {
@@ -719,6 +736,18 @@ legend {
   }
   .footer {
     padding: 20px 16px;
+  }
+  th,
+  .rolechip,
+  .pill,
+  .severity,
+  .count,
+  .eyebrow,
+  .stat-label,
+  .metric .label,
+  .provenance,
+  .state-track {
+    font-size: 12px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

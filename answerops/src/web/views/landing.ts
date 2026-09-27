@@ -1,4 +1,5 @@
 import { html, type Raw } from '../html.js';
+import { asset } from '../assets.js';
 import { HOME_FAQ } from '../../http/public-copy.js';
 
 const STEPS = [
@@ -79,6 +80,65 @@ function exhibit(): Raw {
     <div class="exhibit-foot"><span class="case-impact"><strong>C$812.02</strong><span>Ordered payment<br>Damages, interest &amp; tribunal fees</span></span><span class="case-outcome">One wrong answer.<br>A real customer consequence.</span></div>
   </figure>`;
 }
+/**
+ * The film's on-screen text, scene by scene. It has no narration, so this is its only text
+ * alternative. The scene labels are part of the honesty of the film and are not decoration.
+ */
+const TRANSCRIPT: Array<[label: string | null, text: string]> = [
+  ['Illustrative example', 'Your buyers ask AI about you. (Prompt typed: “Who runs Aeroplan?”)'],
+  [
+    'Illustrative example',
+    'Your product changed. The answer didn’t. (Answer shown: “Aeroplan is Aimia’s loyalty programme…”, marked stale.)',
+  ],
+  [null, 'You never see the wrong answer. Your buyer does.'],
+  [
+    'Real case',
+    'Air Canada’s own chatbot. Air Canada’s chatbot told a customer: “…have already travelled and would like to submit your ticket for a reduced bereavement rate, kindly do so within 90 days…”',
+  ],
+  [
+    'Real case',
+    'Its own policy page said the opposite. The tribunal held Air Canada responsible. Ordered to pay C$812.02. (Moffatt v. Air Canada, 2024 BCCRT 149.) Not a Miscited finding.',
+  ],
+  [null, 'Visibility ≠ accuracy. Being named is one question. Being described accurately is another.'],
+  [null, 'Miscited. Quality control for what AI says about your company.'],
+  [
+    'Illustrative example',
+    '01 Find. Start from your facts, dated. (Aeroplan operated by Aimia: superseded. Aeroplan owned by Air Canada. New Aeroplan launched: effective. Policy: bereavement fares are not available after travel is completed.)',
+  ],
+  [
+    'Illustrative example',
+    'Every claim, checked. (“Aeroplan is Aimia’s loyalty programme, and you can claim a bereavement fare after you travel.” Stale: true until 10 Jan 2019. Contradicted.)',
+  ],
+  [
+    null,
+    'Two independent checks: a rules engine and the Jev model. Agreement settles the verdict. An uncertain disagreement is held for review.',
+  ],
+  [
+    'Illustrative example',
+    '02 Trace. Trace the evidence. (aircanada.com › Bereavement travel: the cited page contradicts the claim.)',
+  ],
+  [null, '03 Correct. Correct the source. Every fix needs evidence.'],
+  [
+    null,
+    '04 Test. Test whether the answer changed: confirmed, rejected or inconclusive. (Example chart: treatment against a matched control.) You can’t edit the AI. You can measure what changes.',
+  ],
+  [null, 'Always on: scheduled sampling, alerts, weekly briefing, missed demand, markets, roles.'],
+  [null, 'See what the answers say. Get a free answer audit at miscited.com.'],
+];
+function film(): Raw {
+  return html`<section id="film" class="shell section film-section" aria-labelledby="film-title">
+    <div class="section-heading"><p class="label">The method in 69 seconds</p><h2 id="film-title">From a wrong answer to a tested correction.</h2><p>Find the claim, trace the evidence, correct the source, then test whether the answer changed.</p></div>
+    <figure class="film">
+      <div class="film-frame"><video controls preload="none" playsinline width="1920" height="1080" poster="${asset('/static/video/miscited-explainer-poster.jpg')}" aria-label="Miscited explainer film, 69 seconds, no sound" aria-describedby="film-caption" data-testid="film-video"><source src="${asset('/static/video/miscited-explainer.mp4')}" type="video/mp4"><p>Your browser cannot play this film. <a href="${asset('/static/video/miscited-explainer.mp4')}">Download it (MP4, 4.7 MB)</a> or read the transcript below.</p></video></div>
+      <figcaption id="film-caption">No narration or sound. Air Canada appears as an illustrative example and is not a Miscited customer.</figcaption>
+    </figure>
+    <details class="transcript" data-testid="film-transcript"><summary>Read the transcript <span aria-hidden="true">+</span></summary>
+      <p class="transcript-note">The film’s on-screen text. Illustrative example from public records (scenes 1, 2, 8, 9 and 11): Air Canada is not a Miscited customer.</p>
+      <ol>${TRANSCRIPT.map(([label, text]) => html`<li>${label ? html`<span class="transcript-tag">${label}</span> ` : null}${text}</li>`)}</ol>
+      <p class="transcript-sources">Sources: <a href="https://www.canlii.org/en/bc/bccrt/doc/2024/2024bccrt149/2024bccrt149.html" target="_blank" rel="noopener noreferrer">Moffatt v. Air Canada, 2024 BCCRT 149 ↗</a> (¶15, ¶16–17, ¶44). Aimia completed the sale of Aeroplan to Air Canada on 10 Jan 2019. Air Canada launched the new Aeroplan on 8 Nov 2020.</p>
+    </details>
+  </section>`;
+}
 function auditForm(rehearsal: boolean): Raw {
   return html`<form class="audit-form" data-audit-form novalidate data-testid="audit-form" > <h3>${rehearsal ? 'Run a demo audit' : 'Request an answer audit'}</h3> <p class="note"> Two fields. An evidence-linked report. No payment details. </p> ${
     rehearsal
@@ -111,14 +171,14 @@ function auditForm(rehearsal: boolean): Raw {
  */
 export function siteHeader(base = ''): Raw {
   return html`<header class="lp-nav shell">
-      <a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30"><span class="wordmark">miscited</span></a>
+      <a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="${asset('/static/miscited-logo-rust.png')}" alt="" width="44" height="30"><span class="wordmark">miscited</span></a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation" hidden>Menu <span aria-hidden="true">☰</span></button>
       <nav id="site-navigation" class="lp-nav-links" aria-label="Sections"><a href="${base}#loop">How it works</a><a href="${base}#teams">Who it’s for</a><a href="${base}#design">The evidence</a><a href="${base}#plans">Early access</a></nav>
       <a class="signin" href="/login" data-testid="nav-signin">Sign in <span aria-hidden="true">↗</span></a>
     </header>`;
 }
 export function siteFooter(base = ''): Raw {
-  return html`<footer class="shell lp-footer"><div class="footer-top"><a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="/static/miscited-logo-rust.png" alt="" width="44" height="30"><span class="wordmark">miscited</span></a><p>A better record.<br>A more accountable answer.</p></div><nav aria-label="Footer"><a href="/blog">Writing</a><a href="${base}#design">Measurement</a><a href="https://github.com/jooliperbush/ai-roadmap">GitHub ↗</a><a href="/login">Sign in</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav><div class="footer-bottom"><span>Miscited / Answer accuracy</span><span>Measured, not controlled.</span></div><p class="hero-note">We count page views and example interactions by broad referral source without visitor IDs or cookies. Optional event counting respects Do Not Track.</p></footer>`;
+  return html`<footer class="shell lp-footer"><div class="footer-top"><a class="lp-brand" href="/" aria-label="Miscited home"><img class="brand-logo" src="${asset('/static/miscited-logo-rust.png')}" alt="" width="44" height="30"><span class="wordmark">miscited</span></a><p>A better record.<br>A more accountable answer.</p></div><nav aria-label="Footer"><a href="/blog">Writing</a><a href="${base}#design">Measurement</a><a href="https://github.com/jooliperbush/ai-roadmap">GitHub ↗</a><a href="/login">Sign in</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav><div class="footer-bottom"><span>Miscited / Answer accuracy</span><span>Measured, not controlled.</span></div><p class="hero-note">We count page views and example interactions by broad referral source without visitor IDs or cookies. Optional event counting respects Do Not Track.</p></footer>`;
 }
 
 export function landingView(opts: { liveProviders?: number } = {}): Raw {
@@ -135,16 +195,17 @@ export function landingView(opts: { liveProviders?: number } = {}): Raw {
           <p class="hero-description">Find outdated prices, retired plans and unsupported claims. Trace the evidence, correct the source, and test whether the next answer gets it right.</p>
           <div class="hero-actions"><a class="btn btn-primary" href="${count === 0 ? '#example' : '#audit'}" data-testid="cta-hero">${count === 0 ? 'Try the worked example' : 'Get a free answer audit'} <span aria-hidden="true">↗</span></a><a class="text-link" href="#example">See a worked example <span aria-hidden="true">↓</span></a></div>
           <p class="hero-note">${count === 0 ? 'No signup for the example. Live audits are not connected yet; the audit below is a labelled demo.' : 'No payment details. Every finding comes with its context.'}</p>
-          <div class="hero-rule"><span>01 / FIND</span><span>02 / CORRECT</span><span>03 / RECHECK</span></div>
+          <div class="hero-rule"><span>01 / FIND</span><span>02 / TRACE</span><span>03 / CORRECT</span><span>04 / TEST</span></div>
         </div>
         <div class="hero-evidence" id="example"><div class="evidence-kicker"><span>THE ANSWER LOOKS RIGHT.</span><span>LOOK CLOSER. ↙</span></div>${exhibit()}<p class="example-note">Documented historical incident, not a live Miscited finding and not a ChatGPT or Claude screenshot. This was an airline-owned chatbot; Miscited currently checks external AI answers about your company.</p></div>
       </section>
       <div class="surface-strip"><div class="shell surface-inner"><p class="label">Built for multiple model providers</p><div class="provider-names"><span>OpenAI</span><span>Anthropic</span><span>Google</span><span>Perplexity</span></div><p class="surface-note">Coverage depends on configured API surfaces. API results can differ from consumer apps.</p></div></div>
-      <section id="catches" class="shell section"><div class="section-heading"><p class="label">01 / The blind spot</p><h2>A mention can still get you wrong.</h2><p>Being named is one question. Being described accurately is another. Start with the facts your buyers use to decide.</p></div><div class="error-grid">${ERRORS.map(([tag, title, body]) => html`<article class="error-card"><span class="label">${tag}</span><div class="error-symbol" aria-hidden="true">≠</div><h3>${title}</h3><p>${body}</p></article>`)}</div></section>
-      <section id="loop" class="workflow"><div class="shell"><div class="section-heading"><p class="label">02 / From finding to follow-through</p><h2>Give every wrong answer a next step.</h2><p>A report is the beginning. Keep the evidence, the correction and the follow-up measurement connected.</p></div><div class="steps">${STEPS.map(([n, title, body, who]) => html`<article class="step"><span class="step-number">${n}</span><div><h3>${title}</h3><p>${body}</p></div><span class="step-owner">${who}</span></article>`)}</div><a class="text-link" href="#audit">Start with your domain <span aria-hidden="true">↗</span></a></div></section>
+      ${film()}
+      <section id="catches" class="shell section"><div class="section-heading"><p class="label">01 / Visibility ≠ accuracy</p><h2>A mention can still get you wrong.</h2><p>Being named is one question. Being described accurately is another. Start with the facts your buyers use to decide.</p></div><div class="error-grid">${ERRORS.map(([tag, title, body]) => html`<article class="error-card"><span class="label">${tag}</span><div class="error-symbol" aria-hidden="true">≠</div><h3>${title}</h3><p>${body}</p></article>`)}</div></section>
+      <section id="loop" class="workflow"><div class="shell"><div class="section-heading"><p class="label">02 / Find, trace, correct, test</p><h2>Give every wrong answer a next step.</h2><p>A report is the beginning. Keep the evidence, the correction and the follow-up measurement connected.</p></div><div class="steps">${STEPS.map(([n, title, body, who]) => html`<article class="step"><span class="step-number">${n}</span><div><h3>${title}</h3><p>${body}</p></div><span class="step-owner">${who}</span></article>`)}</div><a class="text-link" href="#audit">Start with your domain <span aria-hidden="true">↗</span></a></div></section>
       <section id="teams" class="shell section"><div class="section-heading"><p class="label">03 / Built around the people who fix it</p><h2>For teams with a record to protect.</h2></div><div class="team-grid"><article><span class="label">B2B SaaS teams</span><h3>Keep the product story current.</h3><p>Bring product marketing, content and support around the same evidence. Review old prices, missing qualifications and retired capabilities before they become another conversation to untangle.</p><a class="text-link" href="#audit">Audit your company ↗</a></article><article><span class="label">Specialist agencies</span><h3>Bring clients the finding and the follow-up.</h3><p>Work across brands with separate permissions and evidence histories. Make a concrete correction part of your engagement, then report what changed and what remains uncertain.</p><a class="text-link" href="#audit">Start with one client ↗</a></article></div></section>
       <section id="design" class="evidence-section"><div class="shell"><div class="section-heading"><p class="label">04 / The standard of proof</p><h2>Show your work.</h2><p>The useful question is whether you can defend a finding when someone opens the source.</p></div><div class="principles">${PRINCIPLES.map(([title, body], i) => html`<article><span class="principle-number">0${i + 1}</span><h3>${title}</h3><p>${body}</p></article>`)}</div><div class="evidence-links"><a href="/blog/how-many-prompts-ai-visibility-sample-size">Read the measurement guide ↗</a><a href="https://github.com/jooliperbush/ai-roadmap">Inspect the project on GitHub ↗</a></div><details id="refusals" class="refusals"><summary>What we refuse to claim <span aria-hidden="true">+</span></summary><p>We cannot decide what an external model says. A corrected page may help; it may not. We do not promise a ranking, hide an inconclusive experiment or combine unlike buyer questions into a single score. Source access and extraction coverage have limits, and human review matters.</p></details></div></section>
-      <section id="plans" class="shell section"><div class="section-heading"><p class="label">05 / Early access</p><h2>Start with one useful finding.</h2><p>Find out whether this is a problem worth solving for your team before committing to an ongoing program.</p></div><div class="plan-grid"><article class="plan featured"><span class="label">Answer Risk Audit</span><h3>First, see the evidence.</h3><p class="price">Free<span>one-time sample</span></p><p>Submit your domain. Get a dated report with provisional site facts, sampled answers, citations and coverage limits.</p><a class="btn btn-primary" href="#audit">Start the audit ↗</a></article><article class="plan"><span class="label">Founding teams & agencies</span><h3>Then, scope the follow-through.</h3><p>Ongoing monitoring and correction work are scoped during early access. Agree the brands, questions, provider usage and review responsibilities before a paid engagement.</p><p class="plan-note">Pilot scope and pricing agreed individually. No subscription checkout on this page.</p><a class="text-link" href="#audit">Begin with an audit ↗</a></article></div></section>
+      <section id="plans" class="shell section"><div class="section-heading"><p class="label">05 / Early access</p><h2>Start with one useful finding.</h2><p>Find out whether this is a problem worth solving for your team before committing to an ongoing program.</p></div><div class="plan-grid"><article class="plan featured"><span class="label">Answer Risk Audit</span><h3>First, see the evidence.</h3><p class="price">Free<span>one-time sample</span></p><p>Submit your domain. Get a dated report with provisional site facts, sampled answers, citations and coverage limits.</p><a class="btn btn-primary" href="#audit">Get a free answer audit ↗</a></article><article class="plan"><span class="label">Founding teams & agencies</span><h3>Then, scope the follow-through.</h3><p>Ongoing monitoring and correction work are scoped during early access. Agree the brands, questions, provider usage and review responsibilities before a paid engagement.</p><p class="plan-note">Pilot scope and pricing agreed individually. No subscription checkout on this page.</p><a class="text-link" href="#audit">Begin with an audit ↗</a></article></div></section>
       <section class="shell faq-section" id="faq"><div><p class="label">A few fair questions</p><h2>Before you begin.</h2></div><div class="faq-list">${HOME_FAQ.map(({ q, a }) => html`<details><summary>${q}<span aria-hidden="true">+</span></summary><p>${a}</p></details>`)}</div></section>
       <section class="audit-section" id="audit"><div class="shell audit-grid"><div class="audit-copy"><p class="label">Your domain. The actual record.</p><h2>See what the answers say.</h2><p class="lede">A concrete place to start the conversation.</p><ul><li>A dated report you can inspect.</li><li>Extracted claims and the sources behind them.</li><li>Clear labels for simulated results and missing coverage.</li></ul><p class="coverage-note">${count >= 4 ? 'We sample your questions across all four assistants through their configured APIs.' : 'We sample your questions on the configured API surfaces.'} Results depend on the model, access mode, region and date.</p></div>${auditForm(count === 0)}</div></section>
     </main>

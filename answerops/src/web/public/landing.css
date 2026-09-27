@@ -260,7 +260,8 @@ main {
 }
 .hero-rule {
   display: flex;
-  gap: 35px;
+  flex-wrap: wrap;
+  gap: 8px 35px;
   border-top: 1px solid var(--line);
   padding-top: 17px;
   font: 14px var(--mono);
@@ -957,6 +958,11 @@ details[open] > summary span {
   margin-bottom: 30px;
 }
 .lp-footer nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   text-decoration: none;
 }
 .footer-bottom {
@@ -998,7 +1004,7 @@ details[open] > summary span {
     gap: 12px;
   }
   .hero-rule {
-    gap: 18px;
+    column-gap: 18px;
   }
   .workflow .shell {
     column-gap: 45px;
@@ -1175,6 +1181,10 @@ details[open] > summary span {
   }
   .hero .label {
     font-size: 14px;
+  }
+  .hero-rule {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
   }
   .hero-evidence {
     padding-right: 6px;
@@ -1406,7 +1416,7 @@ details[open] > summary span {
 
 /* A quiet masthead, with a collapsible navigation on smaller screens. */
 .lp-nav { min-height: 88px; gap: 24px; }
-.lp-nav .lp-brand { font-family: var(--serif); font-weight: 500; font-size: 31px; letter-spacing: -1.2px; gap: 9px; }
+.lp-nav .lp-brand { font-family: var(--serif); font-weight: 500; font-size: 31px; letter-spacing: -1.2px; gap: 9px; min-height: 44px; }
 .lp-nav .brand-logo { width: 36px; height: 29px; }
 /* The logo's red-pencil underline: one stroke a little wider than the word. The box keeps the SVG's
    1000:60 ratio so the stroke never distorts; 50% + 0.38em puts it just under the serif's baseline. */
@@ -1465,7 +1475,6 @@ details[open] > summary span {
   .audit-form input, .audit-form select, .audit-form textarea { font-size: 16px; min-height: 48px; }
   .faq summary { font-size: 16px; line-height: 1.5; min-height: 48px; }
   .lp-footer nav { flex-wrap: wrap; gap: 8px 22px; }
-  .lp-footer nav a { display: inline-flex; align-items: center; min-height: 44px; }
   .footer-top { flex-direction: column; align-items: flex-start; gap: 20px; }
   .footer-top p { text-align: left; }
   .footer-bottom { flex-direction: column; gap: 10px; }
@@ -1494,4 +1503,21 @@ details[open] > summary span {
   .legal-head .lede { font-size: 19px; }
   .legal-contact { grid-template-columns: 1fr; gap: 0; }
   .legal-contact dd { margin-bottom: 10px; }
+}
+
+/* The explainer film: a 16:9 frame that holds its space before the poster loads, and its transcript. */
+.film-section { padding-bottom: 0; }
+.film { margin: 0; }
+.film-frame { border: 1px solid #cecfc3; border-radius: 18px; overflow: hidden; background: #e4e4da; box-shadow: 0 18px 55px #29251c12; }
+.film-frame video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #e4e4da; }
+.film figcaption { margin-top: 14px; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.transcript { max-width: 760px; margin-top: 28px; border-block: 1px solid var(--line); }
+.transcript summary { font-size: 16px; min-height: 48px; padding-block: 12px; }
+.transcript-note, .transcript-sources { font-size: 14px; line-height: 1.7; color: var(--muted); }
+.transcript ol { display: grid; gap: 12px; margin: 0 0 20px; padding-left: 30px; }
+.transcript li::marker { font-family: var(--mono); font-size: 14px; color: var(--muted); }
+.transcript-tag { display: inline-block; margin-right: 6px; padding: 0 6px; border: 1px solid var(--red); border-radius: 3px; font: 12px/1.6 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--red); vertical-align: 2px; }
+@media (max-width: 600px) {
+  .film-frame { border-radius: 10px; }
+  .transcript ol { padding-left: 24px; }
 }

@@ -19,9 +19,11 @@
     "eval:extractor": "tsx scripts/eval-extractor.mts",
     "gold:build": "tsx scripts/build-gold-set.mts",
     "scheduler": "tsx scripts/scheduler.mts",
-    "walkthrough": "tsx scripts/walkthrough.mts"
+    "walkthrough": "tsx scripts/walkthrough.mts",
+    "og": "tsx scripts/og-cards.mts"
   },
   "dependencies": {
+    "@fastify/compress": "^9.2.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/formbody": "^8.0.2",
     "@fastify/static": "^10.1.4",

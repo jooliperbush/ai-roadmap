@@ -10,6 +10,8 @@ import type { Fetcher } from '../domain/fetcher.js';
 import type { BeliefProfile } from '../providers/types.js';
 import { flash, page } from '../web/views/layout.js';
 import { html, raw, type Raw } from '../web/html.js';
+import { asset } from '../web/assets.js';
+import { SITE_LANGUAGE } from '../web/seo.js';
 
 export interface ServerOptions {
   db: DB;
@@ -48,11 +50,11 @@ export const redirectWith = (
   reply.redirect(`${path}${path.includes('?') ? '&' : '?'}msg=${encodeURIComponent(message)}&kind=${kind}`);
 export const forbidden = (message: string) =>
   html`<!DOCTYPE html>
-    <html lang="en">
+    <html lang="${SITE_LANGUAGE}">
       <head>
         <meta charset="utf-8" />
         <title>Not permitted</title>
-        <link rel="stylesheet" href="/static/app.css" />
+        <link rel="stylesheet" href="${asset('/static/app.css')}" />
       </head>
       <body>
         <main>

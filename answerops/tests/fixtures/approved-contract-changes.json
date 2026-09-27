@@ -1,8 +1,8 @@
 {
   "tests/integration/seo.test.ts": {
     "referenceSha256": "811732b472d1d3030891c161de1893bce7c1c30d007de26bffadb9f79882145d",
-    "sha256": "fb50dfacf8dc5c657857b8bc41d57dbda5be049456a41b12f8ca6c80640f4ba4",
-    "reason": "2026-09-05 requested marketing website repositioning: remove unvalidated paid subscriptions from public structured data; retain the free audit. Only the price expectation changes."
+    "sha256": "883eb0f3335e569b010055be3181a8696e5d8faf1cb94cc607a9f7256b4688be",
+    "reason": "2026-09-05 requested marketing website repositioning: remove unvalidated paid subscriptions from public structured data; retain the free audit. Only the price expectation changes. 2026-09-27 launch SEO work: every public page now shares a 1200x630 or larger card, so the expected twitter:card becomes summary_large_image; no other assertion changes."
   },
   "tests/integration/http.test.ts": {
     "referenceSha256": "9cf04a67f38892457b899fffe5b30584080a880c082c95272a9df9829cb4122d",

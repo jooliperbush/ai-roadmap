@@ -1,9 +1,54 @@
+import { createHash } from 'node:crypto';
+import type { FastifyInstance } from 'fastify';
 import type { Runtime } from './context.js';
 import { forbidden } from './context.js';
 import { ROUTE_ROLES, CSRF_EXEMPT, routeKey, allows } from '../domain/roles.js';
 import { LIMIT_ON_FAILURE } from '../domain/ratelimit.js';
 import * as repo from '../db/repo/index.js';
 import { getSchedule } from '../db/repo/unattended.js';
+
+/** The inline event handlers the views still use. Each is allowed by its hash, so no other inline script runs. */
+export const INLINE_HANDLERS = ['this.form.submit()'];
+const sha256 = (source: string) => `'sha256-${createHash('sha256').update(source).digest('base64')}'`;
+/**
+ * Scripts are files under /static/ plus the handlers above; JSON-LD blocks are data, which script-src does not
+ * govern. style-src keeps 'unsafe-inline' so a style attribute in new markup is not silently dropped: no view has
+ * one today, and CSS injection is the smaller risk. data: images are the SVG backgrounds in the stylesheets.
+ * No page is framed, even by the site itself: frame-ancestors says so, and X-Frame-Options DENY says it to browsers
+ * too old to read frame-ancestors.
+ */
+export const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-hashes' ${INLINE_HANDLERS.map(sha256).join(' ')}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "media-src 'self'",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+export const SECURITY_HEADERS: Record<string, string> = {
+  'content-security-policy': CONTENT_SECURITY_POLICY,
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'x-frame-options': 'DENY',
+  'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+};
+/** Subdomains are left out until each of them is known to serve HTTPS. */
+export const HSTS = 'max-age=31536000';
+
+/** On every response, redirects, 404s and errors included. A route that sets one of these itself keeps its own. */
+export function installHeaders(app: FastifyInstance): void {
+  app.addHook('onSend', async (_req, reply) => {
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) if (!reply.hasHeader(name)) reply.header(name, value);
+    // Only production is known to be served over HTTPS alone.
+    if (process.env.NODE_ENV === 'production' && !reply.hasHeader('strict-transport-security'))
+      reply.header('strict-transport-security', HSTS);
+  });
+}
 
 export function undeclaredMutatingRoutes(routes: Array<{ method: string; url: string }>): string[] {
   return [

@@ -143,7 +143,7 @@ describe('head tags on public pages', () => {
     const body = (await get('/')).body;
     expect(body).toContain('<meta property="og:url" content="https://miscited.com/">');
     expect(body).toContain('<meta property="og:site_name" content="Miscited">');
-    expect(body).toContain('<meta name="twitter:card" content="summary">');
+    expect(body).toContain('<meta name="twitter:card" content="summary_large_image">');
   });
 
   it('serves a favicon rather than 404ing on it', async () => {

@@ -1,5 +1,7 @@
 import { FastifyReply } from 'fastify';
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { z } from 'zod';
 
 import { postBySlug, postsNewestFirst } from '../../content/posts.js';
@@ -17,25 +19,34 @@ import { auditedThisWeek, markDuplicate, startQueuedAudits } from '../../service
 import { buildDashboard } from '../../services/dashboard.js';
 import { countLaunchEvent, LAUNCH_EVENTS, trafficSource } from '../../services/traffic.js';
 import {
+  BLOG_DESCRIPTION,
+  blogLd,
   blogPostingLd,
   breadcrumbLd,
   faqLd,
   faviconSvg,
+  FEED_PATH,
   organizationLd,
+  postSocialImage,
+  renderFeed,
   renderLlmsTxt,
   renderRobots,
   renderSitemap,
   SITE_NAME,
   sitemapEntries,
   softwareLd,
+  videoLd,
+  webManifest,
+  websiteLd,
 } from '../../web/seo.js';
-import { blogIndexView, postView } from '../../web/views/blog.js';
+import { blogIndexView, breadcrumbTrail, postView } from '../../web/views/blog.js';
 import { dashboardView } from '../../web/views/dashboard.js';
 import { landingView } from '../../web/views/landing.js';
-import { flash, marketingPage, page, publicPage, reportPage } from '../../web/views/layout.js';
+import { flash, marketingPage, notFoundPage, page, publicPage, reportPage } from '../../web/views/layout.js';
 import { loginView } from '../../web/views/login.js';
 import { auditReportView } from '../../web/views/ops.js';
 
+import { PUBLIC_ROOT } from '../../web/assets.js';
 import { html, type Raw } from '../../web/html.js';
 import type { Runtime } from '../context.js';
 import { forbidden, redirectWith } from '../context.js';
@@ -120,7 +131,7 @@ export function publicRoutes(r: Runtime): void {
             'Miscited · quality control for what AI says about your company',
             PUBLIC_DESCRIPTION,
             landingView({ liveProviders: liveProviderCount() }),
-            [organizationLd(), softwareLd(), faqLd(HOME_FAQ)],
+            [organizationLd(), websiteLd(), softwareLd(), videoLd(), faqLd(HOME_FAQ)],
           ),
         );
     const c = r.context(req, reply, a);
@@ -281,7 +292,7 @@ export function publicRoutes(r: Runtime): void {
     }
   });
   app.get('/healthz', async () => ({ ok: true }));
-  const cached = (url: string, type: string, render: () => string, seconds = 3600) =>
+  const cached = (url: string, type: string, render: () => string | Buffer, seconds = 3600) =>
     app.get(url, async (_req, reply) =>
       reply.type(type).header('cache-control', `public, max-age=${seconds}`).send(render()),
     );
@@ -293,21 +304,22 @@ export function publicRoutes(r: Runtime): void {
     renderLlmsTxt(postsNewestFirst().map((p) => ({ slug: p.slug, title: p.title, summary: p.summary }))),
   );
   cached('/favicon.svg', 'image/svg+xml', faviconSvg, 86400);
+  // Asked for by habit whatever a page links, so it is the icon itself (16, 32 and 48 px), never a redirect.
+  cached('/favicon.ico', 'image/x-icon', () => readFileSync(join(PUBLIC_ROOT, 'icons', 'favicon.ico')), 86400);
+  cached('/site.webmanifest', 'application/manifest+json; charset=utf-8', webManifest, 86400);
+  cached(FEED_PATH, 'application/rss+xml; charset=utf-8', () => renderFeed(postsNewestFirst()));
   app.get('/blog', async (_req, reply) =>
     reply.type('text/html; charset=utf-8').send(
       publicPage(
         {
           title: `Writing · ${SITE_NAME}`,
-          description:
-            'How to measure what AI assistants say about a company without fooling yourself: sample sizes, intervals, and what separates a wrong answer from a missing one.',
+          description: BLOG_DESCRIPTION,
           path: '/blog',
           stylesheet: '/static/blog.css',
           script: null,
           extra: [
-            breadcrumbLd([
-              { name: 'Miscited', path: '/' },
-              { name: 'Writing', path: '/blog' },
-            ]),
+            blogLd(postsNewestFirst()),
+            breadcrumbLd(breadcrumbTrail()),
           ],
         },
         blogIndexView(postsNewestFirst()),
@@ -317,24 +329,7 @@ export function publicRoutes(r: Runtime): void {
   app.get('/blog/:slug', async (req, reply) => {
     const post = postBySlug((req.params as Record<string, string>).slug);
     if (!post)
-      return reply
-        .code(404)
-        .type('text/html; charset=utf-8')
-        .send(
-          publicPage(
-            {
-              title: `Not found · ${SITE_NAME}`,
-              description: 'No such page.',
-              path: '/blog',
-              stylesheet: '/static/blog.css',
-              script: null,
-            },
-            html`<article class="post">
-              <h1>Not found</h1>
-              <p class="lede">No post exists at this address.</p>
-            </article>`,
-          ),
-        );
+      return reply.code(404).type('text/html; charset=utf-8').send(notFoundPage('No post exists at this address.'));
     return reply.type('text/html; charset=utf-8').send(
       publicPage(
         {
@@ -343,14 +338,12 @@ export function publicRoutes(r: Runtime): void {
           path: `/blog/${post.slug}`,
           stylesheet: '/static/blog.css',
           script: null,
+          image: postSocialImage(post),
+          article: { published: post.published, modified: post.updated },
           extra: [
             blogPostingLd(post),
             faqLd(post.faq),
-            breadcrumbLd([
-              { name: 'Miscited', path: '/' },
-              { name: 'Writing', path: '/blog' },
-              { name: post.metaTitle, path: `/blog/${post.slug}` },
-            ]),
+            breadcrumbLd(breadcrumbTrail(post)),
           ],
         },
         postView(

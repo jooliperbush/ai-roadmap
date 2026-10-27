@@ -1,0 +1,36 @@
+# Local stack: Postgres, Redis, API, one worker, dashboard. `docker compose up --build`,
+# then `docker compose exec api placeguard create-key me` for an API key.
+services:
+  postgres:
+    image: postgres:16
+    environment: { POSTGRES_USER: placeguard, POSTGRES_PASSWORD: placeguard, POSTGRES_DB: placeguard }
+    volumes: [pgdata:/var/lib/postgresql/data]
+  redis:
+    image: redis:7
+  api:
+    build: .
+    environment: &env
+      DATABASE_URL: postgresql+psycopg://placeguard:placeguard@postgres/placeguard
+      REDIS_URL: redis://redis:6379/0
+      PLACEGUARD_STORAGE_ROOT: /data
+      PLACEGUARD_CORS_ORIGINS: http://localhost:3000
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes: [blobs:/data]
+    ports: ["8000:8000"]
+    depends_on: [postgres, redis]
+  worker:
+    build: .
+    command: celery -A placeguard.api.worker worker --concurrency=1 --loglevel=info
+    environment: *env
+    volumes: [blobs:/data]
+    depends_on: [postgres, redis]
+  web:
+    image: node:22-slim
+    working_dir: /web
+    command: sh -c "npm ci && npm run build && npm start"
+    environment: { NEXT_PUBLIC_API_URL: "http://localhost:8000", NEXT_TELEMETRY_DISABLED: "1" }
+    volumes: [./web:/web]
+    ports: ["3000:3000"]
+volumes:
+  pgdata:
+  blobs:
